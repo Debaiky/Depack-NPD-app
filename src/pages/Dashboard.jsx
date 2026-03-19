@@ -136,6 +136,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [customerFilter, setCustomerFilter] = useState("All");
+  const [requesterFilter, setRequesterFilter] = useState("All");
 
   useEffect(() => {
     const loadRequests = async () => {
@@ -165,6 +166,11 @@ export default function Dashboard() {
     return values.sort((a, b) => a.localeCompare(b));
   }, [requests]);
 
+  const uniqueRequesters = useMemo(() => {
+    const values = Array.from(new Set(requests.map((r) => r.CreatedBy).filter(Boolean)));
+    return values.sort((a, b) => a.localeCompare(b));
+  }, [requests]);
+
   const filteredRequests = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -176,7 +182,8 @@ export default function Dashboard() {
         req.ProjectName?.toLowerCase().includes(q) ||
         req.ProductType?.toLowerCase().includes(q) ||
         req.ProductMaterial?.toLowerCase().includes(q) ||
-        req.DecorationType?.toLowerCase().includes(q);
+        req.DecorationType?.toLowerCase().includes(q) ||
+        req.CreatedBy?.toLowerCase().includes(q);
 
       const matchesStatus =
         statusFilter === "All" || (req.Status || "Draft") === statusFilter;
@@ -184,9 +191,12 @@ export default function Dashboard() {
       const matchesCustomer =
         customerFilter === "All" || req.CustomerName === customerFilter;
 
-      return matchesSearch && matchesStatus && matchesCustomer;
+      const matchesRequester =
+        requesterFilter === "All" || req.CreatedBy === requesterFilter;
+
+      return matchesSearch && matchesStatus && matchesCustomer && matchesRequester;
     });
-  }, [requests, search, statusFilter, customerFilter]);
+  }, [requests, search, statusFilter, customerFilter, requesterFilter]);
 
   if (loading) return <div className="p-6">Loading...</div>;
 
@@ -225,7 +235,7 @@ export default function Dashboard() {
         ) : null}
 
         <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <div>
               <label className="mb-2 block text-sm font-medium">Search</label>
               <input
@@ -267,6 +277,22 @@ export default function Dashboard() {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">Requester</label>
+              <select
+                value={requesterFilter}
+                onChange={(e) => setRequesterFilter(e.target.value)}
+                className="w-full rounded-lg border px-3 py-2 text-sm"
+              >
+                <option value="All">All</option>
+                {uniqueRequesters.map((requester) => (
+                  <option key={requester} value={requester}>
+                    {requester}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -277,6 +303,7 @@ export default function Dashboard() {
                 <tr>
                   <th className="p-3 text-left">Request ID</th>
                   <th className="p-3 text-left">Created</th>
+                  <th className="p-3 text-left">Requester</th>
                   <th className="p-3 text-left">Status</th>
                   <th className="p-3 text-left">Customer</th>
                   <th className="p-3 text-left">Project</th>
@@ -290,7 +317,7 @@ export default function Dashboard() {
               <tbody>
                 {filteredRequests.length === 0 ? (
                   <tr>
-                    <td colSpan="10" className="p-6 text-center text-muted-foreground">
+                    <td colSpan="11" className="p-6 text-center text-muted-foreground">
                       No matching requests found.
                     </td>
                   </tr>
@@ -302,6 +329,7 @@ export default function Dashboard() {
                       <tr key={req.RequestID} className="border-t hover:bg-gray-50 align-top">
                         <td className="p-3 font-medium">{req.RequestID}</td>
                         <td className="p-3">{req.CreatedDate}</td>
+                        <td className="p-3">{req.CreatedBy || "—"}</td>
                         <td className="p-3">
                           <StatusBadge status={req.Status} />
                         </td>
