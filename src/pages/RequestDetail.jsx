@@ -198,6 +198,24 @@ export default function RequestDetail() {
             <DetailItem label="Specific Cut / Shape Notes" value={product.specialCutNotes} />
             <DetailItem label="Rim Notes" value={product.rimNotes} />
             <DetailItem label="Technical Notes" value={product.technicalNotes} />
+            <DetailItem label="Sheet Material" value={product.sheetMaterial} />
+            <DetailItem label="% HIPS" value={product.hipsPct} />
+            <DetailItem label="% GPPS" value={product.gppsPct} />
+            <DetailItem label="% rPET" value={product.rpetPct} />
+            <DetailItem label="% Virgin PET" value={product.virginPetPct} />
+            <DetailItem label="Sheet Width (mm)" value={product.sheetWidthMm} />
+            <DetailItem label="Width Tol +" value={product.sheetWidthTolerancePlusMm} />
+            <DetailItem label="Width Tol -" value={product.sheetWidthToleranceMinusMm} />
+            <DetailItem label="Sheet Thickness (micron)" value={product.sheetThicknessMicron} />
+            <DetailItem label="Thickness Tol +" value={product.sheetThicknessTolerancePlusMicron} />
+            <DetailItem label="Thickness Tol -" value={product.sheetThicknessToleranceMinusMicron} />
+            <DetailItem label="Roll Weight (kg)" value={product.rollWeightKg} />
+            <DetailItem label="Roll Diameter (mm)" value={product.rollDiameterMm} />
+            <DetailItem label="Core Diameter (mm)" value={product.coreDiameterMm} />
+            <DetailItem label="Core Material" value={product.coreMaterial} />
+            <DetailItem label="Layer Colors" value={product.sheetLayerColors} />
+            <DetailItem label="Layer A Color" value={product.layerAColor} />
+            <DetailItem label="Layer B Color" value={product.layerBColor} />
           </DetailCard>
 
           <DetailCard title="Decoration Details">
@@ -206,142 +224,55 @@ export default function RequestDetail() {
             {decoration.decorationType === "Dry offset printing" && (
               <>
                 <DetailItem label="Print Colors" value={decoration.dryOffset?.printColors} />
-                <DetailItem
-                  label="Print Area Description"
-                  value={decoration.dryOffset?.printAreaDescription}
-                />
+                <DetailItem label="Print Area Description" value={decoration.dryOffset?.printAreaDescription} />
                 <DetailItem label="Coverage %" value={decoration.dryOffset?.printCoveragePct} />
-                <DetailItem
-                  label="Artwork Available"
-                  value={decoration.dryOffset?.printArtworkAvailable}
-                />
-                <DetailItem
-                  label="Artwork Format"
-                  value={decoration.dryOffset?.printArtworkFormat}
-                />
-                <DetailItem
-                  label="Registration Notes"
-                  value={decoration.dryOffset?.printRegistrationNotes}
-                />
-                <DetailItem
-                  label="Material Notes"
-                  value={decoration.dryOffset?.printMaterialNotes}
-                />
-                <DetailItem
-                  label="Additional Notes"
-                  value={decoration.dryOffset?.printAdditionalNotes}
-                />
+                <DetailItem label="Artwork Available" value={decoration.dryOffset?.printArtworkAvailable} />
+                <DetailItem label="Artwork Format" value={decoration.dryOffset?.printArtworkFormat} />
+                <DetailItem label="Registration Notes" value={decoration.dryOffset?.printRegistrationNotes} />
+                <DetailItem label="Material Notes" value={decoration.dryOffset?.printMaterialNotes} />
+                <DetailItem label="Additional Notes" value={decoration.dryOffset?.printAdditionalNotes} />
               </>
             )}
 
             {decoration.decorationType === "Shrink sleeve" && (
               <>
-                <DetailItem
-                  label="Sleeve Material"
-                  value={decoration.shrinkSleeve?.sleeveMaterial}
-                />
-                <DetailItem
-                  label="Sleeve Thickness"
-                  value={decoration.shrinkSleeve?.sleeveThicknessMicron}
-                />
-                <DetailItem
-                  label="Layflat Width"
-                  value={decoration.shrinkSleeve?.sleeveLayflatWidthMm}
-                />
-                <DetailItem
-                  label="Sleeve Height"
-                  value={decoration.shrinkSleeve?.sleeveHeightMm}
-                />
-                <DetailItem
-                  label="Shrink Ratio"
-                  value={decoration.shrinkSleeve?.sleeveShrinkRatio}
-                />
-                <DetailItem
-                  label="Glue Pattern Needed"
-                  value={decoration.shrinkSleeve?.gluePatternNeeded}
-                />
-                <DetailItem
-                  label="Glue Pattern Diagram Available"
-                  value={decoration.shrinkSleeve?.gluePatternDiagramAvailable}
-                />
-                <DetailItem
-                  label="Sleeve Artwork Available"
-                  value={decoration.shrinkSleeve?.sleeveArtworkAvailable}
-                />
-                <DetailItem
-                  label="Seam / Orientation Notes"
-                  value={decoration.shrinkSleeve?.sleeveSeamNotes}
-                />
-                <DetailItem
-                  label="Shrink / Application Notes"
-                  value={decoration.shrinkSleeve?.sleeveApplicationNotes}
-                />
-                <DetailItem
-                  label="Additional Notes"
-                  value={decoration.shrinkSleeve?.sleeveAdditionalNotes}
-                />
+                <DetailItem label="Sleeve Material" value={decoration.shrinkSleeve?.sleeveMaterial} />
+                <DetailItem label="Sleeve Thickness" value={decoration.shrinkSleeve?.sleeveThicknessMicron} />
+                <DetailItem label="Layflat Width" value={decoration.shrinkSleeve?.sleeveLayflatWidthMm} />
+                <DetailItem label="Sleeve Height" value={decoration.shrinkSleeve?.sleeveHeightMm} />
+                <DetailItem label="Shrink Ratio" value={decoration.shrinkSleeve?.sleeveShrinkRatio} />
+                <DetailItem label="Glue Pattern Needed" value={decoration.shrinkSleeve?.gluePatternNeeded} />
+                <DetailItem label="Glue Pattern Diagram Available" value={decoration.shrinkSleeve?.gluePatternDiagramAvailable} />
+                <DetailItem label="Sleeve Artwork Available" value={decoration.shrinkSleeve?.sleeveArtworkAvailable} />
+                <DetailItem label="Seam / Orientation Notes" value={decoration.shrinkSleeve?.sleeveSeamNotes} />
+                <DetailItem label="Shrink / Application Notes" value={decoration.shrinkSleeve?.sleeveApplicationNotes} />
+                <DetailItem label="Additional Notes" value={decoration.shrinkSleeve?.sleeveAdditionalNotes} />
               </>
             )}
 
             {decoration.decorationType === "Hybrid cup" && (
               <>
-                <DetailItem
-                  label="Cup Family"
-                  value={decoration.hybridCup?.hybridCupFamily}
-                />
+                <DetailItem label="Cup Family" value={decoration.hybridCup?.hybridCupFamily} />
                 <DetailItem label="Blank Wrapped" value={decoration.hybridCup?.blankWrapped} />
-                <DetailItem
-                  label="Paper Bottom Required"
-                  value={decoration.hybridCup?.paperBottomRequired}
-                />
-                <DetailItem
-                  label="Blank Material"
-                  value={decoration.hybridCup?.hybridBlankMaterial}
-                />
+                <DetailItem label="Paper Bottom Required" value={decoration.hybridCup?.paperBottomRequired} />
+                <DetailItem label="Blank Material" value={decoration.hybridCup?.hybridBlankMaterial} />
                 <DetailItem label="Blank GSM" value={decoration.hybridCup?.hybridBlankGsm} />
-                <DetailItem
-                  label="Wrap Artwork Available"
-                  value={decoration.hybridCup?.hybridWrapArtworkAvailable}
-                />
-                <DetailItem
-                  label="Bottom Artwork Available"
-                  value={decoration.hybridCup?.hybridBottomArtworkAvailable}
-                />
-                <DetailItem
-                  label="Alignment Notes"
-                  value={decoration.hybridCup?.hybridAlignmentNotes}
-                />
-                <DetailItem
-                  label="Additional Notes"
-                  value={decoration.hybridCup?.hybridAdditionalNotes}
-                />
+                <DetailItem label="Wrap Artwork Available" value={decoration.hybridCup?.hybridWrapArtworkAvailable} />
+                <DetailItem label="Bottom Artwork Available" value={decoration.hybridCup?.hybridBottomArtworkAvailable} />
+                <DetailItem label="Alignment Notes" value={decoration.hybridCup?.hybridAlignmentNotes} />
+                <DetailItem label="Additional Notes" value={decoration.hybridCup?.hybridAdditionalNotes} />
               </>
             )}
 
             {decoration.decorationType === "Label" && (
               <>
                 <DetailItem label="Label Material" value={decoration.label?.labelMaterial} />
-                <DetailItem
-                  label="Label Dimensions"
-                  value={decoration.label?.labelDimensions}
-                />
+                <DetailItem label="Label Dimensions" value={decoration.label?.labelDimensions} />
                 <DetailItem label="Label Type" value={decoration.label?.labelType} />
-                <DetailItem
-                  label="Adhesive Notes"
-                  value={decoration.label?.labelAdhesiveNotes}
-                />
-                <DetailItem
-                  label="Artwork Available"
-                  value={decoration.label?.labelArtworkAvailable}
-                />
-                <DetailItem
-                  label="Position Notes"
-                  value={decoration.label?.labelPositionNotes}
-                />
-                <DetailItem
-                  label="Additional Notes"
-                  value={decoration.label?.labelAdditionalNotes}
-                />
+                <DetailItem label="Adhesive Notes" value={decoration.label?.labelAdhesiveNotes} />
+                <DetailItem label="Artwork Available" value={decoration.label?.labelArtworkAvailable} />
+                <DetailItem label="Position Notes" value={decoration.label?.labelPositionNotes} />
+                <DetailItem label="Additional Notes" value={decoration.label?.labelAdditionalNotes} />
               </>
             )}
           </DetailCard>
@@ -349,133 +280,53 @@ export default function RequestDetail() {
           <DetailCard title="Packaging Details">
             <DetailItem label="Pieces per Stack" value={packaging.primary?.pcsPerStack} />
             <DetailItem label="Stacks per Bag" value={packaging.primary?.stacksPerBag} />
-            <DetailItem
-              label="Sleeve Artwork Needed"
-              value={packaging.primary?.sleeveArtworkNeeded}
-            />
-            <DetailItem
-              label="Sleeve Artwork Provided"
-              value={packaging.primary?.sleeveArtworkProvided}
-            />
-            <DetailItem
-              label="Primary Packaging Notes"
-              value={packaging.primary?.primaryPackagingNotes}
-            />
-            <DetailItem
-              label="Bag / Sleeve Material"
-              value={packaging.primary?.bagSleeveMaterial}
-            />
-            <DetailItem
-              label="Bag / Sleeve Dimensions"
-              value={packaging.primary?.bagSleeveDimensions}
-            />
-            <DetailItem
-              label="Bag Thickness"
-              value={packaging.primary?.bagSleeveThicknessMicron}
-            />
+            <DetailItem label="Sleeve Artwork Needed" value={packaging.primary?.sleeveArtworkNeeded} />
+            <DetailItem label="Sleeve Artwork Provided" value={packaging.primary?.sleeveArtworkProvided} />
+            <DetailItem label="Primary Packaging Notes" value={packaging.primary?.primaryPackagingNotes} />
+            <DetailItem label="Bag / Sleeve Material" value={packaging.primary?.bagSleeveMaterial} />
+            <DetailItem label="Bag / Sleeve Dimensions" value={packaging.primary?.bagSleeveDimensions} />
+            <DetailItem label="Bag Thickness" value={packaging.primary?.bagSleeveThicknessMicron} />
             <DetailItem label="Bag Weight" value={packaging.primary?.bagSleeveWeight} />
             <DetailItem label="Bags per Carton" value={packaging.secondary?.bagsPerCarton} />
             <DetailItem label="Carton Type" value={packaging.secondary?.cartonType} />
-            <DetailItem
-              label="Carton Internal Dimensions"
-              value={packaging.secondary?.cartonInternalDimensions}
-            />
-            <DetailItem
-              label="Carton External Dimensions"
-              value={packaging.secondary?.cartonExternalDimensions}
-            />
-            <DetailItem
-              label="Carton Artwork Needed"
-              value={packaging.secondary?.cartonArtworkNeeded}
-            />
-            <DetailItem
-              label="Carton Artwork Provided"
-              value={packaging.secondary?.cartonArtworkProvided}
-            />
-            <DetailItem
-              label="Carton Packaging Notes"
-              value={packaging.secondary?.cartonPackagingNotes}
-            />
-            <DetailItem
-              label="Carton Label Required"
-              value={packaging.labelInstructions?.cartonLabelRequired}
-            />
-            <DetailItem
-              label="Label Dimensions"
-              value={packaging.labelInstructions?.cartonLabelDimensions}
-            />
-            <DetailItem
-              label="Barcode Required"
-              value={packaging.labelInstructions?.barcodeRequired}
-            />
-            <DetailItem
-              label="Barcode Type"
-              value={packaging.labelInstructions?.barcodeType}
-            />
-            <DetailItem
-              label="Other Label Data"
-              value={packaging.labelInstructions?.labelFieldOther}
-            />
-            <DetailItem
-              label="Carton Label Artwork Provided"
-              value={packaging.labelInstructions?.cartonLabelArtworkProvided}
-            />
-            <DetailItem
-              label="Carton Label Notes"
-              value={packaging.labelInstructions?.cartonLabelNotes}
-            />
+            <DetailItem label="Carton Internal Dimensions" value={packaging.secondary?.cartonInternalDimensions} />
+            <DetailItem label="Carton External Dimensions" value={packaging.secondary?.cartonExternalDimensions} />
+            <DetailItem label="Carton Artwork Needed" value={packaging.secondary?.cartonArtworkNeeded} />
+            <DetailItem label="Carton Artwork Provided" value={packaging.secondary?.cartonArtworkProvided} />
+            <DetailItem label="Carton Packaging Notes" value={packaging.secondary?.cartonPackagingNotes} />
+            <DetailItem label="Carton Label Required" value={packaging.labelInstructions?.cartonLabelRequired} />
+            <DetailItem label="Label Dimensions" value={packaging.labelInstructions?.cartonLabelDimensions} />
+            <DetailItem label="Barcode Required" value={packaging.labelInstructions?.barcodeRequired} />
+            <DetailItem label="Barcode Type" value={packaging.labelInstructions?.barcodeType} />
+            <DetailItem label="Other Label Data" value={packaging.labelInstructions?.labelFieldOther} />
+            <DetailItem label="Carton Label Artwork Provided" value={packaging.labelInstructions?.cartonLabelArtworkProvided} />
+            <DetailItem label="Carton Label Notes" value={packaging.labelInstructions?.cartonLabelNotes} />
             <DetailItem label="Pallet Type" value={packaging.pallet?.palletType} />
             <DetailItem label="Pallet Dimensions" value={packaging.pallet?.palletDimensions} />
-            <DetailItem
-              label="Returnable Pallet"
-              value={packaging.pallet?.returnablePallet}
-            />
-            <DetailItem
-              label="Pallet Return Count"
-              value={packaging.pallet?.palletReturnCount}
-            />
-            <DetailItem
-              label="Cartons per Pallet"
-              value={packaging.pallet?.cartonsPerPallet}
-            />
-            <DetailItem
-              label="Stretch Wrap Required"
-              value={packaging.pallet?.stretchWrapRequired}
-            />
-            <DetailItem
-              label="Stretch Wrap Kg per Pallet"
-              value={packaging.pallet?.stretchWrapKgPerPallet}
-            />
+            <DetailItem label="Returnable Pallet" value={packaging.pallet?.returnablePallet} />
+            <DetailItem label="Pallet Return Count" value={packaging.pallet?.palletReturnCount} />
+            <DetailItem label="Cartons per Pallet" value={packaging.pallet?.cartonsPerPallet} />
+            <DetailItem label="Stretch Wrap Required" value={packaging.pallet?.stretchWrapRequired} />
+            <DetailItem label="Stretch Wrap Kg per Pallet" value={packaging.pallet?.stretchWrapKgPerPallet} />
             <DetailItem label="Pallet Notes" value={packaging.pallet?.palletNotes} />
+            <DetailItem label="Rolls per Pallet" value={packaging.pallet?.rollsPerPallet} />
+            <DetailItem label="Number of Separators" value={packaging.pallet?.separatorCount} />
+            <DetailItem label="Strap Length (m)" value={packaging.pallet?.strapLengthM} />
+            <DetailItem label="Labels per Roll" value={packaging.pallet?.labelsPerRoll} />
+            <DetailItem label="Foam Wrapping (m)" value={packaging.pallet?.foamWrappingM} />
           </DetailCard>
 
           <DetailCard title="Delivery Details">
-            <DetailItem
-              label="Delivery Location"
-              value={delivery.deliveryLocationConfirm}
-            />
+            <DetailItem label="Delivery Location" value={delivery.deliveryLocationConfirm} />
             <DetailItem label="Delivery Term" value={delivery.deliveryTerm} />
-            <DetailItem
-              label="Delivery Frequency"
-              value={delivery.deliveryFrequency}
-            />
-            <DetailItem
-              label="First Delivery Date"
-              value={delivery.firstDeliveryDate}
-            />
+            <DetailItem label="Delivery Frequency" value={delivery.deliveryFrequency} />
+            <DetailItem label="First Delivery Date" value={delivery.firstDeliveryDate} />
             <DetailItem label="Receiving Notes" value={delivery.receivingNotes} />
-            <DetailItem
-              label="Loading Restrictions"
-              value={delivery.loadingRestrictions}
-            />
-            <DetailItem
-              label="Required Delivery Documents"
-              value={delivery.requiredDeliveryDocs}
-            />
-            <DetailItem
-              label="Logistics Comments"
-              value={delivery.logisticsComments}
-            />
+            <DetailItem label="Loading Restrictions" value={delivery.loadingRestrictions} />
+            <DetailItem label="Required Delivery Documents" value={delivery.requiredDeliveryDocs} />
+            <DetailItem label="Logistics Comments" value={delivery.logisticsComments} />
+            <DetailItem label="Desired Qty per Truck" value={delivery.desiredQtyPerTruck} />
+            <DetailItem label="Desired Qty Unit" value={delivery.desiredQtyPerTruckUnit} />
           </DetailCard>
 
           <DetailCard title="Attachments">

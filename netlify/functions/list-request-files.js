@@ -28,7 +28,7 @@ export async function handler(event) {
     const fileRows = rows.slice(1);
 
     const files = fileRows
-      .filter((row) => row[0] === requestId)
+      .filter((row) => row[0] === requestId && row[4])
       .map((row, index) => ({
         rowIndex: index + 2,
         requestId: row[0] || "",
