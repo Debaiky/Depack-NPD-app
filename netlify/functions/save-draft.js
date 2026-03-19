@@ -1,22 +1,11 @@
 /* eslint-env node */
-import { google } from "googleapis";
+import { googleJsonFetch } from "./_google-rest.js";
 
-function getAuth() {
-  return new google.auth.JWT({
-    email: process.env.NETLIFY_GOOGLE_CLIENT_EMAIL,
-    key: process.env.NETLIFY_GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-}
+const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
 
 export async function handler(event) {
   try {
     const body = JSON.parse(event.body || "{}");
-
-    const auth = getAuth();
-    await auth.authorize();
-
-    const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
 
     const requestId = body?.metadata?.requestId || "";
@@ -43,12 +32,12 @@ export async function handler(event) {
       driveFolderId,
     ];
 
-    const existing = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: "Requests_Master!A:A",
+    const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:A`;
+    const existing = await googleJsonFetch(getUrl, {
+      scopes: SHEETS_SCOPE,
     });
 
-    const rows = existing.data.values || [];
+    const rows = existing.values || [];
     let rowIndex = -1;
 
     for (let i = 1; i < rows.length; i++) {
@@ -59,20 +48,20 @@ export async function handler(event) {
     }
 
     if (rowIndex === -1) {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId,
-        range: "Requests_Master!A:O",
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
+      const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:O:append?valueInputOption=USER_ENTERED`;
+      await googleJsonFetch(appendUrl, {
+        method: "POST",
+        scopes: SHEETS_SCOPE,
+        body: {
           values: [row],
         },
       });
     } else {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `Requests_Master!A${rowIndex}:O${rowIndex}`,
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
+      const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A${rowIndex}:O${rowIndex}?valueInputOption=USER_ENTERED`;
+      await googleJsonFetch(updateUrl, {
+        method: "PUT",
+        scopes: SHEETS_SCOPE,
+        body: {
           values: [row],
         },
       });
