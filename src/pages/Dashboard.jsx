@@ -25,6 +25,7 @@ function StatusBadge({ status }) {
 export default function Dashboard() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -37,10 +38,14 @@ export default function Dashboard() {
         const data = await response.json();
 
         if (data.success) {
-          setRequests(data.requests);
+          setRequests(data.requests || []);
+          setLoadError("");
+        } else {
+          setLoadError(data.error || "Failed to load requests");
         }
       } catch (error) {
         console.error("Failed to load requests:", error);
+        setLoadError("Failed to load requests");
       } finally {
         setLoading(false);
       }
@@ -109,6 +114,12 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        {loadError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+            {loadError}
+          </div>
+        ) : null}
+
         <div className="rounded-2xl border bg-white p-4 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
