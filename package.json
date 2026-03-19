@@ -7,12 +7,6 @@
 
   "node": "20.x"
 },
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 78879e6 (Replace googleapis auth with native Google REST flow)
-    "node": "20.x"
-  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
