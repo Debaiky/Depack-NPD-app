@@ -18,8 +18,33 @@ function DetailItem({ label, value }) {
       <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
         {label}
       </div>
-      <div className="font-medium break-words">
-        {value || "—"}
+      <div className="font-medium break-words">{value || "—"}</div>
+    </div>
+  );
+}
+
+function AttachmentCard({ file }) {
+  return (
+    <div className="rounded-xl bg-gray-50 border p-3">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+        {file.category || "Attachment"}
+      </div>
+      <div className="font-medium break-words">{file.fileName || "Unnamed file"}</div>
+      <div className="text-xs text-muted-foreground mt-1">
+        {file.fileType || "Unknown type"}
+      </div>
+      <div className="text-xs text-muted-foreground mt-1">
+        {file.uploadedAt || ""}
+      </div>
+      <div className="mt-3">
+        <a
+          href={file.driveLink}
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 underline text-sm"
+        >
+          View / Download
+        </a>
       </div>
     </div>
   );
@@ -29,6 +54,7 @@ export default function RequestDetail() {
   const { requestId } = useParams();
   const [request, setRequest] = useState(null);
   const [payload, setPayload] = useState(null);
+  const [files, setFiles] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -42,6 +68,16 @@ export default function RequestDetail() {
           setPayload(data.payload);
         } else {
           setError(data.error || "Request not found");
+          return;
+        }
+
+        const filesResponse = await fetch(
+          `/.netlify/functions/list-request-files?requestId=${requestId}`
+        );
+        const filesData = await filesResponse.json();
+
+        if (filesData.success) {
+          setFiles(filesData.files || []);
         }
       } catch (error) {
         console.error("Failed to load request:", error);
@@ -60,7 +96,6 @@ export default function RequestDetail() {
   const decoration = payload.decoration || {};
   const packaging = payload.packaging || {};
   const delivery = payload.delivery || {};
-  const attachments = payload.attachments || {};
   const status = payload?.metadata?.status || request.Status || "Draft";
 
   return (
@@ -171,55 +206,142 @@ export default function RequestDetail() {
             {decoration.decorationType === "Dry offset printing" && (
               <>
                 <DetailItem label="Print Colors" value={decoration.dryOffset?.printColors} />
-                <DetailItem label="Print Area Description" value={decoration.dryOffset?.printAreaDescription} />
+                <DetailItem
+                  label="Print Area Description"
+                  value={decoration.dryOffset?.printAreaDescription}
+                />
                 <DetailItem label="Coverage %" value={decoration.dryOffset?.printCoveragePct} />
-                <DetailItem label="Artwork Available" value={decoration.dryOffset?.printArtworkAvailable} />
-                <DetailItem label="Artwork Format" value={decoration.dryOffset?.printArtworkFormat} />
-                <DetailItem label="Registration Notes" value={decoration.dryOffset?.printRegistrationNotes} />
-                <DetailItem label="Material Notes" value={decoration.dryOffset?.printMaterialNotes} />
-                <DetailItem label="Additional Notes" value={decoration.dryOffset?.printAdditionalNotes} />
+                <DetailItem
+                  label="Artwork Available"
+                  value={decoration.dryOffset?.printArtworkAvailable}
+                />
+                <DetailItem
+                  label="Artwork Format"
+                  value={decoration.dryOffset?.printArtworkFormat}
+                />
+                <DetailItem
+                  label="Registration Notes"
+                  value={decoration.dryOffset?.printRegistrationNotes}
+                />
+                <DetailItem
+                  label="Material Notes"
+                  value={decoration.dryOffset?.printMaterialNotes}
+                />
+                <DetailItem
+                  label="Additional Notes"
+                  value={decoration.dryOffset?.printAdditionalNotes}
+                />
               </>
             )}
 
             {decoration.decorationType === "Shrink sleeve" && (
               <>
-                <DetailItem label="Sleeve Material" value={decoration.shrinkSleeve?.sleeveMaterial} />
-                <DetailItem label="Sleeve Thickness" value={decoration.shrinkSleeve?.sleeveThicknessMicron} />
-                <DetailItem label="Layflat Width" value={decoration.shrinkSleeve?.sleeveLayflatWidthMm} />
-                <DetailItem label="Sleeve Height" value={decoration.shrinkSleeve?.sleeveHeightMm} />
-                <DetailItem label="Shrink Ratio" value={decoration.shrinkSleeve?.sleeveShrinkRatio} />
-                <DetailItem label="Glue Pattern Needed" value={decoration.shrinkSleeve?.gluePatternNeeded} />
-                <DetailItem label="Glue Pattern Diagram Available" value={decoration.shrinkSleeve?.gluePatternDiagramAvailable} />
-                <DetailItem label="Sleeve Artwork Available" value={decoration.shrinkSleeve?.sleeveArtworkAvailable} />
-                <DetailItem label="Seam / Orientation Notes" value={decoration.shrinkSleeve?.sleeveSeamNotes} />
-                <DetailItem label="Shrink / Application Notes" value={decoration.shrinkSleeve?.sleeveApplicationNotes} />
-                <DetailItem label="Additional Notes" value={decoration.shrinkSleeve?.sleeveAdditionalNotes} />
+                <DetailItem
+                  label="Sleeve Material"
+                  value={decoration.shrinkSleeve?.sleeveMaterial}
+                />
+                <DetailItem
+                  label="Sleeve Thickness"
+                  value={decoration.shrinkSleeve?.sleeveThicknessMicron}
+                />
+                <DetailItem
+                  label="Layflat Width"
+                  value={decoration.shrinkSleeve?.sleeveLayflatWidthMm}
+                />
+                <DetailItem
+                  label="Sleeve Height"
+                  value={decoration.shrinkSleeve?.sleeveHeightMm}
+                />
+                <DetailItem
+                  label="Shrink Ratio"
+                  value={decoration.shrinkSleeve?.sleeveShrinkRatio}
+                />
+                <DetailItem
+                  label="Glue Pattern Needed"
+                  value={decoration.shrinkSleeve?.gluePatternNeeded}
+                />
+                <DetailItem
+                  label="Glue Pattern Diagram Available"
+                  value={decoration.shrinkSleeve?.gluePatternDiagramAvailable}
+                />
+                <DetailItem
+                  label="Sleeve Artwork Available"
+                  value={decoration.shrinkSleeve?.sleeveArtworkAvailable}
+                />
+                <DetailItem
+                  label="Seam / Orientation Notes"
+                  value={decoration.shrinkSleeve?.sleeveSeamNotes}
+                />
+                <DetailItem
+                  label="Shrink / Application Notes"
+                  value={decoration.shrinkSleeve?.sleeveApplicationNotes}
+                />
+                <DetailItem
+                  label="Additional Notes"
+                  value={decoration.shrinkSleeve?.sleeveAdditionalNotes}
+                />
               </>
             )}
 
             {decoration.decorationType === "Hybrid cup" && (
               <>
-                <DetailItem label="Cup Family" value={decoration.hybridCup?.hybridCupFamily} />
+                <DetailItem
+                  label="Cup Family"
+                  value={decoration.hybridCup?.hybridCupFamily}
+                />
                 <DetailItem label="Blank Wrapped" value={decoration.hybridCup?.blankWrapped} />
-                <DetailItem label="Paper Bottom Required" value={decoration.hybridCup?.paperBottomRequired} />
-                <DetailItem label="Blank Material" value={decoration.hybridCup?.hybridBlankMaterial} />
+                <DetailItem
+                  label="Paper Bottom Required"
+                  value={decoration.hybridCup?.paperBottomRequired}
+                />
+                <DetailItem
+                  label="Blank Material"
+                  value={decoration.hybridCup?.hybridBlankMaterial}
+                />
                 <DetailItem label="Blank GSM" value={decoration.hybridCup?.hybridBlankGsm} />
-                <DetailItem label="Wrap Artwork Available" value={decoration.hybridCup?.hybridWrapArtworkAvailable} />
-                <DetailItem label="Bottom Artwork Available" value={decoration.hybridCup?.hybridBottomArtworkAvailable} />
-                <DetailItem label="Alignment Notes" value={decoration.hybridCup?.hybridAlignmentNotes} />
-                <DetailItem label="Additional Notes" value={decoration.hybridCup?.hybridAdditionalNotes} />
+                <DetailItem
+                  label="Wrap Artwork Available"
+                  value={decoration.hybridCup?.hybridWrapArtworkAvailable}
+                />
+                <DetailItem
+                  label="Bottom Artwork Available"
+                  value={decoration.hybridCup?.hybridBottomArtworkAvailable}
+                />
+                <DetailItem
+                  label="Alignment Notes"
+                  value={decoration.hybridCup?.hybridAlignmentNotes}
+                />
+                <DetailItem
+                  label="Additional Notes"
+                  value={decoration.hybridCup?.hybridAdditionalNotes}
+                />
               </>
             )}
 
             {decoration.decorationType === "Label" && (
               <>
                 <DetailItem label="Label Material" value={decoration.label?.labelMaterial} />
-                <DetailItem label="Label Dimensions" value={decoration.label?.labelDimensions} />
+                <DetailItem
+                  label="Label Dimensions"
+                  value={decoration.label?.labelDimensions}
+                />
                 <DetailItem label="Label Type" value={decoration.label?.labelType} />
-                <DetailItem label="Adhesive Notes" value={decoration.label?.labelAdhesiveNotes} />
-                <DetailItem label="Artwork Available" value={decoration.label?.labelArtworkAvailable} />
-                <DetailItem label="Position Notes" value={decoration.label?.labelPositionNotes} />
-                <DetailItem label="Additional Notes" value={decoration.label?.labelAdditionalNotes} />
+                <DetailItem
+                  label="Adhesive Notes"
+                  value={decoration.label?.labelAdhesiveNotes}
+                />
+                <DetailItem
+                  label="Artwork Available"
+                  value={decoration.label?.labelArtworkAvailable}
+                />
+                <DetailItem
+                  label="Position Notes"
+                  value={decoration.label?.labelPositionNotes}
+                />
+                <DetailItem
+                  label="Additional Notes"
+                  value={decoration.label?.labelAdditionalNotes}
+                />
               </>
             )}
           </DetailCard>
@@ -227,60 +349,146 @@ export default function RequestDetail() {
           <DetailCard title="Packaging Details">
             <DetailItem label="Pieces per Stack" value={packaging.primary?.pcsPerStack} />
             <DetailItem label="Stacks per Bag" value={packaging.primary?.stacksPerBag} />
-            <DetailItem label="Sleeve Artwork Needed" value={packaging.primary?.sleeveArtworkNeeded} />
-            <DetailItem label="Sleeve Artwork Provided" value={packaging.primary?.sleeveArtworkProvided} />
-            <DetailItem label="Primary Packaging Notes" value={packaging.primary?.primaryPackagingNotes} />
-            <DetailItem label="Bag / Sleeve Material" value={packaging.primary?.bagSleeveMaterial} />
-            <DetailItem label="Bag / Sleeve Dimensions" value={packaging.primary?.bagSleeveDimensions} />
-            <DetailItem label="Bag Thickness" value={packaging.primary?.bagSleeveThicknessMicron} />
+            <DetailItem
+              label="Sleeve Artwork Needed"
+              value={packaging.primary?.sleeveArtworkNeeded}
+            />
+            <DetailItem
+              label="Sleeve Artwork Provided"
+              value={packaging.primary?.sleeveArtworkProvided}
+            />
+            <DetailItem
+              label="Primary Packaging Notes"
+              value={packaging.primary?.primaryPackagingNotes}
+            />
+            <DetailItem
+              label="Bag / Sleeve Material"
+              value={packaging.primary?.bagSleeveMaterial}
+            />
+            <DetailItem
+              label="Bag / Sleeve Dimensions"
+              value={packaging.primary?.bagSleeveDimensions}
+            />
+            <DetailItem
+              label="Bag Thickness"
+              value={packaging.primary?.bagSleeveThicknessMicron}
+            />
             <DetailItem label="Bag Weight" value={packaging.primary?.bagSleeveWeight} />
             <DetailItem label="Bags per Carton" value={packaging.secondary?.bagsPerCarton} />
             <DetailItem label="Carton Type" value={packaging.secondary?.cartonType} />
-            <DetailItem label="Carton Internal Dimensions" value={packaging.secondary?.cartonInternalDimensions} />
-            <DetailItem label="Carton External Dimensions" value={packaging.secondary?.cartonExternalDimensions} />
-            <DetailItem label="Carton Artwork Needed" value={packaging.secondary?.cartonArtworkNeeded} />
-            <DetailItem label="Carton Artwork Provided" value={packaging.secondary?.cartonArtworkProvided} />
-            <DetailItem label="Carton Packaging Notes" value={packaging.secondary?.cartonPackagingNotes} />
-            <DetailItem label="Carton Label Required" value={packaging.labelInstructions?.cartonLabelRequired} />
-            <DetailItem label="Label Dimensions" value={packaging.labelInstructions?.cartonLabelDimensions} />
-            <DetailItem label="Barcode Required" value={packaging.labelInstructions?.barcodeRequired} />
-            <DetailItem label="Barcode Type" value={packaging.labelInstructions?.barcodeType} />
-            <DetailItem label="Other Label Data" value={packaging.labelInstructions?.labelFieldOther} />
-            <DetailItem label="Carton Label Artwork Provided" value={packaging.labelInstructions?.cartonLabelArtworkProvided} />
-            <DetailItem label="Carton Label Notes" value={packaging.labelInstructions?.cartonLabelNotes} />
+            <DetailItem
+              label="Carton Internal Dimensions"
+              value={packaging.secondary?.cartonInternalDimensions}
+            />
+            <DetailItem
+              label="Carton External Dimensions"
+              value={packaging.secondary?.cartonExternalDimensions}
+            />
+            <DetailItem
+              label="Carton Artwork Needed"
+              value={packaging.secondary?.cartonArtworkNeeded}
+            />
+            <DetailItem
+              label="Carton Artwork Provided"
+              value={packaging.secondary?.cartonArtworkProvided}
+            />
+            <DetailItem
+              label="Carton Packaging Notes"
+              value={packaging.secondary?.cartonPackagingNotes}
+            />
+            <DetailItem
+              label="Carton Label Required"
+              value={packaging.labelInstructions?.cartonLabelRequired}
+            />
+            <DetailItem
+              label="Label Dimensions"
+              value={packaging.labelInstructions?.cartonLabelDimensions}
+            />
+            <DetailItem
+              label="Barcode Required"
+              value={packaging.labelInstructions?.barcodeRequired}
+            />
+            <DetailItem
+              label="Barcode Type"
+              value={packaging.labelInstructions?.barcodeType}
+            />
+            <DetailItem
+              label="Other Label Data"
+              value={packaging.labelInstructions?.labelFieldOther}
+            />
+            <DetailItem
+              label="Carton Label Artwork Provided"
+              value={packaging.labelInstructions?.cartonLabelArtworkProvided}
+            />
+            <DetailItem
+              label="Carton Label Notes"
+              value={packaging.labelInstructions?.cartonLabelNotes}
+            />
             <DetailItem label="Pallet Type" value={packaging.pallet?.palletType} />
             <DetailItem label="Pallet Dimensions" value={packaging.pallet?.palletDimensions} />
-            <DetailItem label="Returnable Pallet" value={packaging.pallet?.returnablePallet} />
-            <DetailItem label="Pallet Return Count" value={packaging.pallet?.palletReturnCount} />
-            <DetailItem label="Cartons per Pallet" value={packaging.pallet?.cartonsPerPallet} />
-            <DetailItem label="Stretch Wrap Required" value={packaging.pallet?.stretchWrapRequired} />
-            <DetailItem label="Stretch Wrap Kg per Pallet" value={packaging.pallet?.stretchWrapKgPerPallet} />
+            <DetailItem
+              label="Returnable Pallet"
+              value={packaging.pallet?.returnablePallet}
+            />
+            <DetailItem
+              label="Pallet Return Count"
+              value={packaging.pallet?.palletReturnCount}
+            />
+            <DetailItem
+              label="Cartons per Pallet"
+              value={packaging.pallet?.cartonsPerPallet}
+            />
+            <DetailItem
+              label="Stretch Wrap Required"
+              value={packaging.pallet?.stretchWrapRequired}
+            />
+            <DetailItem
+              label="Stretch Wrap Kg per Pallet"
+              value={packaging.pallet?.stretchWrapKgPerPallet}
+            />
             <DetailItem label="Pallet Notes" value={packaging.pallet?.palletNotes} />
           </DetailCard>
 
           <DetailCard title="Delivery Details">
-            <DetailItem label="Delivery Location" value={delivery.deliveryLocationConfirm} />
+            <DetailItem
+              label="Delivery Location"
+              value={delivery.deliveryLocationConfirm}
+            />
             <DetailItem label="Delivery Term" value={delivery.deliveryTerm} />
-            <DetailItem label="Delivery Frequency" value={delivery.deliveryFrequency} />
-            <DetailItem label="First Delivery Date" value={delivery.firstDeliveryDate} />
+            <DetailItem
+              label="Delivery Frequency"
+              value={delivery.deliveryFrequency}
+            />
+            <DetailItem
+              label="First Delivery Date"
+              value={delivery.firstDeliveryDate}
+            />
             <DetailItem label="Receiving Notes" value={delivery.receivingNotes} />
-            <DetailItem label="Loading Restrictions" value={delivery.loadingRestrictions} />
-            <DetailItem label="Required Delivery Documents" value={delivery.requiredDeliveryDocs} />
-            <DetailItem label="Logistics Comments" value={delivery.logisticsComments} />
+            <DetailItem
+              label="Loading Restrictions"
+              value={delivery.loadingRestrictions}
+            />
+            <DetailItem
+              label="Required Delivery Documents"
+              value={delivery.requiredDeliveryDocs}
+            />
+            <DetailItem
+              label="Logistics Comments"
+              value={delivery.logisticsComments}
+            />
           </DetailCard>
 
-          <DetailCard title="Attachments Summary">
-            <DetailItem label="Sample Photos" value={attachments.samplePhotos?.length ? `${attachments.samplePhotos.length} file(s)` : "None"} />
-            <DetailItem label="Print Artwork" value={attachments.printArtworkFiles?.length ? `${attachments.printArtworkFiles.length} file(s)` : "None"} />
-            <DetailItem label="Sleeve Artwork" value={attachments.sleeveArtworkFiles?.length ? `${attachments.sleeveArtworkFiles.length} file(s)` : "None"} />
-            <DetailItem label="Glue Pattern Diagrams" value={attachments.gluePatternDiagramFiles?.length ? `${attachments.gluePatternDiagramFiles.length} file(s)` : "None"} />
-            <DetailItem label="Hybrid Wrap Artwork" value={attachments.hybridWrapArtworkFiles?.length ? `${attachments.hybridWrapArtworkFiles.length} file(s)` : "None"} />
-            <DetailItem label="Hybrid Bottom Artwork" value={attachments.hybridBottomArtworkFiles?.length ? `${attachments.hybridBottomArtworkFiles.length} file(s)` : "None"} />
-            <DetailItem label="Label Artwork" value={attachments.labelArtworkFiles?.length ? `${attachments.labelArtworkFiles.length} file(s)` : "None"} />
-            <DetailItem label="Primary Sleeve Artwork" value={attachments.primarySleeveArtworkFiles?.length ? `${attachments.primarySleeveArtworkFiles.length} file(s)` : "None"} />
-            <DetailItem label="Carton Artwork" value={attachments.cartonArtworkFiles?.length ? `${attachments.cartonArtworkFiles.length} file(s)` : "None"} />
-            <DetailItem label="Carton Label Artwork" value={attachments.cartonLabelArtworkFiles?.length ? `${attachments.cartonLabelArtworkFiles.length} file(s)` : "None"} />
-            <DetailItem label="Customer Brief Files" value={attachments.customerBriefFiles?.length ? `${attachments.customerBriefFiles.length} file(s)` : "None"} />
+          <DetailCard title="Attachments">
+            {files.length === 0 ? (
+              <DetailItem label="Files" value="No uploaded files" />
+            ) : (
+              files.map((file) => (
+                <AttachmentCard
+                  key={`${file.driveFileId}-${file.rowIndex}`}
+                  file={file}
+                />
+              ))
+            )}
           </DetailCard>
         </div>
       </div>

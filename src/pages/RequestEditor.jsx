@@ -5,30 +5,78 @@ import RequestWizard from "../components/RequestWizard";
 export default function RequestEditor() {
   const { requestId } = useParams();
   const [data, setData] = useState(null);
+  const [files, setFiles] = useState([]);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`/.netlify/functions/get-request?requestId=${requestId}`);
-        const json = await res.json();
+  const loadAll = async () => {
+    try {
+      const res = await fetch(`/.netlify/functions/get-request?requestId=${requestId}`);
+      const json = await res.json();
 
-        if (json.success) {
-          setData(json.payload);
-        } else {
-          setError(json.error || "Failed to load request");
-        }
-      } catch (e) {
-        console.error(e);
-        setError("Failed to load request");
+      if (json.success) {
+        setData(json.payload);
+      } else {
+        setError(json.error || "Failed to load request");
+        return;
       }
-    };
 
-    load();
+      const filesRes = await fetch(
+        `/.netlify/functions/list-request-files?requestId=${requestId}`
+      );
+      const filesJson = await filesRes.json();
+
+      if (filesJson.success) {
+        setFiles(filesJson.files || []);
+      }
+    } catch (e) {
+      console.error(e);
+      setError("Failed to load request");
+    }
+  };
+
+  useEffect(() => {
+    loadAll();
   }, [requestId]);
+
+  const handleDeleteFile = async (file) => {
+    const ok = window.confirm(`Delete file "${file.fileName}"?`);
+    if (!ok) return;
+
+    try {
+      const res = await fetch("/.netlify/functions/delete-request-file", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rowIndex: file.rowIndex,
+          driveFileId: file.driveFileId,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!json.success) {
+        alert(json.error || "Failed to delete file");
+        return;
+      }
+
+      await loadAll();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete file");
+    }
+  };
 
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!data) return <div className="p-6">Loading...</div>;
 
-  return <RequestWizard key={requestId} initialData={data} />;
+  return (
+    <RequestWizard
+      key={requestId}
+      initialData={data}
+      existingFiles={files}
+      onDeleteFile={handleDeleteFile}
+    />
+  );
 }

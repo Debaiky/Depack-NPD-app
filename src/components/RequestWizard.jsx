@@ -201,7 +201,53 @@ const initialForm = {
     customerBriefFiles: [],
   },
 };
+function ExistingFilesPanel({ files, onDeleteFile }) {
+  if (!files || files.length === 0) return null;
 
+  return (
+    <Card className="rounded-2xl shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-lg">Uploaded Attachments</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {files.map((file) => (
+          <div
+            key={`${file.driveFileId}-${file.rowIndex}`}
+            className="flex items-center justify-between gap-3 rounded-xl border px-3 py-3"
+          >
+            <div className="min-w-0">
+              <div className="font-medium truncate">{file.fileName}</div>
+              <div className="text-xs text-muted-foreground">
+                {file.category || "Attachment"}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <a
+                href={file.driveLink}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 underline text-sm"
+              >
+                View / Download
+              </a>
+
+              {onDeleteFile ? (
+                <button
+                  type="button"
+                  onClick={() => onDeleteFile(file)}
+                  className="text-red-600 underline text-sm"
+                >
+                  Delete
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
 function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
@@ -445,7 +491,11 @@ function SummaryPanel({ form, currentStep, missingRequired }) {
   );
 }
 
-export default function RequestWizard({ initialData = null }) {
+export default function RequestWizard({
+  initialData = null,
+  existingFiles = [],
+  onDeleteFile = null,
+}) {
   const [currentStep, setCurrentStep] = useState(0);
   const [saveMessage, setSaveMessage] = useState("Not saved yet");
   const [form, setForm] = useState(() => {
@@ -755,6 +805,7 @@ if (data.success) {
         </div>
 
         <WizardStepper currentStep={currentStep} status={status} />
+        <ExistingFilesPanel files={existingFiles} onDeleteFile={onDeleteFile} />
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
           <div className="xl:col-span-2 space-y-6">
