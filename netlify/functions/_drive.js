@@ -51,6 +51,28 @@ export async function getOrCreateFolder(name, parentId) {
   return createFolder(name, parentId);
 }
 
+export async function findFileByName(fileName, parentId) {
+  const safeName = String(fileName).replace(/'/g, "\\'");
+  const q = [
+    `name = '${safeName}'`,
+    `'${parentId}' in parents`,
+    "trashed = false",
+  ].join(" and ");
+
+  const url =
+    "https://www.googleapis.com/drive/v3/files" +
+    `?q=${encodeURIComponent(q)}` +
+    "&fields=files(id,name,webViewLink,mimeType)" +
+    "&includeItemsFromAllDrives=true" +
+    "&supportsAllDrives=true";
+
+  const data = await googleJsonFetch(url, {
+    scopes: DRIVE_SCOPE,
+  });
+
+  return data.files?.[0] || null;
+}
+
 export async function deleteDriveFile(fileId) {
   const accessToken = await getServiceAccountAccessToken(DRIVE_SCOPE);
 
@@ -73,6 +95,18 @@ export async function deleteDriveFile(fileId) {
 }
 
 export async function uploadFileToDrive({ folderId, fileName, mimeType, base64 }) {
+  const existing = await findFileByName(fileName, folderId);
+
+  if (existing) {
+    return {
+      id: existing.id,
+      name: existing.name,
+      webViewLink: existing.webViewLink || "",
+      mimeType: existing.mimeType || mimeType || "application/octet-stream",
+      alreadyExists: true,
+    };
+  }
+
   const accessToken = await getServiceAccountAccessToken(DRIVE_SCOPE);
   const metadata = {
     name: fileName,
@@ -101,7 +135,7 @@ export async function uploadFileToDrive({ folderId, fileName, mimeType, base64 }
   ]);
 
   const res = await fetch(
-    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink",
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,mimeType",
     {
       method: "POST",
       headers: {
@@ -125,5 +159,8 @@ export async function uploadFileToDrive({ folderId, fileName, mimeType, base64 }
     throw new Error(`Drive upload error ${res.status}: ${JSON.stringify(data)}`);
   }
 
-  return data;
+  return {
+    ...data,
+    alreadyExists: false,
+  };
 }

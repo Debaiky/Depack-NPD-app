@@ -695,7 +695,7 @@ export default function RequestWizard({
 
         const data = await response.json();
 
-        if (data.success) {
+               if (data.success && !data.alreadyExists) {
           await fetch("/.netlify/functions/save-file-record", {
             method: "POST",
             headers: {

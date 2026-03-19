@@ -32,6 +32,7 @@ export async function handler(event) {
       body: JSON.stringify({
         success: true,
         file,
+        alreadyExists: Boolean(file.alreadyExists),
       }),
     };
   } catch (error) {
