@@ -1,29 +1,16 @@
 /* eslint-env node */
-import { google } from "googleapis";
+import { googleJsonFetch } from "./_google-rest.js";
 
-function getAuth() {
-  return new google.auth.JWT({
-    email: process.env.NETLIFY_GOOGLE_CLIENT_EMAIL,
-    key: process.env.NETLIFY_GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-}
-
-export async function getSheetsClient() {
-  const auth = getAuth();
-  await auth.authorize();
-  return google.sheets({ version: "v4", auth });
-}
+const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
 
 export async function findRequestRowById(spreadsheetId, requestId) {
-  const sheets = await getSheetsClient();
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:O`;
 
-  const existing = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: "Requests_Master!A:O",
+  const data = await googleJsonFetch(url, {
+    scopes: SHEETS_SCOPE,
   });
 
-  const rows = existing.data.values || [];
+  const rows = data.values || [];
   const headers = rows[0] || [];
 
   for (let i = 1; i < rows.length; i++) {
@@ -40,13 +27,12 @@ export async function findRequestRowById(spreadsheetId, requestId) {
 }
 
 export async function updateDriveFolderId(spreadsheetId, rowIndex, folderId) {
-  const sheets = await getSheetsClient();
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!O${rowIndex}?valueInputOption=USER_ENTERED`;
 
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `Requests_Master!O${rowIndex}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: {
+  await googleJsonFetch(url, {
+    method: "PUT",
+    scopes: SHEETS_SCOPE,
+    body: {
       values: [[folderId]],
     },
   });

@@ -1,6 +1,5 @@
 /* eslint-env node */
-import { Readable } from "node:stream";
-import { getDriveClient } from "./_drive.js";
+import { uploadFileToDrive } from "./_drive.js";
 
 export async function handler(event) {
   try {
@@ -21,28 +20,18 @@ export async function handler(event) {
       };
     }
 
-    const drive = await getDriveClient();
-    const buffer = Buffer.from(base64, "base64");
-    const stream = Readable.from(buffer);
-
-    const result = await drive.files.create({
-      requestBody: {
-        name: fileName,
-        parents: [folderId],
-      },
-      media: {
-        mimeType,
-        body: stream,
-      },
-      fields: "id, name, webViewLink",
-      supportsAllDrives: true,
+    const file = await uploadFileToDrive({
+      folderId,
+      fileName,
+      mimeType,
+      base64,
     });
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        file: result.data,
+        file,
       }),
     };
   } catch (error) {
