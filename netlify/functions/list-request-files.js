@@ -28,7 +28,6 @@ export async function handler(event) {
     const fileRows = rows.slice(1);
 
     const files = fileRows
-      .filter((row) => row[0] === requestId && row[4])
       .map((row, index) => ({
         rowIndex: index + 2,
         requestId: row[0] || "",
@@ -38,7 +37,8 @@ export async function handler(event) {
         driveFileId: row[4] || "",
         driveLink: row[5] || "",
         uploadedAt: row[6] || "",
-      }));
+      }))
+      .filter((file) => file.requestId === requestId && file.driveFileId);
 
     return {
       statusCode: 200,
