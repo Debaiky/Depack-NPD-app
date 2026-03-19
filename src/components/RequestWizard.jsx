@@ -43,7 +43,7 @@ const initialForm = {
   metadata: {
     requestId: "",
     status: "Draft",
-    createdBy: "sales@depack.local",
+    createdBy: "",
     createdAt: "",
   },
   customer: {
@@ -420,6 +420,10 @@ function SummaryPanel({ form, currentStep, missingRequired }) {
             <div className="text-muted-foreground">Current Step</div>
             <div className="font-medium">{steps[currentStep].label}</div>
           </div>
+                    <div>
+            <div className="text-muted-foreground">Requested By</div>
+            <div className="font-medium">{form.metadata.createdBy || "—"}</div>
+          </div>
           <Separator />
           <div>
             <div className="text-muted-foreground">Customer</div>
@@ -655,6 +659,7 @@ if (data.success) {
 };
   const missingRequired = useMemo(() => {
     const req = [];
+    if (!form.metadata.createdBy) req.push("Requested By");
     if (!form.customer.customerName) req.push("Customer Name");
     if (!form.customer.contactPerson) req.push("Contact Person");
     if (!form.customer.countryMarket) req.push("Country / Market");
@@ -817,6 +822,20 @@ if (data.success) {
 
             {currentStep === 0 && (
               <div className="space-y-6">
+                                <SectionCard
+                  title="Request Owner"
+                  description="Enter the name of the person creating this request."
+                >
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Field label="Requested By">
+                      <Input
+                        value={form.metadata.createdBy}
+                        onChange={(e) => update("metadata.createdBy", e.target.value)}
+                        placeholder="Enter your full name"
+                      />
+                    </Field>
+                  </div>
+                </SectionCard>
                 <SectionCard title="Customer Details">
                   <div className="grid md:grid-cols-2 gap-4">
                     <Field label="Customer Name">
