@@ -1,12 +1,23 @@
 /* eslint-env node */
-import { google } from "googleapis";
+import { googleJsonFetch } from "./_google-rest.js";
 
-function getAuth() {
-  return new google.auth.JWT({
-    email: process.env.NETLIFY_GOOGLE_CLIENT_EMAIL,
-    key: process.env.NETLIFY_GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
+const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
+
+function normalizeHeader(header) {
+  return String(header || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function getCell(row, headerMap, ...possibleHeaders) {
+  for (const name of possibleHeaders) {
+    const idx = headerMap[normalizeHeader(name)];
+    if (idx !== undefined) {
+      return row[idx] || "";
+    }
+  }
+  return "";
 }
 
 export async function handler(event) {
@@ -23,22 +34,37 @@ export async function handler(event) {
       };
     }
 
-    const auth = getAuth();
-    await auth.authorize();
-
-    const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
 
-    const result = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: "Requests_Master!A:N",
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:O`;
+
+    const data = await googleJsonFetch(url, {
+      scopes: SHEETS_SCOPE,
     });
 
-    const rows = result.data.values || [];
-    const headers = rows[0] || [];
+    const rows = data.values || [];
+    if (rows.length === 0) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({
+          success: false,
+          error: "No data found in Requests_Master",
+        }),
+      };
+    }
+
+    const headers = rows[0];
     const dataRows = rows.slice(1);
 
-    const found = dataRows.find((row) => row[0] === requestId);
+    const headerMap = {};
+    headers.forEach((header, index) => {
+      headerMap[normalizeHeader(header)] = index;
+    });
+
+    const found = dataRows.find((row) => {
+      const rowRequestId = getCell(row, headerMap, "RequestID", "Request ID");
+      return rowRequestId === requestId;
+    });
 
     if (!found) {
       return {
@@ -50,14 +76,27 @@ export async function handler(event) {
       };
     }
 
-    const obj = {};
-    headers.forEach((header, index) => {
-      obj[header] = found[index] || "";
-    });
+    const request = {
+      RequestID: getCell(found, headerMap, "RequestID", "Request ID"),
+      CreatedDate: getCell(found, headerMap, "CreatedDate", "Created Date"),
+      CreatedBy: getCell(found, headerMap, "CreatedBy", "Created By"),
+      Status: getCell(found, headerMap, "Status") || "Draft",
+      CustomerName: getCell(found, headerMap, "CustomerName", "Customer Name"),
+      ContactPerson: getCell(found, headerMap, "ContactPerson", "Contact Person"),
+      CountryMarket: getCell(found, headerMap, "CountryMarket", "Country Market"),
+      DeliveryLocation: getCell(found, headerMap, "DeliveryLocation", "Delivery Location"),
+      ProjectName: getCell(found, headerMap, "ProjectName", "Project Name"),
+      ProjectType: getCell(found, headerMap, "ProjectType", "Project Type"),
+      ProductType: getCell(found, headerMap, "ProductType", "Product Type"),
+      ProductMaterial: getCell(found, headerMap, "ProductMaterial", "Product Material"),
+      DecorationType: getCell(found, headerMap, "DecorationType", "Decoration Type"),
+      PayloadJSON: getCell(found, headerMap, "PayloadJSON", "Payload JSON"),
+      DriveFolderID: getCell(found, headerMap, "DriveFolderID", "Drive Folder ID"),
+    };
 
     let payload = {};
     try {
-      payload = JSON.parse(obj.PayloadJSON || "{}");
+      payload = JSON.parse(request.PayloadJSON || "{}");
     } catch {
       payload = {};
     }
@@ -66,7 +105,7 @@ export async function handler(event) {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        request: obj,
+        request,
         payload,
       }),
     };
