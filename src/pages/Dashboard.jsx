@@ -360,19 +360,16 @@ export default function Dashboard() {
                         </td>
                         <td className="p-3">
                           <div className="flex gap-3">
-                            <Link
-                              to={`/request/${req.RequestID}`}
-                              className="text-blue-600 underline"
-                            >
-                              Open
-                            </Link>
-                            <Link
-                              to={`/edit/${req.RequestID}`}
-                              className="text-green-600 underline"
-                            >
-                              Edit
-                            </Link>
-                          </div>
+  <Link to={`/request/${req.RequestID}`} className="text-blue-600 underline">
+    Open
+  </Link>
+  <Link to={`/edit/${req.RequestID}`} className="text-green-600 underline">
+    Edit
+  </Link>
+  <Link to={`/engineering/${req.RequestID}`} className="text-purple-600 underline">
+    Engineering
+  </Link>
+</div>
                         </td>
                       </tr>
                     );
