@@ -577,8 +577,6 @@ const [eng, setEng] = useState({
     </div>
 
     <Section
-
-      <Section
         title="1. Material to Produce Sheet Roll"
         left={
           <div className="space-y-3">
