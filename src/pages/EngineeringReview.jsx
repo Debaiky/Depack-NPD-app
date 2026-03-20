@@ -241,11 +241,14 @@ function ToolListEditor({ title, tools, onChange }) {
 }
 
 export default function EngineeringReview() {
-  const { requestId } = useParams();
+ const { requestId } = useParams();
 
-  const [payload, setPayload] = useState(null);
+const [payload, setPayload] = useState(null);
+const [engineerName, setEngineerName] = useState("");
+const [engineeringStatus, setEngineeringStatus] = useState("Under Engineering Review");
+const [saveMessage, setSaveMessage] = useState("Not saved yet");
 
-  const [eng, setEng] = useState({
+const [eng, setEng] = useState({
     material: {
       structure: "AB",
       layerAPct: 50,
@@ -324,12 +327,23 @@ export default function EngineeringReview() {
     },
   });
 
-  useEffect(() => {
-    fetch(`/.netlify/functions/get-request?requestId=${requestId}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setPayload(data.payload || {});
-      });
+   useEffect(() => {
+    const loadAll = async () => {
+      const requestRes = await fetch(`/.netlify/functions/get-request?requestId=${requestId}`);
+      const requestJson = await requestRes.json();
+      setPayload(requestJson.payload || {});
+
+      const engRes = await fetch(`/.netlify/functions/get-engineering-data?requestId=${requestId}`);
+      const engJson = await engRes.json();
+
+      if (engJson.success && engJson.engineeringData) {
+        setEng(engJson.engineeringData || {});
+        setEngineerName(engJson.engineerName || "");
+        setEngineeringStatus(engJson.status || "Under Engineering Review");
+      }
+    };
+
+    loadAll();
   }, [requestId]);
 
   const update = (path, value) => {
@@ -492,15 +506,77 @@ export default function EngineeringReview() {
     (acc, item) => acc + Number(item.cost || 0) * Number(item.qty || 1),
     0
   );
+  const saveEngineering = async () => {
+    try {
+      const res = await fetch("/.netlify/functions/save-engineering-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId,
+          status: engineeringStatus,
+          engineerName,
+          engineeringData: eng,
+          note: "",
+        }),
+      });
 
+      const json = await res.json();
+
+      if (json.success) {
+        setSaveMessage(`Saved successfully at ${new Date().toLocaleTimeString()}`);
+      } else {
+        setSaveMessage("Save failed");
+      }
+    } catch (error) {
+      console.error(error);
+      setSaveMessage("Save failed");
+    }
+  };
   if (!payload) return <div className="p-6">Loading...</div>;
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <div className="bg-white rounded-2xl shadow p-5">
-        <div className="text-sm text-gray-500">Engineering Review</div>
-        <div className="text-2xl font-bold">{requestId}</div>
+  <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+    <div className="bg-white rounded-2xl shadow p-5">
+      <div className="text-sm text-gray-500">Engineering Review</div>
+      <div className="text-2xl font-bold">{requestId}</div>
+    </div>
+
+    <div className="bg-white rounded-2xl shadow p-5 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Input
+          label="Engineer Name"
+          value={engineerName}
+          onChange={setEngineerName}
+        />
+
+        <SelectField
+          label="Engineering Status"
+          value={engineeringStatus}
+          onChange={setEngineeringStatus}
+          options={[
+            "Under Engineering Review",
+            "Clarification Required",
+            "Engineering Completed",
+          ]}
+        />
+
+        <div className="flex items-end">
+          <button
+            type="button"
+            onClick={saveEngineering}
+            className="w-full rounded-lg bg-black text-white px-4 py-2"
+          >
+            Save Engineering Data
+          </button>
+        </div>
       </div>
+
+      <div className="text-sm text-green-700 font-medium">{saveMessage}</div>
+    </div>
+
+    <Section
 
       <Section
         title="1. Material to Produce Sheet Roll"
