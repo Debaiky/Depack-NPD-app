@@ -1,9 +1,8 @@
 const {
-  getAllScenarioRows,
-  appendScenarioRow,
-  updateScenarioRow,
+  getPricingScenariosByRequestId,
   makePricingId,
-} = require("./_pricing-scenarios");
+  upsertPricingScenario,
+} = require("./_sheet");
 
 const handler = async (event) => {
   try {
@@ -32,48 +31,28 @@ const handler = async (event) => {
       };
     }
 
-    const rows = await getAllScenarioRows();
+    const existingRows = await getPricingScenariosByRequestId(requestId);
+    const finalPricingId = pricingId || makePricingId(requestId, existingRows);
 
-    let finalPricingId = pricingId;
-    const now = new Date().toISOString();
-
-    const existing = pricingId
-      ? rows.find((r) => r.PricingID === pricingId && r.RequestID === requestId)
-      : null;
-
-    if (existing) {
-      await updateScenarioRow(existing._rowIndex, {
-        PricingID: existing.PricingID,
-        RequestID: requestId,
-        ScenarioName: scenarioName || existing.ScenarioName || "Scenario",
-        ScenarioNote: scenarioNote || "",
-        CreatedBy: createdBy || existing.CreatedBy || "",
-        CreatedDate: existing.CreatedDate || now,
-        ScenarioStatus: scenarioStatus || existing.ScenarioStatus || "Draft",
-        PricingJSON: JSON.stringify(pricingData || {}),
-        TotalCostPer1000: totalCostPer1000 || "",
-        SellingPricePer1000: sellingPricePer1000 || "",
-        MarginPct: marginPct || "",
-      });
-
-      finalPricingId = existing.PricingID;
-    } else {
-      finalPricingId = makePricingId(requestId, rows);
-
-      await appendScenarioRow({
-        PricingID: finalPricingId,
-        RequestID: requestId,
-        ScenarioName: scenarioName || "Scenario",
-        ScenarioNote: scenarioNote || "",
-        CreatedBy: createdBy || "",
-        CreatedDate: now,
-        ScenarioStatus: scenarioStatus || "Draft",
-        PricingJSON: JSON.stringify(pricingData || {}),
-        TotalCostPer1000: totalCostPer1000 || "",
-        SellingPricePer1000: sellingPricePer1000 || "",
-        MarginPct: marginPct || "",
-      });
+    let createdDate = new Date().toISOString();
+    const existing = existingRows.find((r) => r.PricingID === finalPricingId);
+    if (existing?.CreatedDate) {
+      createdDate = existing.CreatedDate;
     }
+
+    await upsertPricingScenario({
+      PricingID: finalPricingId,
+      RequestID: requestId,
+      ScenarioName: scenarioName || "Scenario",
+      ScenarioNote: scenarioNote || "",
+      CreatedBy: createdBy || "",
+      CreatedDate: createdDate,
+      ScenarioStatus: scenarioStatus || "Draft",
+      PricingJSON: JSON.stringify(pricingData || {}),
+      TotalCostPer1000: totalCostPer1000 || "",
+      SellingPricePer1000: sellingPricePer1000 || "",
+      MarginPct: marginPct || "",
+    });
 
     return {
       statusCode: 200,

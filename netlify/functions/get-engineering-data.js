@@ -1,9 +1,6 @@
-/* eslint-env node */
-import { googleJsonFetch } from "./_google-rest.js";
+const { getRowByRequestId } = require("./_sheet");
 
-const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
-
-export async function handler(event) {
+const handler = async (event) => {
   try {
     const requestId = event.queryStringParameters?.requestId || "";
 
@@ -17,56 +14,44 @@ export async function handler(event) {
       };
     }
 
-    const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
+    const row = await getRowByRequestId(requestId);
 
-    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Engineering_Data!A:F`;
+    if (!row) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({
+          success: false,
+          error: "Request not found",
+        }),
+      };
+    }
 
-    const data = await googleJsonFetch(readUrl, {
-      scopes: SHEETS_SCOPE,
-    });
-
-    const rows = data.values || [];
-
-    for (let i = 1; i < rows.length; i++) {
-      if ((rows[i][0] || "") === requestId) {
-        let engineeringJson = {};
-        try {
-          engineeringJson = JSON.parse(rows[i][4] || "{}");
-        } catch {
-          engineeringJson = {};
-        }
-
-        return {
-          statusCode: 200,
-          body: JSON.stringify({
-            success: true,
-            requestId: rows[i][0] || "",
-            status: rows[i][1] || "",
-            engineerName: rows[i][2] || "",
-            savedAt: rows[i][3] || "",
-            engineeringData: engineeringJson,
-            note: rows[i][5] || "",
-          }),
-        };
-      }
+    let engineeringData = {};
+    try {
+      engineeringData = row.EngineeringData ? JSON.parse(row.EngineeringData) : {};
+    } catch (e) {
+      engineeringData = {};
     }
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        engineeringData: null,
+        engineerName: row.EngineerName || "",
+        status: row.EngineeringStatus || "",
+        engineeringData,
       }),
     };
-  } catch (error) {
-    console.error("GET ENGINEERING DATA ERROR:", error);
-
+  } catch (err) {
+    console.error("GET ENGINEERING DATA ERROR:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        error: error.message,
+        error: err.message || "Failed to get engineering data",
       }),
     };
   }
-}
+};
+
+module.exports = { handler };
