@@ -19,6 +19,31 @@ function ScenarioStatusBadge({ status }) {
   );
 }
 
+function parsePricingJson(jsonString) {
+  try {
+    return jsonString ? JSON.parse(jsonString) : {};
+  } catch {
+    return {};
+  }
+}
+
+function extractScenarioMetrics(scenario) {
+  const pricingData = parsePricingJson(scenario.PricingJSON);
+
+  const sheetTotal = pricingData?.pricing?.sheetSummary?.totalPerTon;
+  const thermoTotal = pricingData?.thermo?.summary?.totalPer1000;
+  const payback = pricingData?.thermo?.summary?.paybackQtyPcs;
+  const selling = scenario.SellingPricePer1000 || pricingData?.thermo?.finance?.desiredPricePer1000 || "";
+
+  return {
+    sheetTotal: sheetTotal || scenario.TotalCostPer1000 || "",
+    thermoTotal: thermoTotal || "",
+    selling,
+    payback: payback || "",
+    note: scenario.ScenarioNote || "",
+  };
+}
+
 export default function PricingWorkspace() {
   const { requestId } = useParams();
   const navigate = useNavigate();
@@ -83,6 +108,13 @@ export default function PricingWorkspace() {
     };
   }, [requestData]);
 
+  const scenarioRows = useMemo(() => {
+    return scenarios.map((s) => ({
+      ...s,
+      metrics: extractScenarioMetrics(s),
+    }));
+  }, [scenarios]);
+
   const createScenario = async () => {
     try {
       const author = createdBy.trim();
@@ -114,6 +146,45 @@ export default function PricingWorkspace() {
     } catch (err) {
       console.error(err);
       alert("Failed to create scenario");
+    }
+  };
+
+  const duplicateScenario = async (scenario) => {
+    try {
+      const author = createdBy.trim();
+      localStorage.setItem("pricingCreatedBy", author);
+
+      const pricingData = parsePricingJson(scenario.PricingJSON);
+
+      const res = await fetch("/.netlify/functions/save-pricing-scenario", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId,
+          scenarioName: `${scenario.ScenarioName || "Scenario"} Copy`,
+          scenarioNote: `Duplicated from ${scenario.PricingID}`,
+          createdBy: author,
+          scenarioStatus: "Draft",
+          pricingData,
+          totalCostPer1000: scenario.TotalCostPer1000 || "",
+          sellingPricePer1000: scenario.SellingPricePer1000 || "",
+          marginPct: scenario.MarginPct || "",
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!json.success) {
+        alert(json.error || "Failed to duplicate scenario");
+        return;
+      }
+
+      navigate(`/pricing/${requestId}/scenario/${json.pricingId}`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to duplicate scenario");
     }
   };
 
@@ -224,21 +295,19 @@ export default function PricingWorkspace() {
                 <th className="p-3">Created Date</th>
                 <th className="p-3">Created By</th>
                 <th className="p-3">Status</th>
-                <th className="p-3">Total / 1000</th>
-                <th className="p-3">Selling / 1000</th>
                 <th className="p-3">Action</th>
               </tr>
             </thead>
 
             <tbody>
-              {scenarios.length === 0 ? (
+              {scenarioRows.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-6 text-center text-gray-500">
+                  <td colSpan="6" className="p-6 text-center text-gray-500">
                     No pricing scenarios saved yet.
                   </td>
                 </tr>
               ) : (
-                scenarios.map((s) => (
+                scenarioRows.map((s) => (
                   <tr key={s.PricingID} className="border-t">
                     <td className="p-3 font-medium">{s.PricingID}</td>
                     <td className="p-3">{s.ScenarioName || "—"}</td>
@@ -247,16 +316,66 @@ export default function PricingWorkspace() {
                     <td className="p-3">
                       <ScenarioStatusBadge status={s.ScenarioStatus} />
                     </td>
-                    <td className="p-3">{s.TotalCostPer1000 || "—"}</td>
-                    <td className="p-3">{s.SellingPricePer1000 || "—"}</td>
                     <td className="p-3">
-                      <Link
-                        to={`/pricing/${requestId}/scenario/${s.PricingID}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        Open Scenario
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          to={`/pricing/${requestId}/scenario/${s.PricingID}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          Open
+                        </Link>
+                        <button
+                          onClick={() => duplicateScenario(s)}
+                          className="text-gray-700 hover:underline"
+                        >
+                          Duplicate
+                        </button>
+                      </div>
                     </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
+          <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold">Scenario Comparison</h2>
+          </div>
+
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100 text-left">
+              <tr>
+                <th className="p-3">Scenario</th>
+                <th className="p-3">Status</th>
+                <th className="p-3">Sheet Total / Ton</th>
+                <th className="p-3">Thermo Total / 1000</th>
+                <th className="p-3">Selling / 1000</th>
+                <th className="p-3">Payback Qty</th>
+                <th className="p-3">Note</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {scenarioRows.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-6 text-center text-gray-500">
+                    No scenario data available for comparison.
+                  </td>
+                </tr>
+              ) : (
+                scenarioRows.map((s) => (
+                  <tr key={`cmp-${s.PricingID}`} className="border-t">
+                    <td className="p-3 font-medium">{s.ScenarioName || s.PricingID}</td>
+                    <td className="p-3">
+                      <ScenarioStatusBadge status={s.ScenarioStatus} />
+                    </td>
+                    <td className="p-3">{s.metrics.sheetTotal || "—"}</td>
+                    <td className="p-3">{s.metrics.thermoTotal || "—"}</td>
+                    <td className="p-3">{s.metrics.selling || "—"}</td>
+                    <td className="p-3">{s.metrics.payback || "—"}</td>
+                    <td className="p-3">{s.metrics.note || "—"}</td>
                   </tr>
                 ))
               )}
