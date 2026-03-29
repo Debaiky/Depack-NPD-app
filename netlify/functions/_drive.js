@@ -1,9 +1,12 @@
 /* eslint-env node */
-import { googleJsonFetch, getServiceAccountAccessToken } from "./_google-rest.js";
+const {
+  googleJsonFetch,
+  getServiceAccountAccessToken,
+} = require("./_google-rest");
 
 const DRIVE_SCOPE = ["https://www.googleapis.com/auth/drive"];
 
-export async function findFolderByName(name, parentId) {
+async function findFolderByName(name, parentId) {
   const safeName = String(name).replace(/'/g, "\\'");
   const q = [
     "mimeType = 'application/vnd.google-apps.folder'",
@@ -26,7 +29,7 @@ export async function findFolderByName(name, parentId) {
   return data.files?.[0] || null;
 }
 
-export async function createFolder(name, parentId) {
+async function createFolder(name, parentId) {
   const url = "https://www.googleapis.com/drive/v3/files?supportsAllDrives=true";
 
   const data = await googleJsonFetch(url, {
@@ -45,13 +48,13 @@ export async function createFolder(name, parentId) {
   };
 }
 
-export async function getOrCreateFolder(name, parentId) {
+async function getOrCreateFolder(name, parentId) {
   const existing = await findFolderByName(name, parentId);
   if (existing) return existing;
-  return createFolder(name, parentId);
+  return await createFolder(name, parentId);
 }
 
-export async function findFileByName(fileName, parentId) {
+async function findFileByName(fileName, parentId) {
   const safeName = String(fileName).replace(/'/g, "\\'");
   const q = [
     `name = '${safeName}'`,
@@ -73,7 +76,7 @@ export async function findFileByName(fileName, parentId) {
   return data.files?.[0] || null;
 }
 
-export async function deleteDriveFile(fileId) {
+async function deleteDriveFile(fileId) {
   const accessToken = await getServiceAccountAccessToken(DRIVE_SCOPE);
 
   const res = await fetch(
@@ -94,7 +97,7 @@ export async function deleteDriveFile(fileId) {
   return true;
 }
 
-export async function uploadFileToDrive({ folderId, fileName, mimeType, base64 }) {
+async function uploadFileToDrive({ folderId, fileName, mimeType, base64 }) {
   const existing = await findFileByName(fileName, folderId);
 
   if (existing) {
@@ -164,3 +167,12 @@ export async function uploadFileToDrive({ folderId, fileName, mimeType, base64 }
     alreadyExists: false,
   };
 }
+
+module.exports = {
+  findFolderByName,
+  createFolder,
+  getOrCreateFolder,
+  findFileByName,
+  deleteDriveFile,
+  uploadFileToDrive,
+};
