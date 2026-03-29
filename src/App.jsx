@@ -1,12 +1,21 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import EngineeringDashboard from "./pages/EngineeringDashboard";
 import PricingDashboard from "./pages/PricingDashboard";
+import PricingWorkspace from "./pages/PricingWorkspace";
 import EngineeringReview from "./pages/EngineeringReview";
 import PricingPage from "./pages/PricingPage";
+import ThermoPricingPage from "./pages/ThermoPricingPage";
 import RequestDetail from "./pages/RequestDetail";
 import RequestEditor from "./pages/RequestEditor";
+
+function ThermoPricingPageWrapper() {
+  const location = useLocation();
+  const bundle = location.state?.bundle || {};
+
+  return <ThermoPricingPage sheetBundle={bundle} />;
+}
 
 export default function App() {
   return (
@@ -17,7 +26,12 @@ export default function App() {
         <Route path="/engineering-dashboard" element={<EngineeringDashboard />} />
         <Route path="/pricing-dashboard" element={<PricingDashboard />} />
         <Route path="/engineering/:requestId" element={<EngineeringReview />} />
-        <Route path="/pricing/:requestId" element={<PricingPage />} />
+        <Route path="/pricing/:requestId" element={<PricingWorkspace />} />
+        <Route path="/pricing/:requestId/scenario/:pricingId" element={<PricingPage />} />
+        <Route
+          path="/pricing/:requestId/scenario/:pricingId/thermo"
+          element={<ThermoPricingPageWrapper />}
+        />
         <Route path="/request/:requestId" element={<RequestDetail />} />
         <Route path="/edit/:requestId" element={<RequestEditor />} />
         <Route path="/new" element={<RequestEditor isNew={true} />} />
