@@ -1,9 +1,20 @@
 /* eslint-env node */
-import { googleJsonFetch } from "./_google-rest.js";
+const { googleJsonFetch } = require("./_google-rest");
 
 const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
 
-export async function handler(event) {
+const trimPayloadForSheet = (body) => {
+  const clean = structuredClone(body || {});
+
+  if (clean.product) {
+    clean.product.productThumbnailBase64 = "";
+    clean.product.productThumbnailPreview = "";
+  }
+
+  return clean;
+};
+
+const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
     const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
@@ -13,6 +24,9 @@ export async function handler(event) {
     const createdBy = body?.metadata?.createdBy || "";
     const status = body?.metadata?.status || "Draft";
     const driveFolderId = body?.metadata?.driveFolderId || "";
+
+    const payloadForSheet = trimPayloadForSheet(body);
+    const payloadJson = JSON.stringify(payloadForSheet);
 
     const row = [
       requestId,
@@ -28,7 +42,7 @@ export async function handler(event) {
       body?.product?.productType || "",
       body?.product?.productMaterial || "",
       body?.decoration?.decorationType || "",
-      JSON.stringify(body),
+      payloadJson,
       driveFolderId,
     ];
 
@@ -86,4 +100,6 @@ export async function handler(event) {
       }),
     };
   }
-}
+};
+
+module.exports = { handler };
