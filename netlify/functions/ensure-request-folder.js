@@ -1,8 +1,8 @@
 /* eslint-env node */
-import { getOrCreateFolder } from "./_drive.js";
-import { findRequestRowById, updateDriveFolderId } from "./_sheet.js";
+const { getOrCreateFolder } = require("./_drive");
+const { getRequestRowById, updateRequestRow } = require("./_sheet");
 
-export async function handler(event) {
+const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
     const requestId = body?.requestId;
@@ -17,12 +17,31 @@ export async function handler(event) {
       };
     }
 
-    const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
     const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
 
-    const existingRequest = await findRequestRowById(spreadsheetId, requestId);
+    if (!rootFolderId) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          success: false,
+          error: "Missing GOOGLE_DRIVE_ROOT_FOLDER_ID",
+        }),
+      };
+    }
 
-    let requestFolderId = existingRequest?.row?.[14] || "";
+    const existingRequest = await getRequestRowById(requestId);
+
+    if (!existingRequest) {
+      return {
+        statusCode: 404,
+        body: JSON.stringify({
+          success: false,
+          error: "Request not found",
+        }),
+      };
+    }
+
+    let requestFolderId = existingRequest.DriveFolderID || "";
     let requestFolder;
 
     if (requestFolderId) {
@@ -33,9 +52,9 @@ export async function handler(event) {
     } else {
       requestFolder = await getOrCreateFolder(requestId, rootFolderId);
 
-      if (existingRequest?.rowIndex) {
-        await updateDriveFolderId(spreadsheetId, existingRequest.rowIndex, requestFolder.id);
-      }
+      await updateRequestRow(requestId, {
+        DriveFolderID: requestFolder.id,
+      });
     }
 
     const samplePhotos = await getOrCreateFolder("01 Sample Photos", requestFolder.id);
@@ -65,8 +84,10 @@ export async function handler(event) {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        error: error.message,
+        error: error.message || "Folder creation failed",
       }),
     };
   }
-}
+};
+
+module.exports = { handler };
