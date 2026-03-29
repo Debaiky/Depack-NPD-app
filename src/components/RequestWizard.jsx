@@ -2798,9 +2798,44 @@ export default function RequestWizard({
                     Next <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button disabled={missingRequired.length > 0} className="rounded-2xl">
-                    Submit to Engineering
-                  </Button>
+                 <Button
+  disabled={missingRequired.length > 0}
+  onClick={async () => {
+    try {
+      const updatedForm = {
+        ...form,
+        metadata: {
+          ...form.metadata,
+          status: "Project Completed",
+        },
+      };
+
+      const response = await fetch("/.netlify/functions/save-draft", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedForm),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("✅ Sent to Engineering");
+
+        // redirect to engineering dashboard
+        window.location.href = "/engineering";
+      } else {
+        alert("❌ Failed to send");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error sending");
+    }
+  }}
+>
+  Submit to Engineering
+</Button>
                 )}
               </div>
             </div>
