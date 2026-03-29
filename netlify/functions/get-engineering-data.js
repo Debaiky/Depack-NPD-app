@@ -1,4 +1,4 @@
-const { getRowByRequestId } = require("./_sheet");
+const { getEngineeringRowByRequestId } = require("./_sheet");
 
 const handler = async (event) => {
   try {
@@ -14,21 +14,25 @@ const handler = async (event) => {
       };
     }
 
-    const row = await getRowByRequestId(requestId);
+    const row = await getEngineeringRowByRequestId(requestId);
 
     if (!row) {
       return {
-        statusCode: 404,
+        statusCode: 200,
         body: JSON.stringify({
-          success: false,
-          error: "Request not found",
+          success: true,
+          engineeringData: {},
+          status: "",
+          engineerName: "",
         }),
       };
     }
 
     let engineeringData = {};
     try {
-      engineeringData = row.EngineeringData ? JSON.parse(row.EngineeringData) : {};
+      engineeringData = row.EngineeringJSON
+        ? JSON.parse(row.EngineeringJSON)
+        : {};
     } catch (e) {
       engineeringData = {};
     }
@@ -37,9 +41,9 @@ const handler = async (event) => {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        engineerName: row.EngineerName || "",
-        status: row.EngineeringStatus || "",
         engineeringData,
+        status: row.Status || "",
+        engineerName: row.EngineerName || "",
       }),
     };
   } catch (err) {
@@ -48,7 +52,7 @@ const handler = async (event) => {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        error: err.message || "Failed to get engineering data",
+        error: err.message,
       }),
     };
   }
