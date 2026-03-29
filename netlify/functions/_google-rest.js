@@ -1,9 +1,7 @@
 /* eslint-env node */
-import crypto from "node:crypto";
+const crypto = require("crypto");
 
-const TOKEN_URL = "https://oauth2.googleapis.com/token";
-
-function base64Url(input) {
+function base64UrlEncode(input) {
   return Buffer.from(input)
     .toString("base64")
     .replace(/=/g, "")
@@ -11,7 +9,20 @@ function base64Url(input) {
     .replace(/\//g, "_");
 }
 
-function signJwt({ clientEmail, privateKey, scopes }) {
+async function getServiceAccountAccessToken(scopes = []) {
+  const clientEmail =
+    process.env.NETLIFY_GOOGLE_CLIENT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
+
+  const privateKey = (
+    process.env.NETLIFY_GOOGLE_PRIVATE_KEY ||
+    process.env.GOOGLE_PRIVATE_KEY ||
+    ""
+  ).replace(/\\n/g, "\n");
+
+  if (!clientEmail || !privateKey) {
+    throw new Error("Missing Google service account credentials");
+  }
+
   const now = Math.floor(Date.now() / 1000);
 
   const header = {
@@ -19,77 +30,82 @@ function signJwt({ clientEmail, privateKey, scopes }) {
     typ: "JWT",
   };
 
-  const payload = {
+  const claimSet = {
     iss: clientEmail,
-    scope: scopes.join(" "),
-    aud: TOKEN_URL,
-    iat: now,
+    scope: Array.isArray(scopes) ? scopes.join(" ") : String(scopes || ""),
+    aud: "https://oauth2.googleapis.com/token",
     exp: now + 3600,
+    iat: now,
   };
 
-  const unsigned = `${base64Url(JSON.stringify(header))}.${base64Url(
-    JSON.stringify(payload)
-  )}`;
+  const unsignedToken =
+    `${base64UrlEncode(JSON.stringify(header))}.` +
+    `${base64UrlEncode(JSON.stringify(claimSet))}`;
 
   const signer = crypto.createSign("RSA-SHA256");
-  signer.update(unsigned);
+  signer.update(unsignedToken);
   signer.end();
 
-  const signature = signer
-    .sign(privateKey, "base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+  const signature = signer.sign(privateKey);
+  const jwt = `${unsignedToken}.${base64UrlEncode(signature)}`;
 
-  return `${unsigned}.${signature}`;
-}
-
-export async function getServiceAccountAccessToken(scopes) {
-  const clientEmail = process.env.NETLIFY_GOOGLE_CLIENT_EMAIL;
-  const privateKey = process.env.NETLIFY_GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
-  if (!clientEmail || !privateKey) {
-    throw new Error("Missing Google service account environment variables");
-  }
-
-  const assertion = signJwt({
-    clientEmail,
-    privateKey,
-    scopes,
-  });
-
-  const body = new URLSearchParams({
-    grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-    assertion,
-  });
-
-  const res = await fetch(TOKEN_URL, {
+  const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body,
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
   });
 
-  const data = await res.json();
+  const text = await res.text();
+  let data = {};
+
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
+  }
 
   if (!res.ok) {
-    throw new Error(`Token request failed: ${JSON.stringify(data)}`);
+    throw new Error(`Google token error ${res.status}: ${JSON.stringify(data)}`);
+  }
+
+  if (!data.access_token) {
+    throw new Error("No access_token returned from Google");
   }
 
   return data.access_token;
 }
 
-export async function googleJsonFetch(url, { method = "GET", body, scopes }) {
+async function googleJsonFetch(url, options = {}) {
+  const {
+    method = "GET",
+    body,
+    scopes = [],
+    headers = {},
+  } = options;
+
   const accessToken = await getServiceAccountAccessToken(scopes);
+
+  const finalHeaders = {
+    Authorization: `Bearer ${accessToken}`,
+    ...headers,
+  };
+
+  let finalBody;
+
+  if (body !== undefined && body !== null) {
+    finalHeaders["Content-Type"] = "application/json";
+    finalBody = JSON.stringify(body);
+  }
 
   const res = await fetch(url, {
     method,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: finalHeaders,
+    body: finalBody,
   });
 
   const text = await res.text();
@@ -107,3 +123,8 @@ export async function googleJsonFetch(url, { method = "GET", body, scopes }) {
 
   return data;
 }
+
+module.exports = {
+  googleJsonFetch,
+  getServiceAccountAccessToken,
+};
