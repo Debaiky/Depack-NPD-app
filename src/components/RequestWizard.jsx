@@ -234,7 +234,6 @@ const initialForm = {
   loadingRestrictions: "",
   requiredDeliveryDocs: "",
   logisticsComments: "",
-
   desiredQtyPerTruck: "",
   desiredQtyPerTruckUnit: "",
   truckSize: "",
@@ -2019,99 +2018,12 @@ const estimatedSheetRollPalletLoadKg =
             )}
 
             {currentStep === 3 && form.product.productType === "Sheet Roll" && (
-              <div className="space-y-6">
-                <SectionCard title="Sheet Roll Pallet Packaging">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Rolls per Pallet">
-                      <Input
-                        value={form.packaging.pallet.rollsPerPallet}
-                        onChange={(e) =>
-                          update("packaging.pallet.rollsPerPallet", e.target.value)
-                        }
-                      />
-                    </Field>
-
-                    <Field label="Pallet Type">
-                      <Input
-                        value={form.packaging.pallet.palletType}
-                        onChange={(e) => update("packaging.pallet.palletType", e.target.value)}
-                      />
-                    </Field>
-
-                    <Field label="Number of Separators">
-                      <Input
-                        value={form.packaging.pallet.separatorCount}
-                        onChange={(e) =>
-                          update("packaging.pallet.separatorCount", e.target.value)
-                        }
-                      />
-                    </Field>
-
-                    <Field label="Strap Length (m)">
-                      <Input
-                        value={form.packaging.pallet.strapLengthM}
-                        onChange={(e) =>
-                          update("packaging.pallet.strapLengthM", e.target.value)
-                        }
-                      />
-                    </Field>
-
-                    <Field label="Labels per Roll">
-                      <Input
-                        value={form.packaging.pallet.labelsPerRoll}
-                        onChange={(e) =>
-                          update("packaging.pallet.labelsPerRoll", e.target.value)
-                        }
-                      />
-                    </Field>
-
-                    <Field label="Foam Wrapping (m)">
-                      <Input
-                        value={form.packaging.pallet.foamWrappingM}
-                        onChange={(e) =>
-                          update("packaging.pallet.foamWrappingM", e.target.value)
-                        }
-                      />
-                    </Field>
-
-                    <Field label="Stretch Wrap (kg per Pallet)">
-                      <Input
-                        value={form.packaging.pallet.stretchWrapKgPerPallet}
-                        onChange={(e) =>
-                          update(
-                            "packaging.pallet.stretchWrapKgPerPallet",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </Field>
-                  </div>
-
-                  <Field label="Pallet Weight Check">
-                    <div
-                      className={`rounded-xl border px-3 py-3 text-sm ${
-                        estimatedSheetRollPalletLoadKg > 1000
-                          ? "bg-red-50 border-red-200 text-red-700"
-                          : "bg-green-50 border-green-200 text-green-700"
-                      }`}
-                    >
-                      Estimated pallet load = {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
-                      {estimatedSheetRollPalletLoadKg > 1000
-                        ? " — Above 1 ton"
-                        : " — Within 1 ton"}
-                    </div>
-                  </Field>
-
-                  <Field label="Special Instructions">
-                    <Textarea
-                      value={form.packaging.pallet.palletNotes}
-                      onChange={(e) => update("packaging.pallet.palletNotes", e.target.value)}
-                      rows={4}
-                    />
-                  </Field>
-                </SectionCard>
-              </div>
-            )}
+  <div className="space-y-6">
+    <SectionCard title="Sheet Roll Pallet Packaging">
+      ...
+    </SectionCard>
+  </div>
+)}
 
             {currentStep === 3 && form.product.productType !== "Sheet Roll" && (
               <div className="space-y-6">
@@ -2157,7 +2069,7 @@ const estimatedSheetRollPalletLoadKg =
                         }
                       />
                     </Field>
-                    <Field label="Bag / Sleeve Dimensions (L x W x H)">
+                  <Field label="Bag / Sleeve Dimensions (mm)">
                       <Input
                         value={form.packaging.primary.bagSleeveDimensions}
                         onChange={(e) =>
@@ -2237,7 +2149,7 @@ const estimatedSheetRollPalletLoadKg =
                         </SelectContent>
                       </Select>
                     </Field>
-                    <Field label="Carton Internal Dimensions">
+                    <Field label="Carton Internal Dimensions (mm)">
                       <Input
                         value={form.packaging.secondary.cartonInternalDimensions}
                         onChange={(e) =>
@@ -2248,7 +2160,7 @@ const estimatedSheetRollPalletLoadKg =
                         }
                       />
                     </Field>
-                    <Field label="Carton External Dimensions">
+                    <Field label="Carton External Dimensions (mm)">
                       <Input
                         value={form.packaging.secondary.cartonExternalDimensions}
                         onChange={(e) =>
@@ -2305,7 +2217,18 @@ const estimatedSheetRollPalletLoadKg =
 
                   <TabsContent value="label">
                     <SectionCard title="Label Instructions">
-                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 rounded-xl border p-3">
+  <Checkbox
+    checked={form.decoration.label.useStandardLabelSpecs}
+    onCheckedChange={(checked) =>
+      update("decoration.label.useStandardLabelSpecs", Boolean(checked))
+    }
+  />
+  <Label>Use standard labels specs</Label>
+</div>
+                      {!form.decoration.label.useStandardLabelSpecs && (
+  <>
+    <div className="grid md:grid-cols-2 gap-4">
                         <Field label="Carton Label Required?">
                           <YesNoSelect
                             value={form.packaging.labelInstructions.cartonLabelRequired}
@@ -2317,7 +2240,7 @@ const estimatedSheetRollPalletLoadKg =
                             }
                           />
                         </Field>
-                        <Field label="Label Dimensions">
+                        <Field label="Label Dimensions (mm)">
                           <Input
                             value={form.packaging.labelInstructions.cartonLabelDimensions}
                             onChange={(e) =>
@@ -2421,12 +2344,25 @@ const estimatedSheetRollPalletLoadKg =
                           handleAttachmentAdd("cartonLabelArtworkFiles", files)
                         }
                       />
+                          </>
+)}
                     </SectionCard>
                   </TabsContent>
 
                   <TabsContent value="pallet">
                     <SectionCard title="Pallet Instructions">
-                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3 rounded-xl border p-3">
+  <Checkbox
+    checked={form.packaging.pallet.noPalletNeeded}
+    onCheckedChange={(checked) =>
+      update("packaging.pallet.noPalletNeeded", Boolean(checked))
+    }
+  />
+  <Label>No pallet needed</Label>
+</div>
+                      {!form.packaging.pallet.noPalletNeeded && (
+  <>
+    <div className="grid md:grid-cols-2 gap-4">
                         <Field label="Pallet Type">
                           <Input
                             value={form.packaging.pallet.palletType}
@@ -2435,7 +2371,7 @@ const estimatedSheetRollPalletLoadKg =
                             }
                           />
                         </Field>
-                        <Field label="Pallet Dimensions">
+                        <Field label="Pallet Dimensions (mm)">
                           <Input
                             value={form.packaging.pallet.palletDimensions}
                             onChange={(e) =>
@@ -2510,6 +2446,8 @@ const estimatedSheetRollPalletLoadKg =
                           rows={4}
                         />
                       </Field>
+                          </>
+)}
                     </SectionCard>
                   </TabsContent>
                 </Tabs>
@@ -2517,140 +2455,171 @@ const estimatedSheetRollPalletLoadKg =
             )}
 
             {currentStep === 4 && form.product.productType === "Sheet Roll" && (
-              <SectionCard title="Sheet Roll Delivery Instructions">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <Field label="Delivery Location">
-                    <Input
-                      value={form.delivery.deliveryLocationConfirm}
-                      onChange={(e) =>
-                        update("delivery.deliveryLocationConfirm", e.target.value)
-                      }
-                      placeholder={form.customer.deliveryLocation || "Enter delivery location"}
-                    />
-                  </Field>
+  <SectionCard title="Sheet Roll Delivery Instructions">
+    <div className="grid md:grid-cols-2 gap-4">
+      <Field label="Delivery Location">
+        <Input
+          value={form.delivery.deliveryLocationConfirm}
+          onChange={(e) =>
+            update("delivery.deliveryLocationConfirm", e.target.value)
+          }
+          placeholder={form.customer.deliveryLocation || "Enter delivery location"}
+        />
+      </Field>
 
-                  <Field label="Desired Qty per Truck">
-                    <Input
-                      value={form.delivery.desiredQtyPerTruck}
-                      onChange={(e) =>
-                        update("delivery.desiredQtyPerTruck", e.target.value)
-                      }
-                    />
-                  </Field>
+      <Field label="Required Qty per Truck">
+        <Input
+          value={form.delivery.desiredQtyPerTruck}
+          onChange={(e) => update("delivery.desiredQtyPerTruck", e.target.value)}
+        />
+      </Field>
 
-                  <Field label="Desired Qty Unit">
-                    <Select
-                      value={form.delivery.desiredQtyPerTruckUnit}
-                      onValueChange={(v) =>
-                        update("delivery.desiredQtyPerTruckUnit", v)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Tons">Tons</SelectItem>
-                        <SelectItem value="Kg">Kg</SelectItem>
-                        <SelectItem value="Pcs">Pcs</SelectItem>
-                        <SelectItem value="Cartons">Cartons</SelectItem>
-                        <SelectItem value="Rolls">Rolls</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Field>
+      <Field label="Required Qty Unit">
+        <Select
+          value={form.delivery.desiredQtyPerTruckUnit}
+          onValueChange={(v) => update("delivery.desiredQtyPerTruckUnit", v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select unit" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Tons">Tons</SelectItem>
+            <SelectItem value="Kg">Kg</SelectItem>
+            <SelectItem value="Pcs">Pcs</SelectItem>
+            <SelectItem value="Cartons">Cartons</SelectItem>
+            <SelectItem value="Rolls">Rolls</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
 
-                  <Field label="Delivery Term">
-                    <Input
-                      value={form.delivery.deliveryTerm}
-                      onChange={(e) => update("delivery.deliveryTerm", e.target.value)}
-                      placeholder="EXW / FCA / Delivered / Other"
-                    />
-                  </Field>
-                </div>
+      <Field label="Truck Size">
+        <Input
+          value={form.delivery.truckSize}
+          onChange={(e) => update("delivery.truckSize", e.target.value)}
+        />
+      </Field>
 
-                <Field label="Additional Logistics Comments">
-                  <Textarea
-                    value={form.delivery.logisticsComments}
-                    onChange={(e) => update("delivery.logisticsComments", e.target.value)}
-                    rows={4}
-                  />
-                </Field>
-              </SectionCard>
-            )}
+      <Field label="Delivery Term">
+        <Input
+          value={form.delivery.deliveryTerm}
+          onChange={(e) => update("delivery.deliveryTerm", e.target.value)}
+          placeholder="EXW / FCA / Delivered / Other"
+        />
+      </Field>
+    </div>
+
+    <Field label="Additional Logistics Comments">
+      <Textarea
+        value={form.delivery.logisticsComments}
+        onChange={(e) => update("delivery.logisticsComments", e.target.value)}
+        rows={4}
+      />
+    </Field>
+  </SectionCard>
+)}
 
             {currentStep === 4 && form.product.productType !== "Sheet Roll" && (
-              <SectionCard title="Delivery Instructions">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <Field label="Delivery Location">
-                    <Input
-                      value={form.delivery.deliveryLocationConfirm}
-                      onChange={(e) =>
-                        update("delivery.deliveryLocationConfirm", e.target.value)
-                      }
-                      placeholder={form.customer.deliveryLocation || "Enter delivery location"}
-                    />
-                  </Field>
-                  <Field label="Delivery Term">
-                    <Input
-                      value={form.delivery.deliveryTerm}
-                      onChange={(e) => update("delivery.deliveryTerm", e.target.value)}
-                      placeholder="EXW / FCA / Delivered / Other"
-                    />
-                  </Field>
-                  <Field label="Delivery Frequency">
-                    <Input
-                      value={form.delivery.deliveryFrequency}
-                      onChange={(e) =>
-                        update("delivery.deliveryFrequency", e.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="Estimated First Delivery Date">
-                    <Input
-                      type="date"
-                      value={form.delivery.firstDeliveryDate}
-                      onChange={(e) =>
-                        update("delivery.firstDeliveryDate", e.target.value)
-                      }
-                    />
-                  </Field>
-                </div>
+  <SectionCard title="Thermoformed Product Delivery Instructions">
+    <div className="grid md:grid-cols-2 gap-4">
+      <Field label="Delivery Location">
+        <Input
+          value={form.delivery.deliveryLocationConfirm}
+          onChange={(e) =>
+            update("delivery.deliveryLocationConfirm", e.target.value)
+          }
+          placeholder={form.customer.deliveryLocation || "Enter delivery location"}
+        />
+      </Field>
 
-                <Field label="Customer Receiving Notes">
-                  <Textarea
-                    value={form.delivery.receivingNotes}
-                    onChange={(e) => update("delivery.receivingNotes", e.target.value)}
-                    rows={4}
-                  />
-                </Field>
-                <Field label="Loading Restrictions">
-                  <Textarea
-                    value={form.delivery.loadingRestrictions}
-                    onChange={(e) =>
-                      update("delivery.loadingRestrictions", e.target.value)
-                    }
-                    rows={4}
-                  />
-                </Field>
-                <Field label="Required Delivery Documents">
-                  <Textarea
-                    value={form.delivery.requiredDeliveryDocs}
-                    onChange={(e) =>
-                      update("delivery.requiredDeliveryDocs", e.target.value)
-                    }
-                    rows={4}
-                  />
-                </Field>
-                <Field label="Additional Logistics Comments">
-                  <Textarea
-                    value={form.delivery.logisticsComments}
-                    onChange={(e) =>
-                      update("delivery.logisticsComments", e.target.value)
-                    }
-                    rows={4}
-                  />
-                </Field>
-              </SectionCard>
-            )}
+      <Field label="Delivery Term">
+        <Input
+          value={form.delivery.deliveryTerm}
+          onChange={(e) => update("delivery.deliveryTerm", e.target.value)}
+          placeholder="EXW / FCA / Delivered / Other"
+        />
+      </Field>
+
+      <Field label="Delivery Frequency">
+        <Input
+          value={form.delivery.deliveryFrequency}
+          onChange={(e) => update("delivery.deliveryFrequency", e.target.value)}
+        />
+      </Field>
+
+      <Field label="Estimated First Delivery Date">
+        <Input
+          type="date"
+          value={form.delivery.firstDeliveryDate}
+          onChange={(e) => update("delivery.firstDeliveryDate", e.target.value)}
+        />
+      </Field>
+
+      <Field label="Required Qty per Truck">
+        <Input
+          value={form.delivery.desiredQtyPerTruck}
+          onChange={(e) => update("delivery.desiredQtyPerTruck", e.target.value)}
+        />
+      </Field>
+
+      <Field label="Required Qty Unit">
+        <Select
+          value={form.delivery.desiredQtyPerTruckUnit}
+          onValueChange={(v) => update("delivery.desiredQtyPerTruckUnit", v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select unit" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Tons">Tons</SelectItem>
+            <SelectItem value="Kg">Kg</SelectItem>
+            <SelectItem value="Pcs">Pcs</SelectItem>
+            <SelectItem value="Cartons">Cartons</SelectItem>
+            <SelectItem value="Rolls">Rolls</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+
+      <Field label="Truck Size">
+        <Input
+          value={form.delivery.truckSize}
+          onChange={(e) => update("delivery.truckSize", e.target.value)}
+        />
+      </Field>
+    </div>
+
+    <Field label="Customer Receiving Notes">
+      <Textarea
+        value={form.delivery.receivingNotes}
+        onChange={(e) => update("delivery.receivingNotes", e.target.value)}
+        rows={4}
+      />
+    </Field>
+
+    <Field label="Loading Restrictions">
+      <Textarea
+        value={form.delivery.loadingRestrictions}
+        onChange={(e) => update("delivery.loadingRestrictions", e.target.value)}
+        rows={4}
+      />
+    </Field>
+
+    <Field label="Required Delivery Documents">
+      <Textarea
+        value={form.delivery.requiredDeliveryDocs}
+        onChange={(e) => update("delivery.requiredDeliveryDocs", e.target.value)}
+        rows={4}
+      />
+    </Field>
+
+    <Field label="Additional Logistics Comments">
+      <Textarea
+        value={form.delivery.logisticsComments}
+        onChange={(e) => update("delivery.logisticsComments", e.target.value)}
+        rows={4}
+      />
+    </Field>
+  </SectionCard>
+)}
 
             {currentStep === 5 && (
               <div className="space-y-6">
