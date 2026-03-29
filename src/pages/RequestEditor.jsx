@@ -2,13 +2,20 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import RequestWizard from "../components/RequestWizard";
 
-export default function RequestEditor() {
+export default function RequestEditor({ isNew = false }) {
   const { requestId } = useParams();
   const [data, setData] = useState(null);
   const [files, setFiles] = useState([]);
   const [error, setError] = useState("");
 
   const loadAll = async () => {
+    if (isNew || !requestId) {
+      setData({});
+      setFiles([]);
+      setError("");
+      return;
+    }
+
     try {
       const res = await fetch(`/.netlify/functions/get-request?requestId=${requestId}`);
       const json = await res.json();
@@ -36,7 +43,7 @@ export default function RequestEditor() {
 
   useEffect(() => {
     loadAll();
-  }, [requestId]);
+  }, [requestId, isNew]);
 
   const handleDeleteFile = async (file) => {
     const ok = window.confirm(`Delete file "${file.fileName}"?`);
@@ -69,14 +76,14 @@ export default function RequestEditor() {
   };
 
   if (error) return <div className="p-6 text-red-600">{error}</div>;
-  if (!data) return <div className="p-6">Loading...</div>;
+  if (data === null) return <div className="p-6">Loading...</div>;
 
   return (
     <RequestWizard
-      key={requestId}
-      initialData={data}
-      existingFiles={files}
-      onDeleteFile={handleDeleteFile}
+      key={isNew ? "new-request" : requestId}
+      initialData={isNew ? null : data}
+      existingFiles={isNew ? [] : files}
+      onDeleteFile={isNew ? null : handleDeleteFile}
     />
   );
 }
