@@ -7,8 +7,10 @@ const toNum = (v) => {
   return Number.isNaN(n) ? 0 : n;
 };
 
-const fmt = (v) =>
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(v || 0);
+const fmt = (v, d = 3) =>
+  new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: d,
+  }).format(v || 0);
 
 export default function PricingPage() {
   const { requestId, pricingId } = useParams();
@@ -21,9 +23,15 @@ export default function PricingPage() {
   const [pricing, setPricing] = useState({
     currency: "EGP",
     usdEgp: 60,
-    convPerDay: 300000,
+
     materialPrices: {},
+    materialWastePct: {},
+
     packagingPrices: {},
+    packagingWastePct: {},
+
+    conversionPerTon: "",
+    convPerDay: "",
   });
 
   const [scenarioName, setScenarioName] = useState("");
@@ -66,6 +74,7 @@ export default function PricingPage() {
 
         if (scJson.success) {
           const saved = scJson.pricingData || {};
+
           setScenarioName(scJson.scenario?.ScenarioName || "");
           setScenarioNote(scJson.scenario?.ScenarioNote || "");
           setCreatedBy(scJson.scenario?.CreatedBy || "");
@@ -95,10 +104,8 @@ export default function PricingPage() {
   const pk = engineeringData?.packaging || {};
   const tooling = engineeringData?.tooling || [];
 
-  // ===== Build BOM from engineering data with strong fallback =====
   const bom = (() => {
     const result = [];
-
     const layerAPct = toNum(ms.layerAPct);
     const layerBPct = 100 - layerAPct;
 
@@ -137,10 +144,8 @@ export default function PricingPage() {
     return result.filter((x) => x.name);
   })();
 
-  // ===== Build packaging from engineering data =====
   const packaging = (() => {
     const result = [];
-
     if (pk.primaryName) result.push({ name: pk.primaryName, qty: 1 });
     if (pk.secondaryName) result.push({ name: pk.secondaryName, qty: 1 });
     if (pk.labelsPerSecondary) {
@@ -152,7 +157,6 @@ export default function PricingPage() {
     if (pk.stretchKgPerPallet) {
       result.push({ name: "Stretch Wrap", qty: toNum(pk.stretchKgPerPallet) });
     }
-
     return result;
   })();
 
@@ -163,17 +167,105 @@ export default function PricingPage() {
 
   const netExtruderKgPerHour = toNum(ex.netSpeed_kg_hr) || 0;
 
-  const materialCost = bom.reduce((sum, m) => {
-    const price = toNum(pricing.materialPrices?.[m.name]);
-    return sum + toNum(m.qty) * price;
-  }, 0);
+  // ===== Sync conversion per ton <-> per day =====
+  const setConversionPerTon = (value) => {
+    const convPerTon = toNum(value);
+    const convPerDay = convPerTon * tonsPerDay;
+    setPricing((prev) => ({
+      ...prev,
+      conversionPerTon: value,
+      convPerDay: convPerDay ? String(convPerDay) : "",
+    }));
+  };
 
-  const packagingCost = packaging.reduce((sum, p) => {
-    const price = toNum(pricing.packagingPrices?.[p.name]);
-    return sum + toNum(p.qty) * price;
-  }, 0);
+  const setConversionPerDay = (value) => {
+    const convPerDay = toNum(value);
+    const conversionPerTon = tonsPerDay > 0 ? convPerDay / tonsPerDay : 0;
+    setPricing((prev) => ({
+      ...prev,
+      convPerDay: value,
+      conversionPerTon: conversionPerTon ? String(conversionPerTon) : "",
+    }));
+  };
 
-  const conversionPerTon = toNum(pricing.convPerDay) / tonsPerDay;
+  const conversionPerTon =
+    toNum(pricing.conversionPerTon) ||
+    (tonsPerDay > 0 ? toNum(pricing.convPerDay) / tonsPerDay : 0);
+
+  const conversionPerDay =
+    toNum(pricing.convPerDay) ||
+    conversionPerTon * tonsPerDay;
+
+  const materialSummaryMap = new Map();
+
+  bom.forEach((m) => {
+    const name = m.name;
+    const baseQty = toNum(m.qty);
+    const wastePct = toNum(pricing.materialWastePct?.[name] || 0);
+    const wasteQty = baseQty * (wastePct / 100);
+    const totalQty = baseQty + wasteQty;
+    const price = toNum(pricing.materialPrices?.[name] || 0);
+    const baseCost = baseQty * price;
+    const wasteCost = wasteQty * price;
+    const totalCost = totalQty * price;
+
+    if (!materialSummaryMap.has(name)) {
+      materialSummaryMap.set(name, {
+        name,
+        baseQty: 0,
+        wastePct,
+        wasteQty: 0,
+        totalQty: 0,
+        price,
+        baseCost: 0,
+        wasteCost: 0,
+        totalCost: 0,
+      });
+    }
+
+    const row = materialSummaryMap.get(name);
+    row.baseQty += baseQty;
+    row.wasteQty += wasteQty;
+    row.totalQty += totalQty;
+    row.price = price;
+    row.wastePct = wastePct;
+    row.baseCost += baseCost;
+    row.wasteCost += wasteCost;
+    row.totalCost += totalCost;
+  });
+
+  const materialSummary = Array.from(materialSummaryMap.values());
+
+  const materialBaseCost = materialSummary.reduce((s, r) => s + r.baseCost, 0);
+  const materialWasteCost = materialSummary.reduce((s, r) => s + r.wasteCost, 0);
+  const materialCost = materialSummary.reduce((s, r) => s + r.totalCost, 0);
+
+  const packagingDetails = packaging.map((p) => {
+    const price = toNum(pricing.packagingPrices?.[p.name] || 0);
+    const baseQty = toNum(p.qty);
+    const wastePct = toNum(pricing.packagingWastePct?.[p.name] || 0);
+    const wasteQty = baseQty * (wastePct / 100);
+    const totalQty = baseQty + wasteQty;
+    const baseCost = baseQty * price;
+    const wasteCost = wasteQty * price;
+    const totalCost = totalQty * price;
+
+    return {
+      ...p,
+      price,
+      wastePct,
+      wasteQty,
+      totalQty,
+      baseCost,
+      wasteCost,
+      totalCost,
+    };
+  });
+
+  const packagingBaseCost = packagingDetails.reduce((s, r) => s + r.baseCost, 0);
+  const packagingWasteCost = packagingDetails.reduce((s, r) => s + r.wasteCost, 0);
+  const packagingCost = packagingDetails.reduce((s, r) => s + r.totalCost, 0);
+
   const totalPerTon = materialCost + packagingCost + conversionPerTon;
 
   useEffect(() => {
@@ -184,10 +276,22 @@ export default function PricingPage() {
     chartRef.current = new Chart(pieRef.current, {
       type: "pie",
       data: {
-        labels: ["Material", "Packaging", "Conversion"],
+        labels: [
+          "Material Base",
+          "Material Waste",
+          "Packaging Base",
+          "Packaging Waste",
+          "Conversion",
+        ],
         datasets: [
           {
-            data: [materialCost, packagingCost, conversionPerTon],
+            data: [
+              materialBaseCost,
+              materialWasteCost,
+              packagingBaseCost,
+              packagingWasteCost,
+              conversionPerTon,
+            ],
           },
         ],
       },
@@ -201,7 +305,13 @@ export default function PricingPage() {
     return () => {
       if (chartRef.current) chartRef.current.destroy();
     };
-  }, [materialCost, packagingCost, conversionPerTon]);
+  }, [
+    materialBaseCost,
+    materialWasteCost,
+    packagingBaseCost,
+    packagingWasteCost,
+    conversionPerTon,
+  ]);
 
   const saveScenario = async () => {
     try {
@@ -223,6 +333,12 @@ export default function PricingPage() {
             pricing,
             sheetSummary: {
               totalPerTon,
+              materialBaseCost,
+              materialWasteCost,
+              packagingBaseCost,
+              packagingWasteCost,
+              conversionPerTon,
+              conversionPerDay,
             },
           },
           totalCostPer1000: totalPerTon,
@@ -253,12 +369,12 @@ export default function PricingPage() {
       usdEgp: pricing.usdEgp,
       currency: pricing.currency,
       sheetMaterialCostPerTon: materialCost,
-      sheetPackagingCostPerTon: packagingCost,
+      sheetPackagingCostPerTon: 0, // moved thermo packaging out of sheet pricing
       netExtruderKgPerHour,
       netExtruderKgPerDay: netExtruderKgPerHour * 24,
-      bomPerTon: bom.map((x) => ({
+      bomPerTon: materialSummary.map((x) => ({
         name: x.name,
-        kg: toNum(x.qty),
+        kg: x.totalQty,
       })),
       tooling,
     };
@@ -279,6 +395,12 @@ export default function PricingPage() {
           pricing,
           sheetSummary: {
             totalPerTon,
+            materialBaseCost,
+            materialWasteCost,
+            packagingBaseCost,
+            packagingWasteCost,
+            conversionPerTon,
+            conversionPerDay,
           },
           thermoBundle: bundle,
         },
@@ -371,6 +493,31 @@ export default function PricingPage() {
           <option>EGP</option>
           <option>USD</option>
         </select>
+
+        <input
+          className="border p-2 rounded"
+          value={scenarioNote}
+          onChange={(e) => setScenarioNote(e.target.value)}
+          placeholder="Scenario note"
+        />
+        <input
+          className="border p-2 rounded"
+          value={pricing.usdEgp}
+          onChange={(e) => setPricing({ ...pricing, usdEgp: e.target.value })}
+          placeholder="USD/EGP FX"
+        />
+        <input
+          className="border p-2 rounded"
+          value={pricing.conversionPerTon}
+          onChange={(e) => setConversionPerTon(e.target.value)}
+          placeholder="Required conversion / ton"
+        />
+        <input
+          className="border p-2 rounded"
+          value={pricing.convPerDay}
+          onChange={(e) => setConversionPerDay(e.target.value)}
+          placeholder="Required conversion / day"
+        />
       </div>
 
       <div className="bg-white border rounded-xl p-4">
@@ -395,55 +542,139 @@ export default function PricingPage() {
         </div>
       </div>
 
-      <div className="bg-white border rounded-xl p-4">
-        <h2 className="font-semibold mb-2">Material Prices</h2>
-        {bom.map((m) => (
-          <div key={m.name} className="flex gap-3 mb-2 items-center flex-wrap">
-            <div className="w-44">{m.name}</div>
-            <input
-              className="border p-2 rounded w-44"
-              placeholder="Price / kg"
-              value={pricing.materialPrices?.[m.name] || ""}
-              onChange={(e) =>
-                setPricing({
-                  ...pricing,
-                  materialPrices: {
-                    ...pricing.materialPrices,
-                    [m.name]: e.target.value,
-                  },
-                })
-              }
-            />
-            <div>{fmt(m.qty)} kg</div>
-          </div>
-        ))}
-      </div>
+      <div className="bg-white border rounded-xl p-4 space-y-4">
+        <h2 className="font-semibold">Material Pricing</h2>
 
-      <div className="bg-white border rounded-xl p-4">
-        <h2 className="font-semibold mb-2">Packaging Prices</h2>
-        {packaging.length === 0 ? (
-          <div className="text-sm text-gray-500">
-            No packaging items derived from engineering data.
-          </div>
-        ) : (
-          packaging.map((p) => (
-            <div key={p.name} className="flex gap-3 mb-2 items-center flex-wrap">
-              <div className="w-44">{p.name}</div>
+        {materialSummary.map((m) => (
+          <div key={m.name} className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Material</div>
+              <div className="border rounded p-2 bg-gray-50">{m.name}</div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Base Qty / ton</div>
+              <div className="border rounded p-2 bg-gray-50">{fmt(m.baseQty)}</div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Waste %</div>
               <input
-                className="border p-2 rounded w-44"
-                placeholder="Price"
-                value={pricing.packagingPrices?.[p.name] || ""}
+                className="border p-2 rounded w-full"
+                value={pricing.materialWastePct?.[m.name] || ""}
                 onChange={(e) =>
                   setPricing({
                     ...pricing,
-                    packagingPrices: {
-                      ...pricing.packagingPrices,
-                      [p.name]: e.target.value,
+                    materialWastePct: {
+                      ...pricing.materialWastePct,
+                      [m.name]: e.target.value,
                     },
                   })
                 }
               />
-              <div>{fmt(p.qty)}</div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Waste Qty</div>
+              <div className="border rounded p-2 bg-gray-50">{fmt(m.wasteQty)}</div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Total Qty</div>
+              <div className="border rounded p-2 bg-gray-50">{fmt(m.totalQty)}</div>
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Price / kg</div>
+              <input
+                className="border p-2 rounded w-full"
+                value={pricing.materialPrices?.[m.name] || ""}
+                onChange={(e) =>
+                  setPricing({
+                    ...pricing,
+                    materialPrices: {
+                      ...pricing.materialPrices,
+                      [m.name]: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Total Cost / ton</div>
+              <div className="border rounded p-2 bg-gray-50">{fmt(m.totalCost)}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white border rounded-xl p-4 space-y-4">
+        <h2 className="font-semibold">Sheet Packaging Pricing</h2>
+
+        {packaging.length === 0 ? (
+          <div className="text-sm text-gray-500">No sheet packaging items derived from engineering data.</div>
+        ) : (
+          packagingDetails.map((p) => (
+            <div key={p.name} className="grid grid-cols-1 md:grid-cols-7 gap-3 items-end">
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Item</div>
+                <div className="border rounded p-2 bg-gray-50">{p.name}</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Base Qty</div>
+                <div className="border rounded p-2 bg-gray-50">{fmt(p.qty)}</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Waste %</div>
+                <input
+                  className="border p-2 rounded w-full"
+                  value={pricing.packagingWastePct?.[p.name] || ""}
+                  onChange={(e) =>
+                    setPricing({
+                      ...pricing,
+                      packagingWastePct: {
+                        ...pricing.packagingWastePct,
+                        [p.name]: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Waste Qty</div>
+                <div className="border rounded p-2 bg-gray-50">{fmt(p.wasteQty)}</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Total Qty</div>
+                <div className="border rounded p-2 bg-gray-50">{fmt(p.totalQty)}</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Price</div>
+                <input
+                  className="border p-2 rounded w-full"
+                  value={pricing.packagingPrices?.[p.name] || ""}
+                  onChange={(e) =>
+                    setPricing({
+                      ...pricing,
+                      packagingPrices: {
+                        ...pricing.packagingPrices,
+                        [p.name]: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Total Cost</div>
+                <div className="border rounded p-2 bg-gray-50">{fmt(p.totalCost)}</div>
+              </div>
             </div>
           ))
         )}
@@ -453,16 +684,32 @@ export default function PricingPage() {
         <h2 className="font-semibold mb-3">Summary (per ton)</h2>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span>Material</span>
-            <span>{fmt(materialCost)}</span>
+            <span>Material Base Cost</span>
+            <span>{fmt(materialBaseCost)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Packaging</span>
-            <span>{fmt(packagingCost)}</span>
+            <span>Material Waste Cost</span>
+            <span>{fmt(materialWasteCost)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Conversion</span>
+            <span>Packaging Base Cost</span>
+            <span>{fmt(packagingBaseCost)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Packaging Waste Cost</span>
+            <span>{fmt(packagingWasteCost)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Conversion / ton</span>
             <span>{fmt(conversionPerTon)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Conversion / day</span>
+            <span>{fmt(conversionPerDay)} EGP • {fmt(toNum(pricing.usdEgp) ? conversionPerDay / toNum(pricing.usdEgp) : 0)} USD</span>
+          </div>
+          <div className="flex justify-between">
+            <span>FX Rate</span>
+            <span>{fmt(pricing.usdEgp, 3)}</span>
           </div>
           <div className="flex justify-between font-semibold border-t pt-2">
             <span>Total / ton</span>

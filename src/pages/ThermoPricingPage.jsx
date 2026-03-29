@@ -44,8 +44,9 @@ export default function ThermoPricingPage() {
   const location = useLocation();
 
   const [sheetBundle, setSheetBundle] = useState(location.state?.bundle || null);
-  const [pricingRoot, setPricingRoot] = useState(null);
   const [scenarioMeta, setScenarioMeta] = useState(null);
+  const [pricingRoot, setPricingRoot] = useState(null);
+  const [engineeringData, setEngineeringData] = useState(null);
   const [saveMessage, setSaveMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -110,15 +111,21 @@ export default function ThermoPricingPage() {
       try {
         setLoading(true);
 
-        const scRes = await fetch(
-          `/.netlify/functions/get-pricing-scenario?pricingId=${pricingId}`
-        );
+        const [scRes, engRes] = await Promise.all([
+          fetch(`/.netlify/functions/get-pricing-scenario?pricingId=${pricingId}`),
+          fetch(`/.netlify/functions/get-engineering-data?requestId=${requestId}`),
+        ]);
+
         const scJson = await scRes.json();
+        const engJson = await engRes.json();
+
+        if (engJson.success) {
+          setEngineeringData(engJson.engineeringData || {});
+        }
 
         if (scJson.success) {
           setScenarioMeta(scJson.scenario || null);
           const pricingData = scJson.pricingData || {};
-
           setPricingRoot(pricingData.pricing || null);
 
           if (pricingData.thermoBundle) {
@@ -143,7 +150,56 @@ export default function ThermoPricingPage() {
     };
 
     load();
-  }, [pricingId]);
+  }, [pricingId, requestId]);
+
+  useEffect(() => {
+    const thermo = engineeringData?.thermo || {};
+    const decoEng = engineeringData?.decoration || {};
+    const packEng = engineeringData?.packaging || {};
+
+    setSpec((prev) => ({
+      ...prev,
+      productName: prev.productName || requestId,
+      productCode: prev.productCode || requestId,
+      unitWeight_g: prev.unitWeight_g || thermo.unitWeight_g || "",
+      cavities: prev.cavities || thermo.cavities || "",
+      cpm: prev.cpm || thermo.cpm || "",
+      sheetUtilPct: prev.sheetUtilPct || thermo.sheetUtilizationPct || "85",
+      efficiencyPct: prev.efficiencyPct || thermo.efficiencyPct || "90",
+    }));
+
+    setPack((prev) => ({
+      ...prev,
+      pcsPerStack: prev.pcsPerStack || packEng.pcsPerStack || "",
+      primaryName: prev.primaryName || packEng.primaryName || "PE Bag (bag)",
+      stacksPerPrimary: prev.stacksPerPrimary || packEng.stacksPerPrimary || "",
+      primariesPerSecondary: prev.primariesPerSecondary || packEng.primariesPerSecondary || "",
+      secondaryName: prev.secondaryName || packEng.secondaryName || "Carton (carton)",
+      labelsPerSecondary: prev.labelsPerSecondary || packEng.labelsPerSecondary || "",
+      secondariesPerPallet: prev.secondariesPerPallet || packEng.secondariesPerPallet || "",
+      labelsPerPallet: prev.labelsPerPallet || packEng.labelsPerPallet || "",
+      stretchKgPerPallet: prev.stretchKgPerPallet || packEng.stretchKgPerPallet || "",
+    }));
+
+    if (decoEng.type) {
+      setDeco((prev) => ({
+        ...prev,
+        use: decoEng.type !== "None" && decoEng.type !== "",
+        type:
+          decoEng.type === "Dry offset printing"
+            ? "Printing"
+            : decoEng.type === "Shrink sleeve"
+            ? "Shrink sleeve"
+            : decoEng.type === "Hybrid"
+            ? "Hybrid"
+            : prev.type,
+        printing: {
+          ...prev.printing,
+          ink_g_per_1000: prev.printing.ink_g_per_1000 || decoEng?.dryOffset?.ink_g_per_1000 || "",
+        },
+      }));
+    }
+  }, [engineeringData, requestId]);
 
   if (loading) {
     return <div className="p-6">Loading thermo pricing...</div>;
@@ -158,10 +214,26 @@ export default function ThermoPricingPage() {
     );
   }
 
+  const engThermo = engineeringData?.thermo || {};
+
+  const unitWeightAlert =
+    spec.unitWeight_g &&
+    engThermo.unitWeight_g &&
+    String(spec.unitWeight_g) !== String(engThermo.unitWeight_g);
+
+  const cavitiesAlert =
+    spec.cavities &&
+    engThermo.cavities &&
+    String(spec.cavities) !== String(engThermo.cavities);
+
+  const cpmAlert =
+    spec.cpm &&
+    engThermo.cpm &&
+    String(spec.cpm) !== String(engThermo.cpm);
+
   const currency = sheetBundle.currency || "EGP";
   const usdEgp = Math.max(0, toNum(sheetBundle.usdEgp || 60));
   const sheetMaterialCostPerTon = toNum(sheetBundle.sheetMaterialCostPerTon || 0);
-  const sheetPackagingCostPerTon = toNum(sheetBundle.sheetPackagingCostPerTon || 0);
   const netExtruderKgPerDay = toNum(sheetBundle.netExtruderKgPerDay || 0);
   const bomPerTon = sheetBundle.bomPerTon || [];
 
@@ -175,9 +247,7 @@ export default function ThermoPricingPage() {
   const pcsPerDay = pcsPerHour * 24;
 
   const sheetCostPer1000 =
-    ((sheetMaterialCostPerTon + sheetPackagingCostPerTon) / 1_000_000) *
-    unit_g *
-    1000;
+    (sheetMaterialCostPerTon / 1_000_000) * unit_g * 1000;
 
   const pcsPerStack = Math.max(1, Math.floor(toNum(pack.pcsPerStack)) || 1);
   const stacksPerPrimary = Math.max(1, Math.floor(toNum(pack.stacksPerPrimary)) || 1);
@@ -270,6 +340,7 @@ export default function ThermoPricingPage() {
           summary: {
             totalPer1000,
             paybackQtyPcs,
+            usdEgp,
           },
         },
       };
@@ -357,6 +428,24 @@ export default function ThermoPricingPage() {
         </Field>
       </div>
 
+      {unitWeightAlert ? (
+        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+          Unit weight in this scenario is different from engineering.
+        </div>
+      ) : null}
+
+      {cavitiesAlert ? (
+        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+          Cavities in this scenario are different from engineering.
+        </div>
+      ) : null}
+
+      {cpmAlert ? (
+        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+          CPM in this scenario is different from engineering.
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <InfoTile label="Pcs / hour" value={fmt(pcsPerHour)} />
         <InfoTile label="Pcs / day" value={fmt(pcsPerDay)} />
@@ -366,6 +455,28 @@ export default function ThermoPricingPage() {
         <InfoTile label="Working Cap / 1000" value={fmt(workingCapPer1000)} />
         <InfoTile label="Conversion / 1000" value={fmt(convPer1000)} />
         <InfoTile label="Total / 1000" value={fmt(totalPer1000)} />
+        <InfoTile label="FX Rate" value={fmt(usdEgp, 3)} />
+      </div>
+
+      <div className="bg-white border rounded-xl p-4">
+        <div className="font-semibold mb-3">Finance</div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <Field label="DSO">
+            <NumInput value={finance.DSO} onChange={(v) => setFinance({ ...finance, DSO: v })} />
+          </Field>
+          <Field label="DIO">
+            <NumInput value={finance.DIO} onChange={(v) => setFinance({ ...finance, DIO: v })} />
+          </Field>
+          <Field label="DPO">
+            <NumInput value={finance.DPO} onChange={(v) => setFinance({ ...finance, DPO: v })} />
+          </Field>
+          <Field label="Interest %">
+            <NumInput value={finance.interestPct} onChange={(v) => setFinance({ ...finance, interestPct: v })} />
+          </Field>
+          <Field label="Conversion / day">
+            <NumInput value={finance.convPerDay} onChange={(v) => setFinance({ ...finance, convPerDay: v })} />
+          </Field>
+        </div>
       </div>
 
       <div className="bg-white border rounded-xl p-4">
@@ -380,8 +491,7 @@ export default function ThermoPricingPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
           <InfoTile label="Sheet Material / ton" value={fmt(sheetMaterialCostPerTon)} />
-          <InfoTile label="Sheet Packaging / ton" value={fmt(sheetPackagingCostPerTon)} />
-          <InfoTile label="Payback Qty (pcs)" value={fmt(paybackQtyPcs, 0)} />
+          <InfoTile label="Payback Qty (pcs)" value={fmt(totalInvestEGP && convPer1000 > 0 ? paybackQtyPcs : 0, 0)} />
         </div>
       </div>
     </div>
