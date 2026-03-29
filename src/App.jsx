@@ -1,21 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
+import Dashboard from "./pages/Dashboard";
+import EngineeringDashboard from "./pages/EngineeringDashboard";
+import PricingDashboard from "./pages/PricingDashboard";
 import EngineeringReview from "./pages/EngineeringReview";
 import PricingPage from "./pages/PricingPage";
 import RequestDetail from "./pages/RequestDetail";
 import RequestEditor from "./pages/RequestEditor";
-
-function Dashboard() {
-  return <div className="p-6">Dashboard OK</div>;
-}
-
-function EngineeringDashboard() {
-  return <div className="p-6">Engineering Dashboard OK</div>;
-}
-
-function PricingDashboard() {
-  return <div className="p-6">Pricing Dashboard OK</div>;
-}
 
 export default function App() {
   return (
