@@ -1,10 +1,16 @@
-const { updateRow, findRequestRowById } = require("./_sheet");
+const { upsertEngineeringRow } = require("./_sheet");
 
 const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
 
-    const { requestId, status, engineerName, engineeringData } = body;
+    const {
+      requestId,
+      status,
+      engineerName,
+      engineeringData,
+      note,
+    } = body;
 
     if (!requestId) {
       return {
@@ -16,22 +22,13 @@ const handler = async (event) => {
       };
     }
 
-    const rowIndex = await findRequestRowById(requestId);
-
-    if (!rowIndex) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({
-          success: false,
-          error: "Request not found",
-        }),
-      };
-    }
-
-    await updateRow(requestId, {
-      EngineeringStatus: status || "",
+    await upsertEngineeringRow({
+      RequestID: requestId,
+      Status: status || "",
       EngineerName: engineerName || "",
-      EngineeringData: JSON.stringify(engineeringData || {}),
+      SavedAt: new Date().toISOString(),
+      EngineeringJSON: JSON.stringify(engineeringData || {}),
+      Note: note || "",
     });
 
     return {
