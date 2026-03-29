@@ -1,170 +1,291 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import Chart from "chart.js/auto";
 
-/* ================= UTILITIES ================= */
-const toNum = v => {
-  if (!v) return 0;
-  const n = parseFloat(String(v).replace(/,/g, ""));
-  return isNaN(n) ? 0 : n;
+const toNum = (v) => {
+  const n = parseFloat(String(v ?? "").replace(/,/g, ""));
+  return Number.isNaN(n) ? 0 : n;
 };
 
 const fmt = (v) =>
-  new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 3,
-  }).format(v || 0);
+  new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(v || 0);
 
-/* ================= COMPONENT ================= */
+export default function PricingPage() {
+  const { requestId } = useParams();
+  const navigate = useNavigate();
 
-export default function PricingPage({ bundle, onBack }) {
+  const [engineeringData, setEngineeringData] = useState(null);
+  const [requestData, setRequestData] = useState(null);
+
   const [pricing, setPricing] = useState({
     currency: "EGP",
     usdEgp: 60,
-    convPerDay: 350000,
-    matPrices: {},
-    packPrices: {},
+    convPerDay: 300000,
+    materialPrices: {},
+    packagingPrices: {},
   });
 
   const pieRef = useRef(null);
+  const chartRef = useRef(null);
 
-  const tonsPerDay = bundle?.tonsPerDay || 0;
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const reqRes = await fetch(
+          `/.netlify/functions/get-request?requestId=${requestId}`
+        );
+        const reqJson = await reqRes.json();
 
-  const materialCost =
-    (bundle?.bom_per_ton || []).reduce((sum, m) => {
-      const price = toNum(pricing.matPrices[m.name]);
-      return sum + m.kg * price;
-    }, 0);
+        if (reqJson.success) {
+          setRequestData(reqJson.payload || {});
+        }
 
-  const packagingCost =
-    (bundle?.packaging_per_ton || []).reduce((sum, p) => {
-      const price = toNum(pricing.packPrices[p.name]);
-      return sum + p.qty * price;
-    }, 0);
+        const engRes = await fetch(
+          `/.netlify/functions/get-engineering-data?requestId=${requestId}`
+        );
+        const engJson = await engRes.json();
 
-  const conversionCost =
-    tonsPerDay > 0 ? pricing.convPerDay / tonsPerDay : 0;
+        if (engJson.success) {
+          setEngineeringData(engJson.engineeringData || {});
+        }
+      } catch (error) {
+        console.error("Failed to load pricing page:", error);
+      }
+    };
 
-  const total = materialCost + packagingCost + conversionCost;
+    load();
+  }, [requestId]);
 
-  /* ===== CHART ===== */
+  const requestCustomer = requestData?.customer || {};
+  const requestProduct = requestData?.product || {};
+
+  const sheet = engineeringData?.sheet || {};
+
+  const bom = Array.isArray(sheet?.bom) ? sheet.bom : [];
+  const packaging = Array.isArray(sheet?.packaging) ? sheet.packaging : [];
+
+  const materialCost = bom.reduce((sum, m) => {
+    const price = toNum(pricing.materialPrices[m.name]);
+    return sum + toNum(m.qty) * price;
+  }, 0);
+
+  const packagingCost = packaging.reduce((sum, p) => {
+    const price = toNum(pricing.packagingPrices[p.name]);
+    return sum + toNum(p.qty) * price;
+  }, 0);
+
+  const tonsPerDay = toNum(sheet.tonsPerDay) || 1;
+  const conversionPerTon = toNum(pricing.convPerDay) / tonsPerDay;
+  const totalPerTon = materialCost + packagingCost + conversionPerTon;
+
   useEffect(() => {
     if (!pieRef.current) return;
 
-    const chart = new Chart(pieRef.current, {
+    if (chartRef.current) {
+      chartRef.current.destroy();
+    }
+
+    chartRef.current = new Chart(pieRef.current, {
       type: "pie",
       data: {
         labels: ["Material", "Packaging", "Conversion"],
         datasets: [
           {
-            data: [materialCost, packagingCost, conversionCost],
+            data: [materialCost, packagingCost, conversionPerTon],
           },
         ],
       },
+      options: {
+        plugins: {
+          legend: {
+            position: "bottom",
+          },
+        },
+      },
     });
 
-    return () => chart.destroy();
-  }, [materialCost, packagingCost, conversionCost]);
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.destroy();
+      }
+    };
+  }, [materialCost, packagingCost, conversionPerTon]);
+
+  const goToThermo = () => {
+    const bundle = {
+      requestId,
+      sheetName:
+        requestCustomer.projectName ||
+        requestProduct.productType ||
+        "Sheet",
+      sheetCode: requestId,
+      usdEgp: pricing.usdEgp,
+      currency: pricing.currency,
+      sheetMaterialCostPerTon: materialCost,
+      sheetPackagingCostPerTon: packagingCost,
+      netExtruderKgPerHour: toNum(sheet.netKgPerHour || sheet.kgPerHour || 0),
+      netExtruderKgPerDay:
+        toNum(sheet.netKgPerHour || sheet.kgPerHour || 0) * 24,
+      bomPerTon: bom.map((x) => ({
+        name: x.name,
+        kg: toNum(x.qty),
+      })),
+    };
+
+    navigate(`/pricing/${requestId}/thermo`, {
+      state: { bundle },
+    });
+  };
+
+  if (!engineeringData) {
+    return <div className="p-6">Loading pricing data...</div>;
+  }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-bold">
-          Pricing — {bundle?.sheetName || "—"}
-        </h1>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-semibold">Pricing — Sheet Roll</h1>
+          <p className="text-sm text-gray-500">
+            {requestCustomer.projectName || "—"} {requestId ? `(${requestId})` : ""}
+          </p>
+        </div>
 
         <button
-          onClick={onBack}
-          className="px-4 py-2 border rounded"
+          onClick={goToThermo}
+          className="px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-500"
         >
-          ← Back
+          ➜ Thermoformed Product
         </button>
       </div>
 
-      {/* MATERIAL PRICES */}
-      <div className="border rounded p-4">
-        <h2 className="font-semibold mb-3">Material Prices</h2>
+      <div className="bg-white border rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <div className="text-sm">Currency</div>
+          <select
+            className="border p-2 rounded w-full"
+            value={pricing.currency}
+            onChange={(e) =>
+              setPricing({ ...pricing, currency: e.target.value })
+            }
+          >
+            <option>EGP</option>
+            <option>USD</option>
+          </select>
+        </div>
 
-        {(bundle?.bom_per_ton || []).map((m) => (
-          <div key={m.name} className="flex gap-3 mb-2">
-            <div className="w-40">{m.name}</div>
+        <div>
+          <div className="text-sm">USD/EGP</div>
+          <input
+            className="border p-2 rounded w-full"
+            value={pricing.usdEgp}
+            onChange={(e) =>
+              setPricing({ ...pricing, usdEgp: e.target.value })
+            }
+          />
+        </div>
 
-            <input
-              className="border px-2 py-1"
-              placeholder="Price / kg"
-              value={pricing.matPrices[m.name] || ""}
-              onChange={(e) =>
-                setPricing({
-                  ...pricing,
-                  matPrices: {
-                    ...pricing.matPrices,
-                    [m.name]: e.target.value,
-                  },
-                })
-              }
-            />
-
-            <div>{fmt(m.kg)} kg</div>
-          </div>
-        ))}
-      </div>
-
-      {/* PACKAGING */}
-      <div className="border rounded p-4">
-        <h2 className="font-semibold mb-3">Packaging</h2>
-
-        {(bundle?.packaging_per_ton || []).map((p) => (
-          <div key={p.name} className="flex gap-3 mb-2">
-            <div className="w-40">{p.name}</div>
-
-            <input
-              className="border px-2 py-1"
-              placeholder="Price"
-              value={pricing.packPrices[p.name] || ""}
-              onChange={(e) =>
-                setPricing({
-                  ...pricing,
-                  packPrices: {
-                    ...pricing.packPrices,
-                    [p.name]: e.target.value,
-                  },
-                })
-              }
-            />
-
-            <div>{fmt(p.qty)}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* CONVERSION */}
-      <div className="border rounded p-4">
-        <h2 className="font-semibold mb-3">Conversion</h2>
-
-        <input
-          className="border px-2 py-1"
-          value={pricing.convPerDay}
-          onChange={(e) =>
-            setPricing({ ...pricing, convPerDay: e.target.value })
-          }
-        />
-      </div>
-
-      {/* SUMMARY */}
-      <div className="border rounded p-4">
-        <h2 className="font-semibold mb-3">Summary</h2>
-
-        <div>Material: {fmt(materialCost)}</div>
-        <div>Packaging: {fmt(packagingCost)}</div>
-        <div>Conversion: {fmt(conversionCost)}</div>
-
-        <div className="font-bold mt-3">
-          Total / ton: {fmt(total)}
+        <div>
+          <div className="text-sm">Conversion / day</div>
+          <input
+            className="border p-2 rounded w-full"
+            value={pricing.convPerDay}
+            onChange={(e) =>
+              setPricing({ ...pricing, convPerDay: e.target.value })
+            }
+          />
         </div>
       </div>
 
-      {/* CHART */}
-      <div className="border rounded p-4">
+      <div className="bg-white border rounded-xl p-4">
+        <h2 className="font-semibold mb-2">Material Prices</h2>
+
+        {bom.length === 0 ? (
+          <div className="text-sm text-gray-500">No BOM found in engineering data.</div>
+        ) : (
+          bom.map((m) => (
+            <div key={m.name} className="flex gap-3 mb-2 items-center flex-wrap">
+              <div className="w-40">{m.name}</div>
+
+              <input
+                className="border p-2 rounded w-40"
+                placeholder="Price / kg"
+                value={pricing.materialPrices[m.name] || ""}
+                onChange={(e) =>
+                  setPricing({
+                    ...pricing,
+                    materialPrices: {
+                      ...pricing.materialPrices,
+                      [m.name]: e.target.value,
+                    },
+                  })
+                }
+              />
+
+              <div>{fmt(m.qty)} kg</div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="bg-white border rounded-xl p-4">
+        <h2 className="font-semibold mb-2">Packaging Prices</h2>
+
+        {packaging.length === 0 ? (
+          <div className="text-sm text-gray-500">No packaging data found in engineering data.</div>
+        ) : (
+          packaging.map((p) => (
+            <div key={p.name} className="flex gap-3 mb-2 items-center flex-wrap">
+              <div className="w-40">{p.name}</div>
+
+              <input
+                className="border p-2 rounded w-40"
+                placeholder="Price"
+                value={pricing.packagingPrices[p.name] || ""}
+                onChange={(e) =>
+                  setPricing({
+                    ...pricing,
+                    packagingPrices: {
+                      ...pricing.packagingPrices,
+                      [p.name]: e.target.value,
+                    },
+                  })
+                }
+              />
+
+              <div>{fmt(p.qty)}</div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="bg-white border rounded-xl p-4">
+        <h2 className="font-semibold mb-3">Summary (per ton)</h2>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span>Material</span>
+            <span>{fmt(materialCost)}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Packaging</span>
+            <span>{fmt(packagingCost)}</span>
+          </div>
+
+          <div className="flex justify-between">
+            <span>Conversion</span>
+            <span>{fmt(conversionPerTon)}</span>
+          </div>
+
+          <div className="flex justify-between font-semibold border-t pt-2">
+            <span>Total</span>
+            <span>{fmt(totalPerTon)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white border rounded-xl p-4">
         <canvas ref={pieRef}></canvas>
       </div>
     </div>
