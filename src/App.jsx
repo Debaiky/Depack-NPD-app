@@ -1,15 +1,13 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import LandingPage from "./pages/LandingPage";
+import LandingPage from "./pages/LandingPage.jsx";
 import Dashboard from "./pages/Dashboard";
 import RequestDetail from "./pages/RequestDetail";
 import RequestEditor from "./pages/RequestEditor";
 import EngineeringReview from "./pages/EngineeringReview";
-
-function PricingDashboard() {
-  return <div className="p-6">Pricing dashboard coming next.</div>;
-}
-
 import EngineeringDashboard from "./pages/EngineeringDashboard";
+import PricingDashboard from "./pages/PricingDashboard";
+
+import PricingReview from "./pages/PricingReview";
 
 export default function App() {
   return (
@@ -23,6 +21,7 @@ export default function App() {
         <Route path="/engineering" element={<EngineeringDashboard />} />
         <Route path="/engineering/:requestId" element={<EngineeringReview />} />
         <Route path="/pricing" element={<PricingDashboard />} />
+        <Route path="/pricing/:requestId" element={<PricingReview />} />
       </Routes>
     </BrowserRouter>
   );
