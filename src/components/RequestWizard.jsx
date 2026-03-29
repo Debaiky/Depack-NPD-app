@@ -71,49 +71,53 @@ const initialForm = {
     customerNotes: "",
   },
   product: {
-    productType: "",
-    productTypeOther: "",
-    sampleExists: "",
-    sampleInHand: "",
-    internalSampleCode: "",
-    productMaterial: "",
-    productMaterialOther: "",
-    materialGrade: "",
-    productWeightG: "",
-    topDiameterMm: "",
-    bottomDiameterMm: "",
-    productHeightMm: "",
-    rimNotes: "",
-    productColor: "",
-    masterbatchDetails: "",
-    additives: "",
-    specialFunction: "",
-    specialCutNotes: "",
-    technicalNotes: "",
+  productType: "",
+  productTypeOther: "",
+  sampleExists: "",
+  sampleInHand: "",
+  internalSampleCode: "",
+  productMaterial: "",
+  productMaterialOther: "",
+  materialGrade: "",
+  productWeightG: "",
+  topDiameterMm: "",
+  bottomDiameterMm: "",
+  productHeightMm: "",
+  rimNotes: "",
+  productColor: "",
+  masterbatchDetails: "",
+  additives: "",
+  specialFunction: "",
+  specialCutNotes: "",
+  technicalNotes: "",
 
-    sheetMaterial: "",
-    hipsPct: "",
-    gppsPct: "",
-    rpetPct: "",
-    virginPetPct: "",
+  sheetMaterial: "",
+  hipsPct: "",
+  gppsPct: "",
+  rpetPct: "",
+  virginPetPct: "",
 
-    sheetWidthMm: "",
-    sheetWidthTolerancePlusMm: "",
-    sheetWidthToleranceMinusMm: "",
+  sheetWidthMm: "",
+  sheetWidthTolerancePlusMm: "",
+  sheetWidthToleranceMinusMm: "",
 
-    sheetThicknessMicron: "",
-    sheetThicknessTolerancePlusMicron: "",
-    sheetThicknessToleranceMinusMicron: "",
+  sheetThicknessMicron: "",
+  sheetThicknessTolerancePlusMicron: "",
+  sheetThicknessToleranceMinusMicron: "",
 
-    rollWeightKg: "",
-    rollDiameterMm: "",
-    coreDiameterMm: "",
-    coreMaterial: "",
+  rollWeightKg: "",
+  rollDiameterMm: "",
+  coreDiameterMm: "",
+  coreMaterial: "",
 
-    sheetLayerColors: "",
-    layerAColor: "",
-    layerBColor: "",
-  },
+  sheetLayerColors: "",
+  layerAColor: "",
+  layerBColor: "",
+
+  productThumbnailName: "",
+  productThumbnailBase64: "",
+  productThumbnailPreview: "",
+},
   decoration: {
     decorationType: "",
     dryOffset: {
@@ -151,81 +155,90 @@ const initialForm = {
       hybridAdditionalNotes: "",
     },
     label: {
-      labelMaterial: "",
-      labelDimensions: "",
-      labelType: "",
-      labelAdhesiveNotes: "",
-      labelArtworkAvailable: "",
-      labelPositionNotes: "",
-      labelAdditionalNotes: "",
-    },
+  useStandardLabelSpecs: false,
+  labelMaterial: "",
+  labelDimensionsMm: "",
+  labelType: "",
+  labelAdhesiveNotes: "",
+  labelArtworkAvailable: "",
+  labelPositionNotes: "",
+  labelAdditionalNotes: "",
+},
   },
   packaging: {
-    primary: {
-      pcsPerStack: "",
-      stacksPerBag: "",
-      sleeveArtworkNeeded: "",
-      sleeveArtworkProvided: "",
-      primaryPackagingNotes: "",
-      bagSleeveMaterial: "",
-      bagSleeveDimensions: "",
-      bagSleeveThicknessMicron: "",
-      bagSleeveWeight: "",
-    },
-    secondary: {
-      bagsPerCarton: "",
-      cartonType: "",
-      cartonInternalDimensions: "",
-      cartonExternalDimensions: "",
-      cartonArtworkNeeded: "",
-      cartonArtworkProvided: "",
-      cartonPackagingNotes: "",
-    },
-    labelInstructions: {
-      cartonLabelRequired: "",
-      cartonLabelDimensions: "",
-      barcodeRequired: "",
-      barcodeType: "",
-      labelFieldProductCode: false,
-      labelFieldBatchNo: false,
-      labelFieldProdDate: false,
-      labelFieldExpiryDate: false,
-      labelFieldQuantity: false,
-      labelFieldCustomerCode: false,
-      labelFieldOther: "",
-      cartonLabelArtworkProvided: "",
-      cartonLabelNotes: "",
-    },
-    pallet: {
-      palletType: "",
-      palletDimensions: "",
-      returnablePallet: "",
-      palletReturnCount: "",
-      cartonsPerPallet: "",
-      stretchWrapRequired: "",
-      stretchWrapKgPerPallet: "",
-      palletNotes: "",
-
-      rollsPerPallet: "",
-      separatorCount: "",
-      strapLengthM: "",
-      labelsPerRoll: "",
-      foamWrappingM: "",
-    },
+  sheet: {
+    coreSize: "",
+    rollWeightKg: "",
+    rollsPerPallet: "",
+    palletType: "",
+    strapLengthPerPalletM: "",
+    foamLengthPerPalletM: "",
+    labelsPerRoll: "",
+    labelsPerPallet: "",
+    stretchWeightPerPalletKg: "",
+    operatorsPerPallet: "",
   },
+  primary: {
+    pcsPerStack: "",
+    stacksPerBag: "",
+    sleeveArtworkNeeded: "",
+    sleeveArtworkProvided: "",
+    primaryPackagingNotes: "",
+    bagSleeveMaterial: "",
+    bagSleeveDimensionsMm: "",
+    bagSleeveThicknessMicron: "",
+    bagSleeveWeight: "",
+  },
+  secondary: {
+    bagsPerCarton: "",
+    cartonType: "",
+    cartonInternalDimensionsMm: "",
+    cartonExternalDimensionsMm: "",
+    cartonArtworkNeeded: "",
+    cartonArtworkProvided: "",
+    cartonPackagingNotes: "",
+  },
+  labelInstructions: {
+    cartonLabelRequired: "",
+    cartonLabelDimensionsMm: "",
+    barcodeRequired: "",
+    barcodeType: "",
+    labelFieldProductCode: false,
+    labelFieldBatchNo: false,
+    labelFieldProdDate: false,
+    labelFieldExpiryDate: false,
+    labelFieldQuantity: false,
+    labelFieldCustomerCode: false,
+    labelFieldOther: "",
+    cartonLabelArtworkProvided: "",
+    cartonLabelNotes: "",
+  },
+  pallet: {
+    noPalletNeeded: false,
+    palletType: "",
+    palletDimensionsMm: "",
+    returnablePallet: "",
+    palletReturnCount: "",
+    cartonsPerPallet: "",
+    stretchWrapRequired: "",
+    stretchWrapKgPerPallet: "",
+    palletNotes: "",
+  },
+},
   delivery: {
-    deliveryLocationConfirm: "",
-    deliveryTerm: "",
-    deliveryFrequency: "",
-    firstDeliveryDate: "",
-    receivingNotes: "",
-    loadingRestrictions: "",
-    requiredDeliveryDocs: "",
-    logisticsComments: "",
+  deliveryLocationConfirm: "",
+  deliveryTerm: "",
+  deliveryFrequency: "",
+  firstDeliveryDate: "",
+  receivingNotes: "",
+  loadingRestrictions: "",
+  requiredDeliveryDocs: "",
+  logisticsComments: "",
 
-    desiredQtyPerTruck: "",
-    desiredQtyPerTruckUnit: "",
-  },
+  desiredQtyPerTruck: "",
+  desiredQtyPerTruckUnit: "",
+  truckSize: "",
+},
   attachments: {
     samplePhotos: [],
     printArtworkFiles: [],
@@ -585,6 +598,7 @@ export default function RequestWizard({
     cartonLabelArtworkFiles: [],
     customerBriefFiles: [],
   });
+  const isSheet = form.product.productType === "Sheet Roll";
 
   const requestId = form.metadata.requestId || "—";
   const status = form.metadata.status || "Draft";
@@ -601,15 +615,32 @@ export default function RequestWizard({
   }, [form.product.productType, form.decoration.decorationType]);
 
   const update = (path, value) => {
-    setForm((prev) => {
-      const next = structuredClone(prev);
-      const keys = path.split(".");
-      let ref = next;
-      for (let i = 0; i < keys.length - 1; i += 1) ref = ref[keys[i]];
-      ref[keys[keys.length - 1]] = value;
-      return next;
-    });
+  setForm((prev) => {
+    const next = structuredClone(prev);
+    const keys = path.split(".");
+    let ref = next;
+    for (let i = 0; i < keys.length - 1; i += 1) ref = ref[keys[i]];
+    ref[keys[keys.length - 1]] = value;
+    return next;
+  });
+};
+
+// ✅ ADD THIS RIGHT HERE (directly below update)
+const handleThumbnailChange = (file) => {
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = String(reader.result || "");
+    const base64 = result.split(",")[1] || "";
+
+    update("product.productThumbnailName", file.name);
+    update("product.productThumbnailBase64", base64);
+    update("product.productThumbnailPreview", result);
   };
+
+  reader.readAsDataURL(file);
+};
 
   const handleAttachmentAdd = (field, pickedFiles) => {
     setPendingUploads((prev) => ({
@@ -742,8 +773,9 @@ export default function RequestWizard({
     if (!form.customer.countryMarket) req.push("Country / Market");
     if (!form.customer.deliveryLocation) req.push("Delivery Location");
     if (!form.customer.projectName) req.push("Project Name");
-    if (!form.customer.projectType) req.push("Project Type");
-    if (!form.product.productType) req.push("Product Type");
+   if (!form.customer.projectType) req.push("Project Type");
+if (!form.customer.forecastAnnualVolume) req.push("Forecast Annual Volume");
+if (!form.product.productType) req.push("Product Type");
 
     if (form.product.productType === "Sheet Roll") {
       if (!form.product.sheetMaterial) req.push("Sheet Material");
@@ -765,13 +797,16 @@ export default function RequestWizard({
         if (!form.product.virginPetPct) req.push("% Virgin PET");
       }
 
-      if (!form.packaging.pallet.rollsPerPallet) req.push("Rolls per Pallet");
-      if (!form.packaging.pallet.palletType) req.push("Pallet Type");
+      if (!form.packaging.sheet.coreSize) req.push("Core Size");
+if (!form.packaging.sheet.rollWeightKg) req.push("Roll Weight");
+if (!form.packaging.sheet.rollsPerPallet) req.push("Rolls per Pallet");
+if (!form.packaging.sheet.palletType) req.push("Pallet Type");
       if (!form.delivery.deliveryLocationConfirm && !form.customer.deliveryLocation) {
         req.push("Delivery Location");
       }
-      if (!form.delivery.desiredQtyPerTruck) req.push("Desired Qty per Truck");
-      if (!form.delivery.desiredQtyPerTruckUnit) req.push("Desired Qty Unit");
+      if (!form.delivery.desiredQtyPerTruck) req.push("Required Qty per Truck");
+if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
+if (!form.delivery.truckSize) req.push("Truck Size");
     } else {
       if (!form.product.productMaterial) req.push("Product Material");
       if (form.decoration.decorationType === "") req.push("Decoration Type");
@@ -779,10 +814,16 @@ export default function RequestWizard({
       if (!form.packaging.primary.stacksPerBag) req.push("Stacks per Bag / Sleeve");
       if (!form.packaging.secondary.bagsPerCarton) req.push("Bags / Sleeves per Carton");
       if (!form.packaging.secondary.cartonType) req.push("Carton Type");
-      if (!form.packaging.pallet.palletType) req.push("Pallet Type");
-      if (!form.packaging.pallet.returnablePallet) req.push("Returnable Pallet");
-      if (!form.packaging.pallet.cartonsPerPallet) req.push("Cartons per Pallet");
-      if (!form.packaging.pallet.stretchWrapRequired) req.push("Stretch Wrap Required");
+      if (!form.packaging.pallet.noPalletNeeded) {
+  if (!form.packaging.pallet.palletType) req.push("Pallet Type");
+  if (!form.packaging.pallet.returnablePallet) req.push("Returnable Pallet");
+  if (!form.packaging.pallet.cartonsPerPallet) req.push("Cartons per Pallet");
+  if (!form.packaging.pallet.stretchWrapRequired) req.push("Stretch Wrap Required");
+}
+
+if (!form.delivery.desiredQtyPerTruck) req.push("Required Qty per Truck");
+if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
+if (!form.delivery.truckSize) req.push("Truck Size");
     }
 
     return req;
@@ -852,8 +893,9 @@ export default function RequestWizard({
   const nextStep = () => setCurrentStep((s) => Math.min(s + 1, steps.length - 1));
   const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 0));
 
-  const estimatedSheetRollPalletLoadKg =
-    Number(form.packaging.pallet.rollsPerPallet || 0) * Number(form.product.rollWeightKg || 0);
+const estimatedSheetRollPalletLoadKg =
+  Number(form.packaging.sheet.rollsPerPallet || 0) *
+  Number(form.packaging.sheet.rollWeightKg || 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -1016,7 +1058,7 @@ export default function RequestWizard({
                         onChange={(e) => update("customer.targetLaunchDate", e.target.value)}
                       />
                     </Field>
-                    <Field label="Forecast Annual Volume">
+                   <Field label="Forecast Annual Volume *">
                       <Input
                         value={form.customer.forecastAnnualVolume}
                         onChange={(e) => update("customer.forecastAnnualVolume", e.target.value)}
@@ -1094,6 +1136,27 @@ export default function RequestWizard({
                     )}
                   </div>
                 </SectionCard>
+<SectionCard title="Product Picture">
+  <div className="space-y-4">
+    <Input
+      type="file"
+      accept="image/*"
+      onChange={(e) => handleThumbnailChange(e.target.files?.[0])}
+    />
+
+    {form.product.productThumbnailPreview ? (
+      <img
+        src={form.product.productThumbnailPreview}
+        alt="Product preview"
+        className="w-32 h-32 object-cover rounded-xl border"
+      />
+    ) : (
+      <div className="text-sm text-muted-foreground">
+        No product picture uploaded yet.
+      </div>
+    )}
+  </div>
+</SectionCard>
 
                 <SectionCard title="Sample Availability">
                   <div className="grid md:grid-cols-3 gap-4">
