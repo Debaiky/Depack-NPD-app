@@ -30,27 +30,19 @@ function parsePricingJson(jsonString) {
 function extractScenarioMetrics(scenario) {
   const pricingData = parsePricingJson(scenario.PricingJSON);
 
-  const sheetTotal =
-    pricingData?.sheetSummary?.totalPerTon ||
-    pricingData?.pricing?.sheetSummary?.totalPerTon ||
-    scenario.TotalCostPer1000;
-
-  const thermoTotal =
-    pricingData?.thermo?.summary?.totalPer1000 || "";
-
-  const payback =
-    pricingData?.thermo?.summary?.paybackQtyPcs || "";
-
+  const sheetTotal = pricingData?.sheetSummary?.totalPerTon;
+  const thermoTotal = pricingData?.thermo?.summary?.totalPer1000;
+  const payback = pricingData?.thermo?.summary?.paybackQtyPcs;
   const selling =
     scenario.SellingPricePer1000 ||
     pricingData?.thermo?.finance?.desiredPricePer1000 ||
     "";
 
   return {
-    sheetTotal: sheetTotal || "",
+    sheetTotal: sheetTotal || scenario.TotalCostPer1000 || "",
     thermoTotal: thermoTotal || "",
     selling,
-    payback,
+    payback: payback || "",
     note: scenario.ScenarioNote || "",
   };
 }
@@ -63,107 +55,77 @@ export default function PricingWorkspace() {
   const [scenarios, setScenarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [newScenarioName, setNewScenarioName] = useState("");
   const [newScenarioNote, setNewScenarioNote] = useState("");
   const [createdBy, setCreatedBy] = useState("");
-
-  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
-  const [workspaceHasPassword, setWorkspaceHasPassword] = useState(false);
-  const [workspaceUnlocked, setWorkspaceUnlocked] = useState(false);
-
-  const [setupPassword, setSetupPassword] = useState("");
-  const [setupPasswordConfirm, setSetupPasswordConfirm] = useState("");
-
-  const [enterPassword, setEnterPassword] = useState("");
-
-  const [changeOldPassword, setChangeOldPassword] = useState("");
-  const [changeNewPassword, setChangeNewPassword] = useState("");
-  const [changeNewPasswordConfirm, setChangeNewPasswordConfirm] = useState("");
-
-  const [workspacePasswordValue, setWorkspacePasswordValue] = useState("");
+  const [workspacePassword, setWorkspacePassword] = useState("");
+  const [enteredPassword, setEnteredPassword] = useState("");
+  const [passwordMode, setPasswordMode] = useState("unlock");
+  const [passwordUnlocked, setPasswordUnlocked] = useState(false);
+  const [changePasswordData, setChangePasswordData] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
 
   useEffect(() => {
     const remembered = localStorage.getItem("pricingCreatedBy") || "";
     setCreatedBy(remembered);
   }, []);
 
-  useEffect(() => {
-    loadWorkspaceGate();
-  }, [requestId]);
+ useEffect(() => {
+  load(false);
+}, [requestId]);
 
-  const loadWorkspaceGate = async () => {
-    try {
-      setLoading(true);
-      setError("");
+ const load = async (preserveUnlocked = false) => {
+  try {
+    setLoading(true);
+    setError("");
 
-      const [reqRes, wsRes] = await Promise.all([
-        fetch(`/.netlify/functions/get-request?requestId=${requestId}`),
-        fetch(`/.netlify/functions/get-pricing-workspace?requestId=${requestId}`),
-      ]);
+    const reqRes = await fetch(
+      `/.netlify/functions/get-request?requestId=${requestId}`
+    );
+    const reqJson = await reqRes.json();
 
-      const reqJson = await reqRes.json();
-      const wsJson = await wsRes.json();
-
-      if (!reqJson.success) {
-        setError(reqJson.error || "Failed to load project");
-        setLoading(false);
-        return;
-      }
-
-      setRequestData(reqJson.payload || {});
-
-      if (!wsJson.success) {
-        setError(wsJson.error || "Failed to load pricing workspace");
-        setLoading(false);
-        return;
-      }
-
-      const workspace = wsJson.workspace || null;
-      const hasPassword = !!workspace?.WorkspacePassword;
-
-      setWorkspaceHasPassword(hasPassword);
-      setWorkspacePasswordValue(workspace?.WorkspacePassword || "");
-      setWorkspaceLoaded(true);
-
-      if (!hasPassword) {
-        setWorkspaceUnlocked(false);
-        setLoading(false);
-        return;
-      }
-
-      setWorkspaceUnlocked(false);
-      setLoading(false);
-    } catch (err) {
-      console.error("Pricing workspace load error:", err);
-      setError("Failed to load pricing workspace");
-      setLoading(false);
+    if (!reqJson.success) {
+      setError(reqJson.error || "Failed to load project");
+      return;
     }
-  };
 
-  const loadScenarioList = async () => {
-    try {
-      const scRes = await fetch(
-        `/.netlify/functions/list-pricing-scenarios?requestId=${requestId}`
-      );
-      const scJson = await scRes.json();
+    setRequestData(reqJson.payload || {});
 
-      if (scJson.success) {
-        setScenarios(Array.isArray(scJson.scenarios) ? scJson.scenarios : []);
+    const scRes = await fetch(
+      `/.netlify/functions/list-pricing-scenarios?requestId=${requestId}`
+    );
+    const scJson = await scRes.json();
+
+    if (scJson.success) {
+      const rows = Array.isArray(scJson.scenarios) ? scJson.scenarios : [];
+      setScenarios(rows);
+
+      const savedPassword =
+        rows.map((x) => x.WorkspacePassword || "").find((x) => x.trim() !== "") || "";
+
+      setWorkspacePassword(savedPassword);
+
+      if (preserveUnlocked) {
+        setPasswordUnlocked(true);
+        setPasswordMode("unlocked");
+      } else if (savedPassword) {
+        setPasswordMode("unlock");
+        setPasswordUnlocked(false);
       } else {
-        setScenarios([]);
+        setPasswordMode("setup");
+        setPasswordUnlocked(false);
       }
-    } catch (err) {
-      console.error("Scenario list load error:", err);
-      setScenarios([]);
     }
-  };
-
-  useEffect(() => {
-    if (workspaceUnlocked) {
-      loadScenarioList();
-    }
-  }, [workspaceUnlocked, requestId]);
+  } catch (err) {
+    console.error("Pricing workspace load error:", err);
+    setError("Failed to load pricing workspace");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const summary = useMemo(() => {
     const customer = requestData?.customer || {};
@@ -184,126 +146,156 @@ export default function PricingWorkspace() {
     return scenarios.map((s) => ({
       ...s,
       metrics: extractScenarioMetrics(s),
-      compareSelected: (s.CompareSelected || "") === "Yes",
     }));
   }, [scenarios]);
 
   const selectedForComparison = useMemo(() => {
-    return scenarioRows.filter((s) => s.compareSelected);
+    return scenarioRows.filter((s) => (s.CompareSelected || "") === "Yes");
   }, [scenarioRows]);
 
-  const setFirstPassword = async () => {
-    if (!setupPassword || !setupPasswordConfirm) {
-      alert("Please enter and confirm the workspace password.");
+const saveWorkspacePassword = async () => {
+  try {
+    const newPassword = enteredPassword.trim();
+
+    if (!newPassword) {
+      alert("Please enter a workspace password.");
       return;
     }
 
-    if (setupPassword !== setupPasswordConfirm) {
-      alert("Passwords do not match.");
-      return;
-    }
-
-    try {
-      const res = await fetch("/.netlify/functions/set-pricing-workspace-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          requestId,
-          password: setupPassword,
-        }),
-      });
-
-      const json = await res.json();
-
-      if (!json.success) {
-        alert(json.error || "Failed to save workspace password");
+    if (workspacePassword) {
+      if (newPassword === workspacePassword) {
+        setPasswordUnlocked(true);
+        setPasswordMode("unlocked");
+        setEnteredPassword("");
         return;
       }
 
-      setWorkspaceHasPassword(true);
-      setWorkspacePasswordValue(setupPassword);
-      setWorkspaceUnlocked(true);
-      setSetupPassword("");
-      setSetupPasswordConfirm("");
-      await loadScenarioList();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to save workspace password");
-    }
-  };
-
-  const unlockWorkspace = async () => {
-    if (!enterPassword) {
-      alert("Please enter the workspace password.");
+      alert("There is already a password set. Please unlock instead.");
+      setPasswordMode("unlock");
       return;
     }
 
-    if (enterPassword !== workspacePasswordValue) {
-      alert("Incorrect workspace password.");
+    const res = await fetch("/.netlify/functions/save-pricing-scenario", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId,
+        scenarioName: "Workspace Setup",
+        scenarioNote: "Workspace password record",
+        createdBy: createdBy || "",
+        scenarioStatus: "Draft",
+        pricingData: {},
+        workspacePassword: newPassword,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!json.success) {
+      alert(json.error || "Failed to save workspace password");
       return;
     }
 
-    setWorkspaceUnlocked(true);
-    setEnterPassword("");
-    await loadScenarioList();
-  };
+    setWorkspacePassword(newPassword);
+    setEnteredPassword("");
+    await load(true);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to save workspace password");
+  }
+};
+  const unlockWorkspace = () => {
+  if (!workspacePassword) {
+    setPasswordMode("setup");
+    alert("No workspace password found. Please set one.");
+    return;
+  }
 
-  const changePassword = async () => {
-    if (!changeOldPassword || !changeNewPassword || !changeNewPasswordConfirm) {
-      alert("Please complete all password fields.");
+  if (enteredPassword === workspacePassword) {
+    setPasswordUnlocked(true);
+    setPasswordMode("unlocked");
+    setEnteredPassword("");
+  } else {
+    alert("Wrong password");
+  }
+};
+
+  const changeWorkspacePassword = async () => {
+  try {
+    if (changePasswordData.oldPassword !== workspacePassword) {
+      alert("Old password is incorrect");
       return;
     }
 
-    if (changeNewPassword !== changeNewPasswordConfirm) {
-      alert("New passwords do not match.");
+    if (!changePasswordData.newPassword.trim()) {
+      alert("Please enter a new password");
       return;
     }
 
-    try {
-      const res = await fetch("/.netlify/functions/change-pricing-workspace-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          requestId,
-          oldPassword: changeOldPassword,
-          newPassword: changeNewPassword,
-        }),
-      });
-
-      const json = await res.json();
-
-      if (!json.success) {
-        alert(json.error || "Failed to change password");
-        return;
-      }
-
-      alert("Workspace password changed successfully.");
-      setWorkspacePasswordValue(changeNewPassword);
-      setChangeOldPassword("");
-      setChangeNewPassword("");
-      setChangeNewPasswordConfirm("");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to change password");
+    if (changePasswordData.newPassword !== changePasswordData.confirmPassword) {
+      alert("New password and confirmation do not match");
+      return;
     }
-  };
+
+    const passwordHolderRow =
+      scenarioRows.find((x) => (x.WorkspacePassword || "").trim() !== "") ||
+      scenarioRows[0];
+
+    if (!passwordHolderRow) {
+      alert("No workspace row found to update password");
+      return;
+    }
+
+    const res = await fetch("/.netlify/functions/save-pricing-scenario", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId,
+        pricingId: passwordHolderRow.PricingID,
+        scenarioName: passwordHolderRow.ScenarioName || "Workspace Setup",
+        scenarioNote: passwordHolderRow.ScenarioNote || "",
+        createdBy: passwordHolderRow.CreatedBy || createdBy || "",
+        scenarioStatus: passwordHolderRow.ScenarioStatus || "Draft",
+        pricingData: parsePricingJson(passwordHolderRow.PricingJSON || "{}"),
+        totalCostPer1000: passwordHolderRow.TotalCostPer1000 || "",
+        sellingPricePer1000: passwordHolderRow.SellingPricePer1000 || "",
+        marginPct: passwordHolderRow.MarginPct || "",
+        compareSelected: (passwordHolderRow.CompareSelected || "") === "Yes",
+        scenarioCurrency: passwordHolderRow.ScenarioCurrency || "",
+        usdEgp: passwordHolderRow.UsdEgp || "",
+        eurUsd: passwordHolderRow.EurUsd || "",
+        workspacePassword: changePasswordData.newPassword.trim(),
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!json.success) {
+      alert(json.error || "Failed to change workspace password");
+      return;
+    }
+
+    setWorkspacePassword(changePasswordData.newPassword.trim());
+    setChangePasswordData({
+      oldPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+
+    await load(true);
+    alert("Workspace password changed");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to change workspace password");
+  }
+};
 
   const createScenario = async () => {
     try {
-      if (!newScenarioName.trim()) {
-        alert("Scenario name is required.");
-        return;
-      }
-
-      if (!newScenarioNote.trim()) {
-        alert("Scenario note is required.");
-        return;
-      }
-
       const author = createdBy.trim();
       localStorage.setItem("pricingCreatedBy", author);
 
@@ -314,15 +306,12 @@ export default function PricingWorkspace() {
         },
         body: JSON.stringify({
           requestId,
-          scenarioName: newScenarioName.trim(),
-          scenarioNote: newScenarioNote.trim(),
+          scenarioName: newScenarioName || `Scenario ${scenarios.length + 1}`,
+          scenarioNote: newScenarioNote || "",
           createdBy: author,
           scenarioStatus: "Draft",
-          compareSelected: false,
-          scenarioCurrency: "",
-          usdEgp: "",
-          eurUsd: "",
           pricingData: {},
+          workspacePassword,
         }),
       });
 
@@ -358,14 +347,15 @@ export default function PricingWorkspace() {
           scenarioNote: `Duplicated from ${scenario.PricingID}`,
           createdBy: author,
           scenarioStatus: "Draft",
-          compareSelected: false,
-          scenarioCurrency: scenario.ScenarioCurrency || "",
-          usdEgp: scenario.UsdEgp || "",
-          eurUsd: scenario.EurUsd || "",
           pricingData,
           totalCostPer1000: scenario.TotalCostPer1000 || "",
           sellingPricePer1000: scenario.SellingPricePer1000 || "",
           marginPct: scenario.MarginPct || "",
+          compareSelected: false,
+          scenarioCurrency: scenario.ScenarioCurrency || "",
+          usdEgp: scenario.UsdEgp || "",
+          eurUsd: scenario.EurUsd || "",
+          workspacePassword,
         }),
       });
 
@@ -383,17 +373,18 @@ export default function PricingWorkspace() {
     }
   };
 
-  const toggleCompareSelected = async (scenario) => {
-    const currentlySelected = (scenario.CompareSelected || "") === "Yes";
-    const selectedCount = scenarioRows.filter((s) => (s.CompareSelected || "") === "Yes").length;
-
-    if (!currentlySelected && selectedCount >= 4) {
-      alert("You can compare a maximum of 4 scenarios at a time.");
-      return;
-    }
-
+  const toggleScenarioComparison = async (scenario, checked) => {
     try {
       const pricingData = parsePricingJson(scenario.PricingJSON);
+
+      const currentlySelected = scenarioRows.filter(
+        (s) => (s.CompareSelected || "") === "Yes"
+      );
+
+      if (checked && currentlySelected.length >= 4 && scenario.CompareSelected !== "Yes") {
+        alert("Maximum 4 scenarios can be selected for comparison.");
+        return;
+      }
 
       const res = await fetch("/.netlify/functions/save-pricing-scenario", {
         method: "POST",
@@ -401,20 +392,21 @@ export default function PricingWorkspace() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          requestId: scenario.RequestID,
+          requestId,
           pricingId: scenario.PricingID,
           scenarioName: scenario.ScenarioName || "",
           scenarioNote: scenario.ScenarioNote || "",
           createdBy: scenario.CreatedBy || "",
           scenarioStatus: scenario.ScenarioStatus || "Draft",
-          compareSelected: !currentlySelected,
-          scenarioCurrency: scenario.ScenarioCurrency || "",
-          usdEgp: scenario.UsdEgp || "",
-          eurUsd: scenario.EurUsd || "",
           pricingData,
           totalCostPer1000: scenario.TotalCostPer1000 || "",
           sellingPricePer1000: scenario.SellingPricePer1000 || "",
           marginPct: scenario.MarginPct || "",
+          compareSelected: checked,
+          scenarioCurrency: scenario.ScenarioCurrency || "",
+          usdEgp: scenario.UsdEgp || "",
+          eurUsd: scenario.EurUsd || "",
+          workspacePassword,
         }),
       });
 
@@ -425,21 +417,72 @@ export default function PricingWorkspace() {
         return;
       }
 
-      await loadScenarioList();
+      await load();
     } catch (err) {
       console.error(err);
       alert("Failed to update comparison selection");
     }
   };
 
-  const openComparison = () => {
-  if (selectedForComparison.length === 0) {
-    alert("Please select at least one scenario for comparison.");
-    return;
-  }
+  const clearComparisonSelection = async () => {
+    try {
+      const selected = scenarioRows.filter((s) => (s.CompareSelected || "") === "Yes");
 
-  navigate(`/pricing/${requestId}/compare`);
-};
+      if (selected.length === 0) {
+        alert("No scenarios are selected for comparison.");
+        return;
+      }
+
+      for (const scenario of selected) {
+        const pricingData = parsePricingJson(scenario.PricingJSON);
+
+        const res = await fetch("/.netlify/functions/save-pricing-scenario", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            requestId,
+            pricingId: scenario.PricingID,
+            scenarioName: scenario.ScenarioName || "",
+            scenarioNote: scenario.ScenarioNote || "",
+            createdBy: scenario.CreatedBy || "",
+            scenarioStatus: scenario.ScenarioStatus || "Draft",
+            pricingData,
+            totalCostPer1000: scenario.TotalCostPer1000 || "",
+            sellingPricePer1000: scenario.SellingPricePer1000 || "",
+            marginPct: scenario.MarginPct || "",
+            compareSelected: false,
+            scenarioCurrency: scenario.ScenarioCurrency || "",
+            usdEgp: scenario.UsdEgp || "",
+            eurUsd: scenario.EurUsd || "",
+            workspacePassword,
+          }),
+        });
+
+        const json = await res.json();
+        if (!json.success) {
+          alert(json.error || `Failed to clear comparison for ${scenario.ScenarioName}`);
+          return;
+        }
+      }
+
+      await load();
+      alert("Comparison selection cleared");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to clear comparison selection");
+    }
+  };
+
+  const openComparison = () => {
+    if (selectedForComparison.length === 0) {
+      alert("Please select at least one scenario for comparison.");
+      return;
+    }
+
+    navigate(`/pricing/${requestId}/compare`);
+  };
 
   if (loading) return <div className="p-6">Loading pricing workspace...</div>;
 
@@ -453,20 +496,12 @@ export default function PricingWorkspace() {
     );
   }
 
-  if (!workspaceLoaded) {
-    return <div className="p-6">Loading workspace...</div>;
-  }
-
-  if (!workspaceHasPassword) {
+  if (!passwordUnlocked) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-xl mx-auto space-y-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl font-bold">Pricing Workspace Setup</h1>
-              <p className="text-sm text-gray-500">{requestId}</p>
-            </div>
-
+            <h1 className="text-2xl font-bold">Pricing Workspace Security</h1>
             <Link
               to="/pricing-dashboard"
               className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
@@ -475,83 +510,49 @@ export default function PricingWorkspace() {
             </Link>
           </div>
 
-          <div className="rounded-2xl border bg-white shadow-sm p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Set Workspace Password</h2>
-            <p className="text-sm text-gray-500">
-              This project does not have a pricing workspace password yet. Create one now.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs text-gray-500 mb-1">New Password</div>
+          <div className="rounded-2xl border bg-white shadow-sm p-5 space-y-4">
+            {passwordMode === "setup" ? (
+              <>
+                <h2 className="text-lg font-semibold">Set Workspace Password</h2>
+                <p className="text-sm text-gray-600">
+                  This is the first time this pricing workspace is being opened.
+                  Please assign a password for this project workspace.
+                </p>
                 <input
                   type="password"
                   className="w-full border rounded-lg p-2"
-                  value={setupPassword}
-                  onChange={(e) => setSetupPassword(e.target.value)}
+                  value={enteredPassword}
+                  onChange={(e) => setEnteredPassword(e.target.value)}
+                  placeholder="Enter workspace password"
                 />
-              </div>
-
-              <div>
-                <div className="text-xs text-gray-500 mb-1">Confirm Password</div>
+                <button
+                  onClick={saveWorkspacePassword}
+                  className="w-full rounded-lg bg-black text-white px-4 py-2"
+                >
+                  Save Password and Continue
+                </button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-semibold">Unlock Workspace</h2>
+                <p className="text-sm text-gray-600">
+                  Please enter the pricing workspace password.
+                </p>
                 <input
                   type="password"
                   className="w-full border rounded-lg p-2"
-                  value={setupPasswordConfirm}
-                  onChange={(e) => setSetupPasswordConfirm(e.target.value)}
+                  value={enteredPassword}
+                  onChange={(e) => setEnteredPassword(e.target.value)}
+                  placeholder="Enter workspace password"
                 />
-              </div>
-            </div>
-
-            <button
-              onClick={setFirstPassword}
-              className="rounded-lg bg-black text-white px-4 py-2"
-            >
-              Save Password and Open Workspace
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!workspaceUnlocked) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-        <div className="max-w-3xl mx-auto space-y-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl font-bold">Pricing Workspace</h1>
-              <p className="text-sm text-gray-500">{requestId}</p>
-            </div>
-
-            <Link
-              to="/pricing-dashboard"
-              className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
-            >
-              ← Pricing Dashboard
-            </Link>
-          </div>
-
-          <div className="rounded-2xl border bg-white shadow-sm p-6 space-y-4">
-            <h2 className="text-lg font-semibold">Enter Workspace Password</h2>
-
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Password</div>
-              <input
-                type="password"
-                className="w-full border rounded-lg p-2"
-                value={enterPassword}
-                onChange={(e) => setEnterPassword(e.target.value)}
-              />
-            </div>
-
-            <button
-              onClick={unlockWorkspace}
-              className="rounded-lg bg-black text-white px-4 py-2"
-            >
-              Open Workspace
-            </button>
+                <button
+                  onClick={unlockWorkspace}
+                  className="w-full rounded-lg bg-black text-white px-4 py-2"
+                >
+                  Unlock
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -562,9 +563,23 @@ export default function PricingWorkspace() {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold">Pricing Workspace</h1>
-            <p className="text-sm text-gray-500">{requestId}</p>
+          <div className="flex items-center gap-4">
+            {summary.thumbnail ? (
+              <img
+                src={summary.thumbnail}
+                alt="Product thumbnail"
+                className="w-16 h-16 rounded-xl border object-cover bg-white"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-xl border bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                No image
+              </div>
+            )}
+
+            <div>
+              <h1 className="text-2xl font-bold">Pricing Workspace</h1>
+              <p className="text-sm text-gray-500">{requestId}</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -578,32 +593,18 @@ export default function PricingWorkspace() {
         </div>
 
         <div className="rounded-2xl border bg-white shadow-sm p-5">
-          <div className="flex items-center gap-4 flex-wrap">
-            {summary.thumbnail ? (
-              <img
-                src={summary.thumbnail}
-                alt="Product thumbnail"
-                className="w-20 h-20 rounded-xl border object-cover bg-white"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-xl border bg-gray-100 flex items-center justify-center text-xs text-gray-500">
-                No image
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
-              <div>
-                <div className="text-xs text-gray-500">Customer</div>
-                <div className="font-medium">{summary.customerName}</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500">Project</div>
-                <div className="font-medium">{summary.projectName}</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500">Product</div>
-                <div className="font-medium">{summary.productType}</div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <div className="text-xs text-gray-500">Customer</div>
+              <div className="font-medium">{summary.customerName}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500">Project</div>
+              <div className="font-medium">{summary.projectName}</div>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500">Product</div>
+              <div className="font-medium">{summary.productType}</div>
             </div>
           </div>
         </div>
@@ -617,8 +618,13 @@ export default function PricingWorkspace() {
               <input
                 type="password"
                 className="w-full border rounded-lg p-2"
-                value={changeOldPassword}
-                onChange={(e) => setChangeOldPassword(e.target.value)}
+                value={changePasswordData.oldPassword}
+                onChange={(e) =>
+                  setChangePasswordData({
+                    ...changePasswordData,
+                    oldPassword: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -627,8 +633,13 @@ export default function PricingWorkspace() {
               <input
                 type="password"
                 className="w-full border rounded-lg p-2"
-                value={changeNewPassword}
-                onChange={(e) => setChangeNewPassword(e.target.value)}
+                value={changePasswordData.newPassword}
+                onChange={(e) =>
+                  setChangePasswordData({
+                    ...changePasswordData,
+                    newPassword: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -637,15 +648,20 @@ export default function PricingWorkspace() {
               <input
                 type="password"
                 className="w-full border rounded-lg p-2"
-                value={changeNewPasswordConfirm}
-                onChange={(e) => setChangeNewPasswordConfirm(e.target.value)}
+                value={changePasswordData.confirmPassword}
+                onChange={(e) =>
+                  setChangePasswordData({
+                    ...changePasswordData,
+                    confirmPassword: e.target.value,
+                  })
+                }
               />
             </div>
           </div>
 
           <button
-            onClick={changePassword}
-            className="rounded-lg border px-4 py-2 bg-white hover:bg-gray-50"
+            onClick={changeWorkspacePassword}
+            className="rounded-lg bg-black text-white px-4 py-2"
           >
             Change Password
           </button>
@@ -658,9 +674,7 @@ export default function PricingWorkspace() {
             <div>
               <div className="text-xs text-gray-500 mb-1">Scenario Name</div>
               <input
-                className={`w-full border rounded-lg p-2 ${
-                  !newScenarioName.trim() ? "border-red-300 bg-red-50" : ""
-                }`}
+                className="w-full border rounded-lg p-2"
                 value={newScenarioName}
                 onChange={(e) => setNewScenarioName(e.target.value)}
                 placeholder="e.g. Base Case"
@@ -690,9 +704,7 @@ export default function PricingWorkspace() {
           <div>
             <div className="text-xs text-gray-500 mb-1">Scenario Note</div>
             <textarea
-              className={`w-full border rounded-lg p-2 ${
-                !newScenarioNote.trim() ? "border-red-300 bg-red-50" : ""
-              }`}
+              className="w-full border rounded-lg p-2"
               rows={2}
               value={newScenarioNote}
               onChange={(e) => setNewScenarioNote(e.target.value)}
@@ -702,8 +714,24 @@ export default function PricingWorkspace() {
         </div>
 
         <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-          <div className="p-4 border-b">
+          <div className="p-4 border-b flex items-center justify-between gap-3 flex-wrap">
             <h2 className="text-lg font-semibold">Saved Scenarios</h2>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={clearComparisonSelection}
+                className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
+              >
+                Clear Comparison Selection
+              </button>
+
+              <button
+                onClick={openComparison}
+                className="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-500"
+              >
+                Open Comparison ({selectedForComparison.length})
+              </button>
+            </div>
           </div>
 
           <table className="w-full text-sm">
@@ -715,7 +743,6 @@ export default function PricingWorkspace() {
                 <th className="p-3">Created Date</th>
                 <th className="p-3">Created By</th>
                 <th className="p-3">Status</th>
-                <th className="p-3">Currency</th>
                 <th className="p-3">Action</th>
               </tr>
             </thead>
@@ -723,7 +750,7 @@ export default function PricingWorkspace() {
             <tbody>
               {scenarioRows.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-6 text-center text-gray-500">
+                  <td colSpan="7" className="p-6 text-center text-gray-500">
                     No pricing scenarios saved yet.
                   </td>
                 </tr>
@@ -733,8 +760,8 @@ export default function PricingWorkspace() {
                     <td className="p-3">
                       <input
                         type="checkbox"
-                        checked={s.compareSelected}
-                        onChange={() => toggleCompareSelected(s)}
+                        checked={(s.CompareSelected || "") === "Yes"}
+                        onChange={(e) => toggleScenarioComparison(s, e.target.checked)}
                       />
                     </td>
                     <td className="p-3 font-medium">{s.PricingID}</td>
@@ -744,7 +771,6 @@ export default function PricingWorkspace() {
                     <td className="p-3">
                       <ScenarioStatusBadge status={s.ScenarioStatus} />
                     </td>
-                    <td className="p-3">{s.ScenarioCurrency || "—"}</td>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
                         <Link
@@ -769,14 +795,8 @@ export default function PricingWorkspace() {
         </div>
 
         <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-          <div className="p-4 border-b flex items-center justify-between gap-4 flex-wrap">
-            <h2 className="text-lg font-semibold">Scenario Comparison</h2>
-            <button
-              onClick={openComparison}
-              className="rounded-lg bg-black text-white px-4 py-2"
-            >
-              Compare Selected ({selectedForComparison.length}/4)
-            </button>
+          <div className="p-4 border-b">
+            <h2 className="text-lg font-semibold">Scenario Comparison Snapshot</h2>
           </div>
 
           <table className="w-full text-sm">
@@ -784,7 +804,6 @@ export default function PricingWorkspace() {
               <tr>
                 <th className="p-3">Scenario</th>
                 <th className="p-3">Status</th>
-                <th className="p-3">Currency</th>
                 <th className="p-3">Sheet Total / Ton</th>
                 <th className="p-3">Thermo Total / 1000</th>
                 <th className="p-3">Selling / 1000</th>
@@ -796,7 +815,7 @@ export default function PricingWorkspace() {
             <tbody>
               {scenarioRows.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-6 text-center text-gray-500">
+                  <td colSpan="7" className="p-6 text-center text-gray-500">
                     No scenario data available for comparison.
                   </td>
                 </tr>
@@ -807,7 +826,6 @@ export default function PricingWorkspace() {
                     <td className="p-3">
                       <ScenarioStatusBadge status={s.ScenarioStatus} />
                     </td>
-                    <td className="p-3">{s.ScenarioCurrency || "—"}</td>
                     <td className="p-3">{s.metrics.sheetTotal || "—"}</td>
                     <td className="p-3">{s.metrics.thermoTotal || "—"}</td>
                     <td className="p-3">{s.metrics.selling || "—"}</td>
