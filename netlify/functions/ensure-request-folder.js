@@ -1,4 +1,3 @@
-/* eslint-env node */
 const { getOrCreateFolder } = require("./_drive");
 const { getRequestRowById, updateRequestRow } = require("./_sheet");
 
@@ -17,18 +16,6 @@ const handler = async (event) => {
       };
     }
 
-    const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
-
-    if (!rootFolderId) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          success: false,
-          error: "Missing GOOGLE_DRIVE_ROOT_FOLDER_ID",
-        }),
-      };
-    }
-
     const existingRequest = await getRequestRowById(requestId);
 
     if (!existingRequest) {
@@ -41,7 +28,19 @@ const handler = async (event) => {
       };
     }
 
-    let requestFolderId = existingRequest.DriveFolderID || "";
+    const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+
+    if (!rootFolderId) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          success: false,
+          error: "Missing GOOGLE_DRIVE_ROOT_FOLDER_ID",
+        }),
+      };
+    }
+
+    let requestFolderId = existingRequest?.DriveFolderID || "";
     let requestFolder;
 
     if (requestFolderId) {
@@ -84,7 +83,7 @@ const handler = async (event) => {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        error: error.message || "Folder creation failed",
+        error: error.message,
       }),
     };
   }
