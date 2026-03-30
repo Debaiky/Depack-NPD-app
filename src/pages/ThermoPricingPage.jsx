@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
 const toNum = (v) => {
@@ -11,6 +11,20 @@ const fmt = (v, d = 3) =>
     maximumFractionDigits: d,
   }).format(v || 0);
 
+const isDifferent = (a, b) => String(a ?? "") !== String(b ?? "");
+
+function Card({ title, children, right }) {
+  return (
+    <div className="bg-white border rounded-xl p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h2 className="font-semibold">{title}</h2>
+        {right || null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function Field({ label, children }) {
   return (
     <label className="block">
@@ -20,13 +34,55 @@ function Field({ label, children }) {
   );
 }
 
-function NumInput({ value, onChange }) {
+function TextInput({ value, onChange, changed = false, placeholder = "" }) {
   return (
     <input
-      className="w-full border rounded-md px-3 py-2"
+      className={`w-full border rounded-md px-3 py-2 ${
+        changed ? "bg-orange-50 border-orange-300" : ""
+      }`}
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
     />
+  );
+}
+
+function NumInput({ value, onChange, changed = false, placeholder = "" }) {
+  return (
+    <input
+      className={`w-full border rounded-md px-3 py-2 ${
+        changed ? "bg-orange-50 border-orange-300" : ""
+      }`}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+    />
+  );
+}
+
+function SelectInput({ value, onChange, options, changed = false }) {
+  return (
+    <select
+      className={`w-full border rounded-md px-3 py-2 ${
+        changed ? "bg-orange-50 border-orange-300" : ""
+      }`}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      {options.map((o) => (
+        <option key={o.value ?? o} value={o.value ?? o}>
+          {o.label ?? o}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function ValueCell({ value, unit = "" }) {
+  return (
+    <div className="border rounded p-2 bg-blue-50 border-blue-200 font-medium">
+      {value === "" || value === null || value === undefined ? "—" : `${value}${unit}`}
+    </div>
   );
 }
 
@@ -37,6 +93,17 @@ function InfoTile({ label, value }) {
       <div className="font-medium">{value}</div>
     </div>
   );
+}
+
+function SectionNote({ children, tone = "gray" }) {
+  const styles = {
+    gray: "border-gray-200 bg-gray-50 text-gray-700",
+    red: "border-red-200 bg-red-50 text-red-700",
+    orange: "border-orange-200 bg-orange-50 text-orange-700",
+    green: "border-green-200 bg-green-50 text-green-700",
+  };
+
+  return <div className={`rounded-lg border p-3 text-sm ${styles[tone]}`}>{children}</div>;
 }
 
 export default function ThermoPricingPage() {
@@ -59,19 +126,49 @@ export default function ThermoPricingPage() {
     cpm: "",
     sheetUtilPct: "85",
     efficiencyPct: "90",
+    machineName: "",
+    moldBaseName: "",
+    moldBaseCode: "",
+    insertName: "",
+    insertCode: "",
+    bottomName: "",
+    bottomCode: "",
+    plugAssistName: "",
+    plugAssistCode: "",
+    cuttingPlateName: "",
+    cuttingPlateCode: "",
+    stackingPlateName: "",
+    stackingPlateCode: "",
   });
 
   const [pack, setPack] = useState({
     usePallet: true,
+
     pcsPerStack: "",
-    primaryName: "PE Bag (bag)",
+    primaryName: "PE Bag",
+    primaryDimensions: "",
+    primaryMaterial: "",
+    primaryArtworkCode: "",
     stacksPerPrimary: "",
+
     primariesPerSecondary: "",
-    secondaryName: "Carton (carton)",
+    secondaryName: "Carton",
+    secondaryType: "Single wall",
+    secondaryLengthMm: "",
+    secondaryWidthMm: "",
+    secondaryHeightMm: "",
     labelsPerSecondary: "",
+    labelLengthMm: "100",
+    labelWidthMm: "150",
+
+    palletWidthMm: "",
+    palletLengthMm: "",
+    palletHeightMm: "",
+    palletType: "",
     secondariesPerPallet: "",
     labelsPerPallet: "",
     stretchKgPerPallet: "",
+    packingNotes: "",
   });
 
   const [prices, setPrices] = useState({
@@ -90,13 +187,20 @@ export default function ThermoPricingPage() {
     interestPct: "0",
     convPerDay: "",
     desiredPricePer1000: "",
+    palletsPerTruck: "",
+    cartonsPerTruck: "",
   });
 
   const [deco, setDeco] = useState({
     use: false,
     type: "Printing",
     printing: { ink_g_per_1000: "", ink_price_per_kg: "" },
-    shrink: { price_per_1000: "" },
+    shrink: {
+      sleeveWeight_g: "",
+      sleeveCostPerPiece: "",
+      sleeveCostPerKg: "",
+      wastePct: "",
+    },
     hybrid: {
       blank_per_1000: "",
       bottom_per_1000: "",
@@ -141,11 +245,11 @@ export default function ThermoPricingPage() {
 
           if (pricingData.thermo) {
             const t = pricingData.thermo;
-            if (t.spec) setSpec(t.spec);
-            if (t.pack) setPack(t.pack);
-            if (t.prices) setPrices(t.prices);
-            if (t.finance) setFinance(t.finance);
-            if (t.deco) setDeco(t.deco);
+            if (t.spec) setSpec((prev) => ({ ...prev, ...t.spec }));
+            if (t.pack) setPack((prev) => ({ ...prev, ...t.pack }));
+            if (t.prices) setPrices((prev) => ({ ...prev, ...t.prices }));
+            if (t.finance) setFinance((prev) => ({ ...prev, ...t.finance }));
+            if (t.deco) setDeco((prev) => ({ ...prev, ...t.deco }));
             if (t.investRows) setInvestRows(t.investRows);
           }
         }
@@ -163,6 +267,7 @@ export default function ThermoPricingPage() {
     const thermo = engineeringData?.thermo || {};
     const decoEng = engineeringData?.decoration || {};
     const packEng = engineeringData?.packaging || {};
+    const reqPack = requestData?.packaging || {};
 
     setSpec((prev) => ({
       ...prev,
@@ -173,19 +278,42 @@ export default function ThermoPricingPage() {
       cpm: prev.cpm || thermo.cpm || "",
       sheetUtilPct: prev.sheetUtilPct || thermo.sheetUtilizationPct || "85",
       efficiencyPct: prev.efficiencyPct || thermo.efficiencyPct || "90",
+      machineName: prev.machineName || thermo.machineName || "",
+      moldBaseName: prev.moldBaseName || thermo.moldBaseName || "",
+      moldBaseCode: prev.moldBaseCode || thermo.moldBaseCode || "",
+      insertName: prev.insertName || thermo.insertName || "",
+      insertCode: prev.insertCode || thermo.insertCode || "",
+      bottomName: prev.bottomName || thermo.bottomName || "",
+      bottomCode: prev.bottomCode || thermo.bottomCode || "",
+      plugAssistName: prev.plugAssistName || thermo.plugAssistName || "",
+      plugAssistCode: prev.plugAssistCode || thermo.plugAssistCode || "",
+      cuttingPlateName: prev.cuttingPlateName || thermo.cuttingPlateName || "",
+      cuttingPlateCode: prev.cuttingPlateCode || thermo.cuttingPlateCode || "",
+      stackingPlateName: prev.stackingPlateName || thermo.stackingPlateName || "",
+      stackingPlateCode: prev.stackingPlateCode || thermo.stackingPlateCode || "",
     }));
 
     setPack((prev) => ({
       ...prev,
-      pcsPerStack: prev.pcsPerStack || packEng.pcsPerStack || "",
-      primaryName: prev.primaryName || packEng.primaryName || "PE Bag (bag)",
-      stacksPerPrimary: prev.stacksPerPrimary || packEng.stacksPerPrimary || "",
-      primariesPerSecondary: prev.primariesPerSecondary || packEng.primariesPerSecondary || "",
-      secondaryName: prev.secondaryName || packEng.secondaryName || "Carton (carton)",
+      pcsPerStack: prev.pcsPerStack || packEng.pcsPerStack || reqPack?.primary?.pcsPerStack || "",
+      primaryName: prev.primaryName || packEng.primaryName || reqPack?.primary?.bagSleeveMaterial || "PE Bag",
+      primaryDimensions: prev.primaryDimensions || reqPack?.primary?.bagSleeveDimensions || "",
+      primaryMaterial: prev.primaryMaterial || reqPack?.primary?.bagSleeveMaterial || "",
+      primaryArtworkCode: prev.primaryArtworkCode || "",
+      stacksPerPrimary: prev.stacksPerPrimary || packEng.stacksPerPrimary || reqPack?.primary?.stacksPerBag || "",
+      primariesPerSecondary: prev.primariesPerSecondary || packEng.primariesPerSecondary || reqPack?.secondary?.bagsPerCarton || "",
+      secondaryName: prev.secondaryName || packEng.secondaryName || reqPack?.secondary?.cartonType || "Carton",
+      secondaryType: prev.secondaryType || reqPack?.secondary?.cartonType || "Single wall",
+      secondaryLengthMm: prev.secondaryLengthMm || "",
+      secondaryWidthMm: prev.secondaryWidthMm || "",
+      secondaryHeightMm: prev.secondaryHeightMm || "",
       labelsPerSecondary: prev.labelsPerSecondary || packEng.labelsPerSecondary || "",
-      secondariesPerPallet: prev.secondariesPerPallet || packEng.secondariesPerPallet || "",
+      labelLengthMm: prev.labelLengthMm || "100",
+      labelWidthMm: prev.labelWidthMm || "150",
+      palletType: prev.palletType || packEng.palletType || reqPack?.pallet?.palletType || "",
+      secondariesPerPallet: prev.secondariesPerPallet || packEng.secondariesPerPallet || reqPack?.pallet?.cartonsPerPallet || "",
       labelsPerPallet: prev.labelsPerPallet || packEng.labelsPerPallet || "",
-      stretchKgPerPallet: prev.stretchKgPerPallet || packEng.stretchKgPerPallet || "",
+      stretchKgPerPallet: prev.stretchKgPerPallet || packEng.stretchKgPerPallet || reqPack?.pallet?.stretchWrapKgPerPallet || "",
     }));
 
     if (decoEng.type) {
@@ -207,7 +335,15 @@ export default function ThermoPricingPage() {
         },
       }));
     }
-  }, [engineeringData, requestId]);
+  }, [engineeringData, requestData, requestId]);
+
+  const customer = requestData?.customer || {};
+  const product = requestData?.product || {};
+  const thumb =
+    product?.productThumbnailPreview ||
+    (product?.productThumbnailBase64
+      ? `data:image/*;base64,${product.productThumbnailBase64}`
+      : "");
 
   if (loading) {
     return <div className="p-6">Loading thermo pricing...</div>;
@@ -222,30 +358,9 @@ export default function ThermoPricingPage() {
     );
   }
 
-  const customer = requestData?.customer || {};
-  const product = requestData?.product || {};
-  const thumb =
-    product?.productThumbnailPreview ||
-    (product?.productThumbnailBase64
-      ? `data:image/*;base64,${product.productThumbnailBase64}`
-      : "");
-
   const engThermo = engineeringData?.thermo || {};
-
-  const unitWeightAlert =
-    spec.unitWeight_g &&
-    engThermo.unitWeight_g &&
-    String(spec.unitWeight_g) !== String(engThermo.unitWeight_g);
-
-  const cavitiesAlert =
-    spec.cavities &&
-    engThermo.cavities &&
-    String(spec.cavities) !== String(engThermo.cavities);
-
-  const cpmAlert =
-    spec.cpm &&
-    engThermo.cpm &&
-    String(spec.cpm) !== String(engThermo.cpm);
+  const engPack = engineeringData?.packaging || {};
+  const engDeco = engineeringData?.decoration || {};
 
   const currency = scenarioMeta?.ScenarioCurrency || sheetBundle.currency || "EGP";
   const usdEgp = Math.max(0, toNum(scenarioMeta?.UsdEgp || sheetBundle.usdEgp || 60));
@@ -265,6 +380,9 @@ export default function ThermoPricingPage() {
   const pcsPerHour = cpm * 60 * cav * eff;
   const pcsPerShift = pcsPerHour * 12;
   const pcsPerDay = pcsPerHour * 24;
+  const pcsPerWeek = pcsPerDay * 7;
+  const pcsPerMonth = pcsPerDay * 30;
+  const pcsPerYear = pcsPerDay * 330;
 
   const sheetConsumptionKgPerHour =
     util > 0 ? (unit_g * pcsPerHour) / 1000 / util : 0;
@@ -306,6 +424,9 @@ export default function ThermoPricingPage() {
   const packagingPer1000 =
     costPrimary_1000 + costSecondary_1000 + (pack.usePallet ? costPallet_1000 : 0);
 
+  const packagingPerTon =
+    util > 0 ? packagingPer1000 / ((1000 / unit_g) * util / 1000) : 0;
+
   let decorationPer1000 = 0;
   if (deco.use) {
     if (deco.type === "Printing") {
@@ -313,7 +434,12 @@ export default function ThermoPricingPage() {
         (toNum(deco.printing.ink_g_per_1000) / 1000) *
         toNum(deco.printing.ink_price_per_kg);
     } else if (deco.type === "Shrink sleeve") {
-      decorationPer1000 = toNum(deco.shrink.price_per_1000);
+      const sleeveWeightKg = toNum(deco.shrink.sleeveWeight_g) / 1000;
+      const sleeveCostPiece =
+        toNum(deco.shrink.sleeveCostPerPiece) ||
+        sleeveWeightKg * toNum(deco.shrink.sleeveCostPerKg);
+      const wasteFactor = 1 + toNum(deco.shrink.wastePct) / 100;
+      decorationPer1000 = sleeveCostPiece * 1000 * wasteFactor;
     } else if (deco.type === "Hybrid") {
       decorationPer1000 =
         toNum(deco.hybrid.blank_per_1000) +
@@ -353,6 +479,19 @@ export default function ThermoPricingPage() {
   const pricePerCarton =
     pcsPerSecondary > 0 ? (totalPer1000 / 1000) * pcsPerSecondary : 0;
 
+  const palletsPerTruck =
+    pack.usePallet ? Math.max(0, Math.floor(toNum(finance.palletsPerTruck)) || 0) : 0;
+  const cartonsPerTruck =
+    pack.usePallet
+      ? palletsPerTruck * secondariesPerPallet
+      : Math.max(0, Math.floor(toNum(finance.cartonsPerTruck)) || 0);
+  const pcsPerTruck = cartonsPerTruck * pcsPerSecondary;
+  const netProductWeightPerTruckKg = (pcsPerTruck * unit_g) / 1000;
+
+  const packagingInstructionText = pack.usePallet
+    ? `Pack ${pcsPerStack} pcs per stack and ${stacksPerPrimary} stacks per ${pack.primaryName || "primary pack"}. Use ${primariesPerSecondary} primary packs per ${pack.secondaryName || "secondary pack"}, then load ${secondariesPerPallet} cartons per pallet using ${pack.palletType || "selected pallet"} and ${fmt(toNum(pack.stretchKgPerPallet), 3)} kg stretch film per pallet.`
+    : `Pack ${pcsPerStack} pcs per stack and ${stacksPerPrimary} stacks per ${pack.primaryName || "primary pack"}. Use ${primariesPerSecondary} primary packs per ${pack.secondaryName || "secondary pack"} with no pallet selected.`;
+
   const saveThermoScenario = async () => {
     try {
       const pricingData = {
@@ -374,6 +513,16 @@ export default function ThermoPricingPage() {
             sheetConsumptionKgPerHour,
             sheetConsumptionKgPerShift,
             sheetConsumptionKgPerDay,
+            pcsPerHour,
+            pcsPerShift,
+            pcsPerDay,
+            pcsPerWeek,
+            pcsPerMonth,
+            pcsPerYear,
+            cartonsPerTruck,
+            pcsPerTruck,
+            palletsPerTruck,
+            netProductWeightPerTruckKg,
           },
         },
       };
@@ -457,81 +606,481 @@ export default function ThermoPricingPage() {
 
       {saveMessage ? <div className="text-sm text-green-600">{saveMessage}</div> : null}
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <InfoTile label="Currency" value={currency} />
-        <InfoTile label="USD / EGP" value={fmt(usdEgp, 3)} />
-        <InfoTile label="EUR / USD" value={fmt(eurUsd, 4)} />
-        <InfoTile label="Net Extruder kg/hr" value={fmt(netExtruderKgPerHour)} />
-        <InfoTile label="Net Extruder kg/day" value={fmt(netExtruderKgPerDay)} />
-      </div>
-
-      <div className="bg-white border rounded-xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Field label="Product Name">
-          <input
-            className="w-full border rounded-md px-3 py-2"
-            value={spec.productName}
-            onChange={(e) => setSpec({ ...spec, productName: e.target.value })}
-          />
-        </Field>
-        <Field label="Product Code">
-          <input
-            className="w-full border rounded-md px-3 py-2"
-            value={spec.productCode}
-            onChange={(e) => setSpec({ ...spec, productCode: e.target.value })}
-          />
-        </Field>
-        <Field label="Unit Weight (g)">
-          <NumInput value={spec.unitWeight_g} onChange={(v) => setSpec({ ...spec, unitWeight_g: v })} />
-        </Field>
-        <Field label="Cavities">
-          <NumInput value={spec.cavities} onChange={(v) => setSpec({ ...spec, cavities: v })} />
-        </Field>
-        <Field label="CPM">
-          <NumInput value={spec.cpm} onChange={(v) => setSpec({ ...spec, cpm: v })} />
-        </Field>
-        <Field label="Sheet Utilization %">
-          <NumInput value={spec.sheetUtilPct} onChange={(v) => setSpec({ ...spec, sheetUtilPct: v })} />
-        </Field>
-        <Field label="Efficiency %">
-          <NumInput value={spec.efficiencyPct} onChange={(v) => setSpec({ ...spec, efficiencyPct: v })} />
-        </Field>
-      </div>
-
-      {unitWeightAlert ? (
-        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-          Unit weight in this scenario is different from engineering.
+      <Card title="Scenario Meta">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <InfoTile label="Currency" value={currency} />
+          <InfoTile label="USD / EGP" value={fmt(usdEgp, 3)} />
+          <InfoTile label="EUR / USD" value={fmt(eurUsd, 4)} />
+          <InfoTile label="Net Extruder kg/hr" value={fmt(netExtruderKgPerHour)} />
+          <InfoTile label="Net Extruder kg/day" value={fmt(netExtruderKgPerDay)} />
         </div>
-      ) : null}
+      </Card>
 
-      {cavitiesAlert ? (
-        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-          Cavities in this scenario are different from engineering.
+      <Card title="Thermoforming Data — Engineering vs Scenario">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+          <div className="font-medium text-gray-500">Parameter</div>
+          <div className="font-medium text-gray-500">Engineering</div>
+          <div className="font-medium text-gray-500">Scenario</div>
+
+          {[
+            ["Product Name", "productName"],
+            ["Product Code", "productCode"],
+            ["Machine", "machineName"],
+            ["Mold Base Name", "moldBaseName"],
+            ["Mold Base Code", "moldBaseCode"],
+            ["Insert Name", "insertName"],
+            ["Insert Code", "insertCode"],
+            ["Bottom Name", "bottomName"],
+            ["Bottom Code", "bottomCode"],
+            ["Plug Assist Name", "plugAssistName"],
+            ["Plug Assist Code", "plugAssistCode"],
+            ["Cutting Plate Name", "cuttingPlateName"],
+            ["Cutting Plate Code", "cuttingPlateCode"],
+            ["Stacking Plate Name", "stackingPlateName"],
+            ["Stacking Plate Code", "stackingPlateCode"],
+            ["Unit Weight (g)", "unitWeight_g"],
+            ["Cavities", "cavities"],
+            ["CPM", "cpm"],
+            ["Efficiency %", "efficiencyPct"],
+            ["Sheet Utilization %", "sheetUtilPct"],
+          ].map(([label, key]) => (
+            <div key={key} className="contents">
+              <div className="py-1">{label}</div>
+              <ValueCell value={engThermo[key] || (key === "productName" ? requestId : key === "productCode" ? requestId : "")} />
+              <div>
+                {key === "machineName" ? (
+                  <SelectInput
+                    value={spec[key]}
+                    onChange={(v) => setSpec({ ...spec, [key]: v })}
+                    changed={isDifferent(spec[key], engThermo[key])}
+                    options={["", "RDM73K", "RDK80"]}
+                  />
+                ) : (
+                  <TextInput
+                    value={spec[key]}
+                    onChange={(v) => setSpec({ ...spec, [key]: v })}
+                    changed={isDifferent(spec[key], engThermo[key])}
+                  />
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-      ) : null}
 
-      {cpmAlert ? (
-        <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-          CPM in this scenario is different from engineering.
+        {isDifferent(spec.unitWeight_g, engThermo.unitWeight_g) ? (
+          <SectionNote tone="orange">
+            Unit weight in this scenario is different from engineering.
+          </SectionNote>
+        ) : null}
+
+        {isDifferent(spec.cavities, engThermo.cavities) ? (
+          <SectionNote tone="orange">
+            Cavities in this scenario are different from engineering.
+          </SectionNote>
+        ) : null}
+
+        {isDifferent(spec.cpm, engThermo.cpm) ? (
+          <SectionNote tone="orange">
+            CPM in this scenario is different from engineering.
+          </SectionNote>
+        ) : null}
+      </Card>
+
+      <Card title="Thermo Productivity Summary">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <InfoTile label="Pcs / hr" value={fmt(pcsPerHour)} />
+          <InfoTile label="Pcs / shift" value={fmt(pcsPerShift)} />
+          <InfoTile label="Pcs / day" value={fmt(pcsPerDay)} />
+          <InfoTile label="Pcs / week" value={fmt(pcsPerWeek)} />
+          <InfoTile label="Pcs / month" value={fmt(pcsPerMonth)} />
+          <InfoTile label="Pcs / year" value={fmt(pcsPerYear)} />
         </div>
-      ) : null}
+      </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <InfoTile label="Pcs / hour" value={fmt(pcsPerHour)} />
-        <InfoTile label="Pcs / shift (12h)" value={fmt(pcsPerShift)} />
-        <InfoTile label="Pcs / day" value={fmt(pcsPerDay)} />
-        <InfoTile label="Sheet cost / 1000" value={fmt(sheetCostPer1000)} />
-        <InfoTile label="Packaging / 1000" value={fmt(packagingPer1000)} />
-        <InfoTile label="Decoration / 1000" value={fmt(decorationPer1000)} />
-        <InfoTile label="Working Cap / 1000" value={fmt(workingCapPer1000)} />
-        <InfoTile label="Conversion / 1000" value={fmt(convPer1000)} />
-        <InfoTile label="Total / 1000" value={fmt(totalPer1000)} />
-        <InfoTile label="Price / carton" value={fmt(pricePerCarton)} />
-        <InfoTile label="Sheet consumption kg/hr" value={fmt(sheetConsumptionKgPerHour)} />
-        <InfoTile label="Sheet consumption kg/day" value={fmt(sheetConsumptionKgPerDay)} />
-      </div>
+      <Card title="Thermoformed Product Packaging Data">
+        <div className="space-y-6">
+          <div>
+            <div className="font-medium mb-3">1) Primary Packaging</div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Field label="Pieces / Stack">
+                <NumInput
+                  value={pack.pcsPerStack}
+                  onChange={(v) => setPack({ ...pack, pcsPerStack: v })}
+                  changed={isDifferent(pack.pcsPerStack, engPack.pcsPerStack)}
+                />
+              </Field>
+              <Field label="Stacks / Primary Pack">
+                <NumInput
+                  value={pack.stacksPerPrimary}
+                  onChange={(v) => setPack({ ...pack, stacksPerPrimary: v })}
+                  changed={isDifferent(pack.stacksPerPrimary, engPack.stacksPerPrimary)}
+                />
+              </Field>
+              <Field label="Primary Pack Name">
+                <TextInput
+                  value={pack.primaryName}
+                  onChange={(v) => setPack({ ...pack, primaryName: v })}
+                  changed={isDifferent(pack.primaryName, engPack.primaryName)}
+                />
+              </Field>
+              <Field label="Primary Pack Dimensions">
+                <TextInput
+                  value={pack.primaryDimensions}
+                  onChange={(v) => setPack({ ...pack, primaryDimensions: v })}
+                />
+              </Field>
+              <Field label="Primary Pack Material">
+                <TextInput
+                  value={pack.primaryMaterial}
+                  onChange={(v) => setPack({ ...pack, primaryMaterial: v })}
+                />
+              </Field>
+              <Field label="Primary Artwork Code">
+                <TextInput
+                  value={pack.primaryArtworkCode}
+                  onChange={(v) => setPack({ ...pack, primaryArtworkCode: v })}
+                />
+              </Field>
+              <Field label="Primary Price / Unit">
+                <NumInput
+                  value={prices.primaryPricePerUnit}
+                  onChange={(v) => setPrices({ ...prices, primaryPricePerUnit: v })}
+                />
+              </Field>
+            </div>
+          </div>
 
-      <div className="bg-white border rounded-xl p-4">
-        <div className="font-semibold mb-3">Finance</div>
+          <div>
+            <div className="font-medium mb-3">2) Secondary Packaging</div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Field label="No. Primary Packs / Secondary">
+                <NumInput
+                  value={pack.primariesPerSecondary}
+                  onChange={(v) => setPack({ ...pack, primariesPerSecondary: v })}
+                  changed={isDifferent(pack.primariesPerSecondary, engPack.primariesPerSecondary)}
+                />
+              </Field>
+              <Field label="Secondary Pack Name">
+                <TextInput
+                  value={pack.secondaryName}
+                  onChange={(v) => setPack({ ...pack, secondaryName: v })}
+                  changed={isDifferent(pack.secondaryName, engPack.secondaryName)}
+                />
+              </Field>
+              <Field label="Secondary Type">
+                <SelectInput
+                  value={pack.secondaryType}
+                  onChange={(v) => setPack({ ...pack, secondaryType: v })}
+                  options={["Single wall", "Double wall"]}
+                />
+              </Field>
+              <Field label="Secondary Price / Unit">
+                <NumInput
+                  value={prices.secondaryPricePerUnit}
+                  onChange={(v) => setPrices({ ...prices, secondaryPricePerUnit: v })}
+                />
+              </Field>
+
+              <Field label="Secondary L (mm)">
+                <NumInput
+                  value={pack.secondaryLengthMm}
+                  onChange={(v) => setPack({ ...pack, secondaryLengthMm: v })}
+                />
+              </Field>
+              <Field label="Secondary W (mm)">
+                <NumInput
+                  value={pack.secondaryWidthMm}
+                  onChange={(v) => setPack({ ...pack, secondaryWidthMm: v })}
+                />
+              </Field>
+              <Field label="Secondary H (mm)">
+                <NumInput
+                  value={pack.secondaryHeightMm}
+                  onChange={(v) => setPack({ ...pack, secondaryHeightMm: v })}
+                />
+              </Field>
+              <Field label="Labels / Secondary">
+                <NumInput
+                  value={pack.labelsPerSecondary}
+                  onChange={(v) => setPack({ ...pack, labelsPerSecondary: v })}
+                  changed={isDifferent(pack.labelsPerSecondary, engPack.labelsPerSecondary)}
+                />
+              </Field>
+
+              <Field label="Label L (mm)">
+                <NumInput
+                  value={pack.labelLengthMm}
+                  onChange={(v) => setPack({ ...pack, labelLengthMm: v })}
+                />
+              </Field>
+              <Field label="Label W (mm)">
+                <NumInput
+                  value={pack.labelWidthMm}
+                  onChange={(v) => setPack({ ...pack, labelWidthMm: v })}
+                />
+              </Field>
+              <Field label="Label Price / Secondary">
+                <NumInput
+                  value={prices.labelSecondaryPrice}
+                  onChange={(v) => setPrices({ ...prices, labelSecondaryPrice: v })}
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div>
+            <div className="font-medium mb-3">3) Pallet</div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Field label="Use Pallet?">
+                <SelectInput
+                  value={pack.usePallet ? "Yes" : "No"}
+                  onChange={(v) => setPack({ ...pack, usePallet: v === "Yes" })}
+                  options={["Yes", "No"]}
+                />
+              </Field>
+
+              {pack.usePallet && (
+                <>
+                  <Field label="Pallet Width (mm)">
+                    <NumInput
+                      value={pack.palletWidthMm}
+                      onChange={(v) => setPack({ ...pack, palletWidthMm: v })}
+                    />
+                  </Field>
+                  <Field label="Pallet Length (mm)">
+                    <NumInput
+                      value={pack.palletLengthMm}
+                      onChange={(v) => setPack({ ...pack, palletLengthMm: v })}
+                    />
+                  </Field>
+                  <Field label="Pallet Height (mm)">
+                    <NumInput
+                      value={pack.palletHeightMm}
+                      onChange={(v) => setPack({ ...pack, palletHeightMm: v })}
+                    />
+                  </Field>
+                  <Field label="Pallet Type">
+                    <TextInput
+                      value={pack.palletType}
+                      onChange={(v) => setPack({ ...pack, palletType: v })}
+                      changed={isDifferent(pack.palletType, engPack.palletType)}
+                    />
+                  </Field>
+                  <Field label="Boxes / Pallet">
+                    <NumInput
+                      value={pack.secondariesPerPallet}
+                      onChange={(v) => setPack({ ...pack, secondariesPerPallet: v })}
+                      changed={isDifferent(pack.secondariesPerPallet, engPack.secondariesPerPallet)}
+                    />
+                  </Field>
+                  <Field label="Stretch kg / Pallet">
+                    <NumInput
+                      value={pack.stretchKgPerPallet}
+                      onChange={(v) => setPack({ ...pack, stretchKgPerPallet: v })}
+                      changed={isDifferent(pack.stretchKgPerPallet, engPack.stretchKgPerPallet)}
+                    />
+                  </Field>
+                  <Field label="Labels / Pallet">
+                    <NumInput
+                      value={pack.labelsPerPallet}
+                      onChange={(v) => setPack({ ...pack, labelsPerPallet: v })}
+                      changed={isDifferent(pack.labelsPerPallet, engPack.labelsPerPallet)}
+                    />
+                  </Field>
+                  <Field label="Pallet Price">
+                    <NumInput
+                      value={prices.palletPrice}
+                      onChange={(v) => setPrices({ ...prices, palletPrice: v })}
+                    />
+                  </Field>
+                  <Field label="Label Price / Pallet">
+                    <NumInput
+                      value={prices.labelPalletPrice}
+                      onChange={(v) => setPrices({ ...prices, labelPalletPrice: v })}
+                    />
+                  </Field>
+                  <Field label="Stretch Price / kg">
+                    <NumInput
+                      value={prices.stretchPricePerKg}
+                      onChange={(v) => setPrices({ ...prices, stretchPricePerKg: v })}
+                    />
+                  </Field>
+                </>
+              )}
+
+              <Field label="Packaging Notes">
+                <TextInput
+                  value={pack.packingNotes}
+                  onChange={(v) => setPack({ ...pack, packingNotes: v })}
+                />
+              </Field>
+            </div>
+          </div>
+        </div>
+
+        <SectionNote tone="green">{packagingInstructionText}</SectionNote>
+
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <InfoTile label="Pcs / Stack" value={fmt(pcsPerStack, 0)} />
+          <InfoTile label="Stacks / Primary" value={fmt(stacksPerPrimary, 0)} />
+          <InfoTile label="Pcs / Primary" value={fmt(pcsPerPrimary, 0)} />
+          <InfoTile label="Primaries / Carton" value={fmt(primariesPerSecondary, 0)} />
+          <InfoTile label="Pcs / Carton" value={fmt(pcsPerSecondary, 0)} />
+          <InfoTile label="Pcs / Pallet" value={pack.usePallet ? fmt(pcsPerSecondary * secondariesPerPallet, 0) : "—"} />
+        </div>
+      </Card>
+
+      <Card title="Decoration Cost">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <Field label="Use Decoration?">
+            <SelectInput
+              value={deco.use ? "Yes" : "No"}
+              onChange={(v) => setDeco({ ...deco, use: v === "Yes" })}
+              options={["Yes", "No"]}
+            />
+          </Field>
+
+          <Field label="Decoration Type">
+            <SelectInput
+              value={deco.type}
+              onChange={(v) => setDeco({ ...deco, type: v })}
+              changed={isDifferent(deco.type, engDeco.type)}
+              options={["Printing", "Shrink sleeve", "Hybrid"]}
+            />
+          </Field>
+        </div>
+
+        {deco.use && deco.type === "Printing" && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Field label="Ink g / 1000 pcs">
+              <NumInput
+                value={deco.printing.ink_g_per_1000}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    printing: { ...deco.printing, ink_g_per_1000: v },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Ink Cost / kg">
+              <NumInput
+                value={deco.printing.ink_price_per_kg}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    printing: { ...deco.printing, ink_price_per_kg: v },
+                  })
+                }
+              />
+            </Field>
+          </div>
+        )}
+
+        {deco.use && deco.type === "Shrink sleeve" && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <Field label="Sleeve Weight (g)">
+              <NumInput
+                value={deco.shrink.sleeveWeight_g}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    shrink: { ...deco.shrink, sleeveWeight_g: v },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Sleeve Cost / Piece">
+              <NumInput
+                value={deco.shrink.sleeveCostPerPiece}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    shrink: { ...deco.shrink, sleeveCostPerPiece: v },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Sleeve Cost / kg">
+              <NumInput
+                value={deco.shrink.sleeveCostPerKg}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    shrink: { ...deco.shrink, sleeveCostPerKg: v },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Waste %">
+              <NumInput
+                value={deco.shrink.wastePct}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    shrink: { ...deco.shrink, wastePct: v },
+                  })
+                }
+              />
+            </Field>
+          </div>
+        )}
+
+        {deco.use && deco.type === "Hybrid" && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <Field label="Blank / 1000">
+              <NumInput
+                value={deco.hybrid.blank_per_1000}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    hybrid: { ...deco.hybrid, blank_per_1000: v },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Bottom / 1000">
+              <NumInput
+                value={deco.hybrid.bottom_per_1000}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    hybrid: { ...deco.hybrid, bottom_per_1000: v },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Glue g / 1000">
+              <NumInput
+                value={deco.hybrid.glue_g_per_1000}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    hybrid: { ...deco.hybrid, glue_g_per_1000: v },
+                  })
+                }
+              />
+            </Field>
+            <Field label="Glue Cost / kg">
+              <NumInput
+                value={deco.hybrid.glue_price_per_kg}
+                onChange={(v) =>
+                  setDeco({
+                    ...deco,
+                    hybrid: { ...deco.hybrid, glue_price_per_kg: v },
+                  })
+                }
+              />
+            </Field>
+          </div>
+        )}
+
+        <SectionNote tone="green">
+          Decoration cost / 1000 pcs = {fmt(decorationPer1000)} {currency}
+        </SectionNote>
+      </Card>
+
+      <Card title="Working Capital and Conversion">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <Field label="DSO">
             <NumInput value={finance.DSO} onChange={(v) => setFinance({ ...finance, DSO: v })} />
@@ -543,16 +1092,56 @@ export default function ThermoPricingPage() {
             <NumInput value={finance.DPO} onChange={(v) => setFinance({ ...finance, DPO: v })} />
           </Field>
           <Field label="Interest %">
-            <NumInput value={finance.interestPct} onChange={(v) => setFinance({ ...finance, interestPct: v })} />
+            <NumInput
+              value={finance.interestPct}
+              onChange={(v) => setFinance({ ...finance, interestPct: v })}
+            />
           </Field>
           <Field label="Conversion / day">
-            <NumInput value={finance.convPerDay} onChange={(v) => setFinance({ ...finance, convPerDay: v })} />
+            <NumInput
+              value={finance.convPerDay}
+              onChange={(v) => setFinance({ ...finance, convPerDay: v })}
+            />
           </Field>
         </div>
-      </div>
 
-      <div className="bg-white border rounded-xl p-4">
-        <div className="font-semibold mb-3">Sheet Info / BOM</div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <InfoTile label="Sheet Cost / 1000" value={fmt(sheetCostPer1000)} />
+          <InfoTile label="Packaging / 1000" value={fmt(packagingPer1000)} />
+          <InfoTile label="Decoration / 1000" value={fmt(decorationPer1000)} />
+          <InfoTile label="Working Cap / 1000" value={fmt(workingCapPer1000)} />
+          <InfoTile label="Conversion / 1000" value={fmt(convPer1000)} />
+        </div>
+      </Card>
+
+      <Card title="Truck / Logistics Summary">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {pack.usePallet ? (
+            <Field label="Pallets / Truck">
+              <NumInput
+                value={finance.palletsPerTruck}
+                onChange={(v) => setFinance({ ...finance, palletsPerTruck: v })}
+              />
+            </Field>
+          ) : (
+            <Field label="Cartons / Truck">
+              <NumInput
+                value={finance.cartonsPerTruck}
+                onChange={(v) => setFinance({ ...finance, cartonsPerTruck: v })}
+              />
+            </Field>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <InfoTile label="Pallets / Truck" value={pack.usePallet ? fmt(palletsPerTruck, 0) : "—"} />
+          <InfoTile label="Cartons / Truck" value={fmt(cartonsPerTruck, 0)} />
+          <InfoTile label="Pcs / Truck" value={fmt(pcsPerTruck, 0)} />
+          <InfoTile label="Net Product Weight / Truck (kg)" value={fmt(netProductWeightPerTruckKg, 3)} />
+        </div>
+      </Card>
+
+      <Card title="Sheet Info / BOM">
         <div className="max-h-40 overflow-auto border rounded p-2 bg-white text-sm">
           {bomPerTon.map((x) => (
             <div key={x.name} className="flex justify-between">
@@ -561,16 +1150,26 @@ export default function ThermoPricingPage() {
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
           <InfoTile label="Sheet Material / ton" value={fmt(sheetMaterialCostPerTon)} />
+          <InfoTile label="Sheet Packaging / ton" value={fmt(packagingPerTon)} />
           <InfoTile label="Net Extruder kg/hr" value={fmt(netExtruderKgPerHour)} />
           <InfoTile label="Net Extruder kg/day" value={fmt(netExtruderKgPerDay)} />
-          <InfoTile
-            label="Payback Qty (pcs)"
-            value={fmt(totalInvestEGP && convPer1000 > 0 ? paybackQtyPcs : 0, 0)}
-          />
+          <InfoTile label="Payback Qty (pcs)" value={fmt(totalInvestEGP && convPer1000 > 0 ? paybackQtyPcs : 0, 0)} />
         </div>
-      </div>
+      </Card>
+
+      <Card title="Thermo Summary">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <InfoTile label="Pcs / Carton" value={fmt(pcsPerSecondary, 0)} />
+          <InfoTile label="Price / 1000 pcs" value={fmt(totalPer1000)} />
+          <InfoTile label="Price / Carton" value={fmt(pricePerCarton)} />
+          <InfoTile label="Sheet kg/hr" value={fmt(sheetConsumptionKgPerHour)} />
+          <InfoTile label="Sheet kg/shift" value={fmt(sheetConsumptionKgPerShift)} />
+          <InfoTile label="Sheet kg/day" value={fmt(sheetConsumptionKgPerDay)} />
+        </div>
+      </Card>
     </div>
   );
 }
