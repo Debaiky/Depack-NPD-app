@@ -77,11 +77,15 @@ function SelectField({ value, onChange, options = [] }) {
       onChange={(e) => onChange(e.target.value)}
     >
       <option value="">Select</option>
-      {options.map((o) => (
-        <option key={o.value || o} value={o.value || o}>
-          {o.label || o}
-        </option>
-      ))}
+      {options.map((o) => {
+        const valueKey = typeof o === "string" ? o : o.value;
+        const labelKey = typeof o === "string" ? o : o.label;
+        return (
+          <option key={valueKey} value={valueKey}>
+            {labelKey}
+          </option>
+        );
+      })}
     </select>
   );
 }
@@ -119,6 +123,9 @@ export default function EngineeringReview() {
   const { requestId } = useParams();
 
   const [payload, setPayload] = useState(null);
+  const [engineerName, setEngineerName] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
+
   const [engineering, setEngineering] = useState({
     materialSheet: {
       baseMaterial: "",
@@ -128,9 +135,11 @@ export default function EngineeringReview() {
       layerA: [blankMaterialRow()],
       layerB: [blankMaterialRow()],
       syncLayerBWithA: true,
+
       coatingUsed: "No",
       coatingName: "",
       coatingWeight_g_m2: "",
+
       processWastePct: "",
     },
 
@@ -200,7 +209,8 @@ export default function EngineeringReview() {
 
     thermo: {
       applicable: "Yes",
-      machineName: "",
+      machineName: "RDM73K",
+
       moldBaseName: "",
       moldBaseCode: "",
       insertName: "",
@@ -226,21 +236,6 @@ export default function EngineeringReview() {
       pcsPerWeek: "",
       pcsPerMonth: "",
       pcsPerYear330d: "",
-    },
-
-    decoration: {
-      type: "",
-      productivity_pcs_min: "",
-      wastePct: "",
-      dryOffset: { ink_g_per_1000: "" },
-      shrink: {
-        sleeveMaterial: "",
-        thickness_mic: "",
-        layflat_mm: "",
-        height_mm: "",
-      },
-      hybrid: { blankSpec: "", bottomSpec: "", glue_g_per_1000: "" },
-      label: { labelSpec: "" },
     },
 
     packaging: {
@@ -298,18 +293,12 @@ export default function EngineeringReview() {
     tooling: [],
   });
 
-  const [engineerName, setEngineerName] = useState("");
-  const [saveMessage, setSaveMessage] = useState("");
-
   useEffect(() => {
     const load = async () => {
       try {
         const r1 = await fetch(`/.netlify/functions/get-request?requestId=${requestId}`);
         const j1 = await r1.json();
-
-        if (j1.success) {
-          setPayload(j1.payload);
-        }
+        if (j1.success) setPayload(j1.payload);
 
         const r2 = await fetch(`/.netlify/functions/get-engineering-data?requestId=${requestId}`);
         const j2 = await r2.json();
@@ -318,6 +307,46 @@ export default function EngineeringReview() {
           setEngineering((prev) => ({
             ...prev,
             ...j2.engineeringData,
+            materialSheet: {
+              ...prev.materialSheet,
+              ...(j2.engineeringData.materialSheet || {}),
+              layerA:
+                j2.engineeringData?.materialSheet?.layerA?.length > 0
+                  ? j2.engineeringData.materialSheet.layerA
+                  : prev.materialSheet.layerA,
+              layerB:
+                j2.engineeringData?.materialSheet?.layerB?.length > 0
+                  ? j2.engineeringData.materialSheet.layerB
+                  : prev.materialSheet.layerB,
+            },
+            sheetPackaging: {
+              ...prev.sheetPackaging,
+              ...(j2.engineeringData.sheetPackaging || {}),
+            },
+            extrusion: {
+              ...prev.extrusion,
+              ...(j2.engineeringData.extrusion || {}),
+            },
+            thermo: {
+              ...prev.thermo,
+              ...(j2.engineeringData.thermo || {}),
+            },
+            packaging: {
+              ...prev.packaging,
+              ...(j2.engineeringData.packaging || {}),
+              primary: {
+                ...prev.packaging.primary,
+                ...(j2.engineeringData.packaging?.primary || {}),
+              },
+              secondary: {
+                ...prev.packaging.secondary,
+                ...(j2.engineeringData.packaging?.secondary || {}),
+              },
+              pallet: {
+                ...prev.packaging.pallet,
+                ...(j2.engineeringData.packaging?.pallet || {}),
+              },
+            },
           }));
           setEngineerName(j2.engineerName || "");
         }
@@ -385,7 +414,7 @@ export default function EngineeringReview() {
       const next = structuredClone(prev);
       next.materialSheet[side] = (next.materialSheet[side] || []).filter((r) => r.id !== id);
 
-      if ((next.materialSheet[side] || []).length === 0) {
+      if (next.materialSheet[side].length === 0) {
         next.materialSheet[side] = [blankMaterialRow()];
       }
 
@@ -477,126 +506,117 @@ export default function EngineeringReview() {
     }
   };
 
-  const customer = payload?.customer || {};
-  const product = payload?.product || {};
-  const packagingReq = payload?.packaging || {};
-  const deliveryReq = payload?.delivery || {};
+  if (!payload) return <div className="p-6">Loading...</div>;
+
+  const customer = payload.customer || {};
+  const product = payload.product || {};
+  const packagingReq = payload.packaging || {};
+  const deliveryReq = payload.delivery || {};
+  const isSheet = product.productType === "Sheet Roll";
+
   const thumb =
     product?.productThumbnailPreview ||
     (product?.productThumbnailBase64
       ? `data:image/*;base64,${product.productThumbnailBase64}`
       : "");
 
-  const baseMaterial = engineering.materialSheet.baseMaterial || product.sheetMaterial || product.productMaterial || "";
+  const requestedBaseMaterial = product.sheetMaterial || product.productMaterial || "";
+  const baseMaterial = engineering.materialSheet.baseMaterial || requestedBaseMaterial;
   const autoDensity = DENSITY_MAP[baseMaterial] || 0;
   const density = n(engineering.materialSheet.density) || autoDensity;
 
   useEffect(() => {
-    if (!payload) return;
+    const opt = OPT_SPEED_MAP[baseMaterial] || { A: 0, B: 0 };
 
     setEngineering((prev) => {
       const next = structuredClone(prev);
 
-      if (!next.materialSheet.baseMaterial) {
-        next.materialSheet.baseMaterial = product.sheetMaterial || product.productMaterial || "";
+      if (!next.materialSheet.baseMaterial && requestedBaseMaterial) {
+        next.materialSheet.baseMaterial = requestedBaseMaterial;
       }
 
       if (!next.materialSheet.density && autoDensity) {
         next.materialSheet.density = String(autoDensity);
       }
 
-      if (!next.sheetSpecs.netWidth_mm) {
-        next.sheetSpecs.netWidth_mm = product.sheetWidthMm || "";
+      if (!next.sheetSpecs.netWidth_mm && product.sheetWidthMm) {
+        next.sheetSpecs.netWidth_mm = product.sheetWidthMm;
       }
 
-      if (!next.sheetSpecs.thickness_mic) {
-        next.sheetSpecs.thickness_mic = product.sheetThicknessMicron || "";
+      if (!next.sheetSpecs.thickness_mic && product.sheetThicknessMicron) {
+        next.sheetSpecs.thickness_mic = product.sheetThicknessMicron;
       }
 
-      if (!next.sheetSpecs.rollTargetWeight_kg) {
-        next.sheetSpecs.rollTargetWeight_kg = product.rollWeightKg || "";
+      if (!next.sheetSpecs.rollTargetWeight_kg && product.rollWeightKg) {
+        next.sheetSpecs.rollTargetWeight_kg = product.rollWeightKg;
       }
 
-      if (!next.sheetPackaging.coreMaterial) {
-        next.sheetPackaging.coreMaterial = product.coreMaterial || "";
+      if (!next.sheetSpecs.productDiameter_mm && product.topDiameterMm) {
+        next.sheetSpecs.productDiameter_mm = product.topDiameterMm;
       }
 
-      if (!next.sheetPackaging.coreSize) {
-        next.sheetPackaging.coreSize = product.coreDiameterMm
-          ? Object.keys(CORE_MAP_MM).find((k) => Math.abs(CORE_MAP_MM[k] - n(product.coreDiameterMm)) < 1) || ""
-          : "";
+      if (!next.sheetPackaging.rollWeight_kg && product.rollWeightKg) {
+        next.sheetPackaging.rollWeight_kg = product.rollWeightKg;
       }
 
-      if (!next.sheetPackaging.rollWeight_kg) {
-        next.sheetPackaging.rollWeight_kg = product.rollWeightKg || "";
+      if (!next.sheetPackaging.coreMaterial && product.coreMaterial) {
+        next.sheetPackaging.coreMaterial = product.coreMaterial;
       }
 
-      if (!next.thermo.unitWeight_g) {
-        next.thermo.unitWeight_g = product.productWeightG || "";
+      if (!next.thermo.unitWeight_g && product.productWeightG) {
+        next.thermo.unitWeight_g = product.productWeightG;
       }
 
-      if (!next.packaging.primary.pcsPerStack) {
-        next.packaging.primary.pcsPerStack = packagingReq?.primary?.pcsPerStack || "";
+      if (!next.extrusion.grossSpeedA_kg_hr && opt.A) {
+        next.extrusion.grossSpeedA_kg_hr = String(opt.A);
       }
 
-      if (!next.packaging.primary.stacksPerPrimary) {
-        next.packaging.primary.stacksPerPrimary = packagingReq?.primary?.stacksPerBag || "";
+      if (!next.extrusion.grossSpeedB_kg_hr && opt.B) {
+        next.extrusion.grossSpeedB_kg_hr = String(opt.B);
       }
 
-      if (!next.packaging.primary.primaryName) {
-        next.packaging.primary.primaryName = packagingReq?.primary?.bagSleeveMaterial || "";
+      if (!next.packaging.primary.pcsPerStack && packagingReq?.primary?.pcsPerStack) {
+        next.packaging.primary.pcsPerStack = packagingReq.primary.pcsPerStack;
       }
 
-      if (!next.packaging.primary.primaryMaterial) {
-        next.packaging.primary.primaryMaterial = packagingReq?.primary?.bagSleeveMaterial || "";
+      if (!next.packaging.primary.stacksPerPrimary && packagingReq?.primary?.stacksPerBag) {
+        next.packaging.primary.stacksPerPrimary = packagingReq.primary.stacksPerBag;
       }
 
-      if (!next.packaging.primary.primaryArtworkCode) {
-        next.packaging.primary.primaryArtworkCode = packagingReq?.primary?.sleeveArtworkProvided || "";
+      if (!next.packaging.primary.primaryName && packagingReq?.primary?.bagSleeveMaterial) {
+        next.packaging.primary.primaryName = packagingReq.primary.bagSleeveMaterial;
       }
 
-      if (!next.packaging.secondary.primariesPerSecondary) {
-        next.packaging.secondary.primariesPerSecondary = packagingReq?.secondary?.bagsPerCarton || "";
+      if (!next.packaging.primary.primaryMaterial && packagingReq?.primary?.bagSleeveMaterial) {
+        next.packaging.primary.primaryMaterial = packagingReq.primary.bagSleeveMaterial;
       }
 
-      if (!next.packaging.secondary.secondaryName) {
-        next.packaging.secondary.secondaryName = packagingReq?.secondary?.cartonType || "";
+      if (!next.packaging.secondary.primariesPerSecondary && packagingReq?.secondary?.bagsPerCarton) {
+        next.packaging.secondary.primariesPerSecondary = packagingReq.secondary.bagsPerCarton;
       }
 
-      if (!next.packaging.pallet.palletType) {
-        next.packaging.pallet.palletType = packagingReq?.pallet?.palletType || "";
+      if (!next.packaging.secondary.secondaryName && packagingReq?.secondary?.cartonType) {
+        next.packaging.secondary.secondaryName = packagingReq.secondary.cartonType;
       }
 
-      if (!next.packaging.pallet.boxesPerPallet) {
-        next.packaging.pallet.boxesPerPallet = packagingReq?.pallet?.cartonsPerPallet || "";
+      if (!next.packaging.pallet.palletType && packagingReq?.pallet?.palletType) {
+        next.packaging.pallet.palletType = packagingReq.pallet.palletType;
       }
 
-      if (!next.packaging.pallet.stretchWeightPerPallet_kg) {
-        next.packaging.pallet.stretchWeightPerPallet_kg = packagingReq?.pallet?.stretchWrapKgPerPallet || "";
+      if (!next.packaging.pallet.boxesPerPallet && packagingReq?.pallet?.cartonsPerPallet) {
+        next.packaging.pallet.boxesPerPallet = packagingReq.pallet.cartonsPerPallet;
       }
 
-      if (!next.freight.palletsPerTruck) {
-        next.freight.palletsPerTruck = deliveryReq?.desiredQtyPerTruckUnit === "Pallets"
-          ? deliveryReq?.desiredQtyPerTruck || ""
-          : "";
+      if (
+        !next.packaging.pallet.stretchWeightPerPallet_kg &&
+        packagingReq?.pallet?.stretchWrapKgPerPallet
+      ) {
+        next.packaging.pallet.stretchWeightPerPallet_kg = packagingReq.pallet.stretchWrapKgPerPallet;
       }
-
-      if (!next.extrusion.lineName) {
-        next.extrusion.lineName = "Breyer";
-      }
-
-      const opt = OPT_SPEED_MAP[next.materialSheet.baseMaterial || product.sheetMaterial || product.productMaterial] || { A: 0, B: 0 };
-      if (!next.extrusion.grossSpeedA_kg_hr && opt.A) next.extrusion.grossSpeedA_kg_hr = String(opt.A);
-      if (!next.extrusion.grossSpeedB_kg_hr && opt.B) next.extrusion.grossSpeedB_kg_hr = String(opt.B);
-
-      if (!next.thermo.machineName) next.thermo.machineName = "RDM73K";
-
-      if (!next.sheetSpecs.coreSize) next.sheetSpecs.coreSize = "6 inch";
-      if (!next.sheetSpecs.coreDiameter_mm) next.sheetSpecs.coreDiameter_mm = String(CORE_MAP_MM["6 inch"]);
 
       return next;
     });
-  }, [payload, product, packagingReq, deliveryReq, autoDensity]);
+  }, [requestedBaseMaterial, autoDensity, baseMaterial, product, packagingReq]);
 
   useEffect(() => {
     if (!engineering.materialSheet.syncLayerBWithA) return;
@@ -612,10 +632,15 @@ export default function EngineeringReview() {
   useEffect(() => {
     const coreSize = engineering.sheetSpecs.coreSize || "6 inch";
     const coreDia = CORE_MAP_MM[coreSize] || n(engineering.sheetSpecs.coreDiameter_mm);
+
     if (String(coreDia) !== String(engineering.sheetSpecs.coreDiameter_mm)) {
       updateSection("sheetSpecs", { coreDiameter_mm: String(coreDia) });
     }
-  }, [engineering.sheetSpecs.coreSize]);
+
+    if (!engineering.sheetPackaging.coreSize) {
+      updateSection("sheetPackaging", { coreSize });
+    }
+  }, [engineering.sheetSpecs.coreSize, engineering.sheetSpecs.coreDiameter_mm, engineering.sheetPackaging.coreSize]);
 
   const sheetDerived = useMemo(() => {
     const netWidth = n(engineering.sheetSpecs.netWidth_mm);
@@ -623,33 +648,41 @@ export default function EngineeringReview() {
     const grossWidth = netWidth + 2 * edgeTrim;
     const trimLossPct = grossWidth > 0 ? (1 - netWidth / grossWidth) * 100 : 0;
 
+    const thicknessMic = n(engineering.sheetSpecs.thickness_mic);
     const rollDiameter = n(engineering.sheetSpecs.rollDiameter_mm);
     const coreDiameter = n(engineering.sheetSpecs.coreDiameter_mm);
-    const rollWeight = n(engineering.sheetSpecs.rollTargetWeight_kg);
+    const rollWeightInput = n(engineering.sheetSpecs.rollTargetWeight_kg);
+    const coatingWeightPerM2 = engineering.materialSheet.coatingUsed === "Yes"
+      ? n(engineering.materialSheet.coatingWeight_g_m2)
+      : 0;
+
+    const plasticWeightPerM2_g =
+      thicknessMic > 0 && density > 0 ? 10000 * (thicknessMic / 10000) * density : 0;
+
+    const totalWeightPerM2_g = plasticWeightPerM2_g + coatingWeightPerM2;
+    const coatingShare = totalWeightPerM2_g > 0 ? coatingWeightPerM2 / totalWeightPerM2_g : 0;
+    const plasticShare = 1 - coatingShare;
 
     let calcRollWeight = 0;
-    if (rollDiameter > 0 && coreDiameter > 0 && netWidth > 0 && density > 0) {
-      calcRollWeight =
-        Math.PI *
-        ((rollDiameter / 2) ** 2 - (coreDiameter / 2) ** 2) *
-        netWidth *
-        density /
-        1_000_000;
+    if (rollDiameter > 0 && coreDiameter > 0 && netWidth > 0 && totalWeightPerM2_g > 0) {
+      const area_m2 =
+        Math.PI * ((rollDiameter / 2) ** 2 - (coreDiameter / 2) ** 2) * netWidth / 1_000_000_000;
+      calcRollWeight = area_m2 * totalWeightPerM2_g / 1000;
     }
 
     let calcRollDiameter = 0;
-    if (rollWeight > 0 && coreDiameter > 0 && netWidth > 0 && density > 0) {
+    if (rollWeightInput > 0 && coreDiameter > 0 && netWidth > 0 && totalWeightPerM2_g > 0) {
+      const area_m2 = (rollWeightInput * 1000) / totalWeightPerM2_g;
+      const ringArea_mm2 = area_m2 * 1_000_000 / Math.max(netWidth, 1);
       calcRollDiameter =
         2 *
-        Math.sqrt(
-          rollWeight * 1_000_000 / (Math.PI * netWidth * density) +
-            (coreDiameter / 2) ** 2
-        );
+        Math.sqrt(ringArea_mm2 / Math.PI + (coreDiameter / 2) ** 2);
     }
 
     const isRound = engineering.sheetSpecs.surfaceMode !== "Manual";
     const productDiameter = n(engineering.sheetSpecs.productDiameter_mm || product.topDiameterMm);
     const manualArea = n(engineering.sheetSpecs.manualSurfaceArea_cm2);
+
     const surfaceArea_cm2 = isRound
       ? productDiameter > 0
         ? Math.PI * (productDiameter / 20) ** 2
@@ -666,36 +699,66 @@ export default function EngineeringReview() {
 
     const calcThicknessFromWeight =
       surfaceArea_cm2 > 0 && weightCalc_g > 0 && density > 0
-        ? weightCalc_g / (surfaceArea_cm2 * density) * 10000
+        ? (weightCalc_g / (surfaceArea_cm2 * density)) * 10000
         : 0;
+
+    const materialPerTonRows = [];
+    const layers = [
+      ...(engineering.materialSheet.layerA || []),
+      ...(engineering.materialSheet.layerB || []),
+    ];
+
+    const grouped = {};
+    layers.forEach((row) => {
+      const name = String(row.name || "").trim();
+      const pct = n(row.pct);
+      if (!name || pct <= 0) return;
+      grouped[name] = (grouped[name] || 0) + pct;
+    });
+
+    Object.entries(grouped).forEach(([name, pct]) => {
+      const kgPerTon = (pct / 100) * 1000 * plasticShare;
+      materialPerTonRows.push({
+        name,
+        pct,
+        kgPerTon,
+      });
+    });
+
+    const coatingKgPerTon = coatingShare * 1000;
 
     return {
       grossWidth,
       trimLossPct,
+      plasticWeightPerM2_g,
+      totalWeightPerM2_g,
+      coatingShare,
+      plasticShare,
+      coatingKgPerTon,
+      materialPerTonRows,
       calcRollWeight,
       calcRollDiameter,
       surfaceArea_cm2,
       calcWeightFromThickness,
       calcThicknessFromWeight,
     };
-  }, [engineering.sheetSpecs, density, product.topDiameterMm, product.productWeightG]);
+  }, [engineering.materialSheet, engineering.sheetSpecs, density, product.topDiameterMm, product.productWeightG]);
 
   useEffect(() => {
     updateSection("sheetSpecs", {
-      grossWidth_mm: sheetDerived.grossWidth ? String(sheetDerived.grossWidth) : "",
-      trimLossPct: sheetDerived.trimLossPct ? String(sheetDerived.trimLossPct) : "",
+      grossWidth_mm: sheetDerived.grossWidth ? String(sheetDerived.grossWidth.toFixed(2)) : "",
+      trimLossPct: sheetDerived.trimLossPct ? String(sheetDerived.trimLossPct.toFixed(2)) : "",
     });
   }, [sheetDerived.grossWidth, sheetDerived.trimLossPct]);
 
   useEffect(() => {
     if (!engineering.sheetPackaging.rollWeight_kg) {
-      const autoWeight =
-        n(engineering.sheetSpecs.rollTargetWeight_kg) || sheetDerived.calcRollWeight;
+      const autoWeight = n(engineering.sheetSpecs.rollTargetWeight_kg) || sheetDerived.calcRollWeight;
       if (autoWeight) {
         updateSection("sheetPackaging", { rollWeight_kg: String(autoWeight.toFixed(2)) });
       }
     }
-  }, [engineering.sheetSpecs.rollTargetWeight_kg, sheetDerived.calcRollWeight]);
+  }, [engineering.sheetPackaging.rollWeight_kg, engineering.sheetSpecs.rollTargetWeight_kg, sheetDerived.calcRollWeight]);
 
   const extrusionDerived = useMemo(() => {
     const opt = OPT_SPEED_MAP[baseMaterial] || { A: 0, B: 0 };
@@ -788,15 +851,20 @@ export default function EngineeringReview() {
   const sheetPackagingSentence = useMemo(() => {
     const coreSize = engineering.sheetPackaging.coreSize || engineering.sheetSpecs.coreSize || "6 inch";
     const rollDia = n(engineering.sheetSpecs.rollDiameter_mm) || sheetDerived.calcRollDiameter;
-    const rollW = n(engineering.sheetPackaging.rollWeight_kg) || n(engineering.sheetSpecs.rollTargetWeight_kg) || sheetDerived.calcRollWeight;
+    const rollW =
+      n(engineering.sheetPackaging.rollWeight_kg) ||
+      n(engineering.sheetSpecs.rollTargetWeight_kg) ||
+      sheetDerived.calcRollWeight;
     const rollsPerPallet = n(engineering.sheetPackaging.rollsPerPallet);
     const separators = n(engineering.sheetPackaging.separatorsPerPallet);
     const strap = n(engineering.sheetPackaging.strapLength_m);
     const stretch = n(engineering.sheetPackaging.stretchKgPerPallet);
+
     if (!rollW && !rollsPerPallet) return "";
-    return `Use ${coreSize} core and produce rolls with diameter ${fmt(rollDia)} mm at about ${fmt(
+
+    return `Use ${coreSize} core and make the roll diameter ${fmt(rollDia)} mm at about ${fmt(
       rollW
-    )} kg each. Put ${fmt(rollsPerPallet, 0)} rolls on a pallet with ${fmt(
+    )} kg per roll. Put ${fmt(rollsPerPallet, 0)} rolls on a pallet with ${fmt(
       separators,
       0
     )} separators, use ${fmt(strap)} m of strap and full stretch wrap the pallet with ${fmt(
@@ -837,10 +905,7 @@ export default function EngineeringReview() {
         0
       )} pcs per carton.`;
       if (engineering.packaging.pallet.palletSelected === "Yes") {
-        instructionText += ` Load ${fmt(
-          boxesPerPallet,
-          0
-        )} cartons per pallet.`;
+        instructionText += ` Load ${fmt(boxesPerPallet, 0)} cartons per pallet.`;
       }
     }
 
@@ -859,22 +924,20 @@ export default function EngineeringReview() {
   }, [thermoPackagingDerived.instructionText]);
 
   const freightDerived = useMemo(() => {
-    const isSheet = product.productType === "Sheet Roll";
     const unitWeightG = n(engineering.thermo.unitWeight_g) || n(product.productWeightG);
 
     if (isSheet) {
       const palletsPerTruck = n(engineering.freight.palletsPerTruck);
       const rollsPerPallet = n(engineering.sheetPackaging.rollsPerPallet);
-      const rollWeight = n(engineering.sheetPackaging.rollWeight_kg) || n(engineering.sheetSpecs.rollTargetWeight_kg) || sheetDerived.calcRollWeight;
-
-      const cartonsPerTruck = 0;
-      const pcsPerTruck = 0;
-      const netProductWeightPerTruck_kg = palletsPerTruck * rollsPerPallet * rollWeight;
+      const rollWeight =
+        n(engineering.sheetPackaging.rollWeight_kg) ||
+        n(engineering.sheetSpecs.rollTargetWeight_kg) ||
+        sheetDerived.calcRollWeight;
 
       return {
-        cartonsPerTruck,
-        pcsPerTruck,
-        netProductWeightPerTruck_kg,
+        cartonsPerTruck: 0,
+        pcsPerTruck: 0,
+        netProductWeightPerTruck_kg: palletsPerTruck * rollsPerPallet * rollWeight,
       };
     }
 
@@ -899,7 +962,7 @@ export default function EngineeringReview() {
       netProductWeightPerTruck_kg,
     };
   }, [
-    product.productType,
+    isSheet,
     engineering.freight,
     engineering.sheetPackaging,
     engineering.sheetSpecs,
@@ -921,7 +984,7 @@ export default function EngineeringReview() {
       netProductWeightPerTruck_kg: freightDerived.netProductWeightPerTruck_kg
         ? String(freightDerived.netProductWeightPerTruck_kg.toFixed(2))
         : "",
-      ...(product.productType !== "Sheet Roll"
+      ...(!isSheet
         ? {
             cartonsPerTruck: freightDerived.cartonsPerTruck
               ? String(freightDerived.cartonsPerTruck.toFixed(0))
@@ -929,19 +992,16 @@ export default function EngineeringReview() {
           }
         : {}),
     });
-  }, [freightDerived, product.productType]);
-
-  if (!payload) return <div className="p-6">Loading...</div>;
+  }, [freightDerived, isSheet]);
 
   const requestedWeight = n(product.productWeightG);
   const weightDiffPct =
-    requestedWeight > 0 && n(engineering.sheetSpecs.weightCalc_g)
-      ? ((n(engineering.sheetSpecs.weightCalc_g) - requestedWeight) / requestedWeight) * 100
+    requestedWeight > 0 &&
+    n(engineering.sheetSpecs.weightCalc_g || product.productWeightG) > 0
+      ? ((n(engineering.sheetSpecs.weightCalc_g || product.productWeightG) - requestedWeight) / requestedWeight) * 100
       : 0;
 
-  const materialRowsA = engineering.materialSheet.layerA || [];
-  const materialRowsB = engineering.materialSheet.layerB || [];
-  const isSheet = product.productType === "Sheet Roll";
+  const totalOptGross = (OPT_SPEED_MAP[baseMaterial]?.A || 0) + (OPT_SPEED_MAP[baseMaterial]?.B || 0);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 space-y-6">
@@ -977,7 +1037,7 @@ export default function EngineeringReview() {
             <div className="text-xs uppercase tracking-wide text-gray-500">Project</div>
             <div className="text-xl font-semibold">{customer.projectName || "—"}</div>
             <div className="text-sm text-gray-500">
-              {product.productType || "—"} • {product.sheetMaterial || product.productMaterial || "—"}
+              {product.productType || "—"} • {requestedBaseMaterial || "—"}
             </div>
           </div>
 
@@ -1013,15 +1073,16 @@ export default function EngineeringReview() {
         title="1. Material Structure and Sheet Roll"
         left={
           <>
-            <RefRow label="Requested Material" value={product.sheetMaterial || product.productMaterial} />
+            <RefRow label="Requested Material" value={requestedBaseMaterial} />
             <RefRow label="Requested Width (mm)" value={product.sheetWidthMm} />
             <RefRow label="Requested Thickness (micron)" value={product.sheetThicknessMicron} />
             <RefRow label="Requested Roll Weight (kg)" value={product.rollWeightKg} />
+            <RefRow label="Requested Product Weight (g)" value={product.productWeightG} />
           </>
         }
         right={
           <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <Field label="Base Material">
                 <SelectField
                   value={engineering.materialSheet.baseMaterial}
@@ -1068,7 +1129,40 @@ export default function EngineeringReview() {
                   onChange={(v) => updateSection("materialSheet", { processWastePct: v })}
                 />
               </Field>
+
+              <Field label="Coating Layer Used">
+                <SelectField
+                  value={engineering.materialSheet.coatingUsed}
+                  onChange={(v) => updateSection("materialSheet", { coatingUsed: v })}
+                  options={["Yes", "No"]}
+                />
+              </Field>
             </div>
+
+            {engineering.materialSheet.coatingUsed === "Yes" && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <Field label="Coating Name">
+                  <Input
+                    value={engineering.materialSheet.coatingName}
+                    onChange={(v) => updateSection("materialSheet", { coatingName: v })}
+                  />
+                </Field>
+                <Field label="Coating Weight (g/m²)">
+                  <Input
+                    value={engineering.materialSheet.coatingWeight_g_m2}
+                    onChange={(v) => updateSection("materialSheet", { coatingWeight_g_m2: v })}
+                  />
+                </Field>
+                <RefRow
+                  label="Coating Kg / Ton"
+                  value={
+                    sheetDerived.coatingKgPerTon
+                      ? `${fmt(sheetDerived.coatingKgPerTon, 3)} kg`
+                      : "—"
+                  }
+                />
+              </div>
+            )}
 
             <div className="rounded-xl border p-4 space-y-4">
               <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -1083,14 +1177,14 @@ export default function EngineeringReview() {
                       })
                     }
                   />
-                  Sync Layer B with Layer A
+                  Add Layer A rows automatically to Layer B
                 </label>
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="font-medium text-sm">Layer A</div>
-                  {materialRowsA.map((row) => (
+                  {(engineering.materialSheet.layerA || []).map((row) => (
                     <div key={row.id} className="grid grid-cols-12 gap-2">
                       <div className="col-span-7">
                         <Input
@@ -1126,13 +1220,14 @@ export default function EngineeringReview() {
 
                 <div className="space-y-2">
                   <div className="font-medium text-sm">Layer B</div>
-                  {materialRowsB.map((row) => (
+                  {(engineering.materialSheet.layerB || []).map((row) => (
                     <div key={row.id} className="grid grid-cols-12 gap-2">
                       <div className="col-span-7">
                         <Input
                           value={row.name}
                           onChange={(v) => updateMaterialRow("layerB", row.id, { name: v })}
                           placeholder="Material name"
+                          disabled={engineering.materialSheet.syncLayerBWithA}
                         />
                       </div>
                       <div className="col-span-4">
@@ -1185,7 +1280,11 @@ export default function EngineeringReview() {
                 </Field>
 
                 <Field label="Gross Width (mm)">
-                  <Input value={engineering.sheetSpecs.grossWidth_mm || fmt(sheetDerived.grossWidth)} onChange={() => {}} disabled />
+                  <Input
+                    value={engineering.sheetSpecs.grossWidth_mm || fmt(sheetDerived.grossWidth, 2)}
+                    onChange={() => {}}
+                    disabled
+                  />
                 </Field>
 
                 <Field label="Width + Tol (mm)">
@@ -1202,14 +1301,18 @@ export default function EngineeringReview() {
                   />
                 </Field>
 
-                <Field label="Trim Loss %">
-                  <Input value={fmt(sheetDerived.trimLossPct)} onChange={() => {}} disabled />
+                <Field label="1 - (Net/Gross) %">
+                  <Input
+                    value={engineering.sheetSpecs.trimLossPct || fmt(sheetDerived.trimLossPct, 2)}
+                    onChange={() => {}}
+                    disabled
+                  />
                 </Field>
               </div>
 
               {sheetDerived.trimLossPct > 15 && (
                 <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
-                  Trim loss exceeds 15%.
+                  Width trim loss exceeds 15%.
                 </div>
               )}
 
@@ -1244,7 +1347,7 @@ export default function EngineeringReview() {
                   />
                 </Field>
 
-                <Field label="Core Size">
+                <Field label="Core Diameter">
                   <SelectField
                     value={engineering.sheetSpecs.coreSize}
                     onChange={(v) => updateSection("sheetSpecs", { coreSize: v })}
@@ -1274,13 +1377,39 @@ export default function EngineeringReview() {
                 </Field>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg border p-3">
-                  Auto Roll Weight from Diameter: <span className="font-semibold">{fmt(sheetDerived.calcRollWeight)} kg</span>
-                </div>
-                <div className="rounded-lg border p-3">
-                  Auto Roll Diameter from Weight: <span className="font-semibold">{fmt(sheetDerived.calcRollDiameter)} mm</span>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <RefRow
+                  label="Plastic Weight / m²"
+                  value={
+                    sheetDerived.plasticWeightPerM2_g
+                      ? `${fmt(sheetDerived.plasticWeightPerM2_g, 3)} g/m²`
+                      : "—"
+                  }
+                />
+                <RefRow
+                  label="Total Weight / m²"
+                  value={
+                    sheetDerived.totalWeightPerM2_g
+                      ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
+                      : "—"
+                  }
+                />
+                <RefRow
+                  label="Auto Roll Weight from Diameter"
+                  value={
+                    sheetDerived.calcRollWeight
+                      ? `${fmt(sheetDerived.calcRollWeight, 3)} kg`
+                      : "—"
+                  }
+                />
+                <RefRow
+                  label="Auto Roll Diameter from Weight"
+                  value={
+                    sheetDerived.calcRollDiameter
+                      ? `${fmt(sheetDerived.calcRollDiameter, 2)} mm`
+                      : "—"
+                  }
+                />
               </div>
 
               <div className="rounded-xl border p-4 space-y-4">
@@ -1325,9 +1454,10 @@ export default function EngineeringReview() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <Field label="Surface Area (cm²)">
-                    <Input value={fmt(sheetDerived.surfaceArea_cm2, 3)} onChange={() => {}} disabled />
-                  </Field>
+                  <RefRow
+                    label="Surface Area (cm²)"
+                    value={sheetDerived.surfaceArea_cm2 ? fmt(sheetDerived.surfaceArea_cm2, 3) : "—"}
+                  />
 
                   <Field label="Sheet Thickness (micron)">
                     <Input
@@ -1345,17 +1475,14 @@ export default function EngineeringReview() {
                     />
                   </Field>
 
-                  <Field label="Auto Result">
-                    <Input
-                      value={
-                        engineering.sheetSpecs.thicknessCalcMode === "Calculate Thickness"
-                          ? fmt(sheetDerived.calcThicknessFromWeight, 2)
-                          : fmt(sheetDerived.calcWeightFromThickness, 2)
-                      }
-                      onChange={() => {}}
-                      disabled
-                    />
-                  </Field>
+                  <RefRow
+                    label="Auto Result"
+                    value={
+                      engineering.sheetSpecs.thicknessCalcMode === "Calculate Thickness"
+                        ? `${fmt(sheetDerived.calcThicknessFromWeight, 2)} micron`
+                        : `${fmt(sheetDerived.calcWeightFromThickness, 2)} g`
+                    }
+                  />
                 </div>
 
                 {requestedWeight > 0 && Math.abs(weightDiffPct) > 5 && (
@@ -1363,6 +1490,56 @@ export default function EngineeringReview() {
                     Calculated/requested weight differs by {fmt(Math.abs(weightDiffPct), 2)}%.
                   </div>
                 )}
+              </div>
+
+              <div className="rounded-xl border p-4 space-y-4">
+                <div className="font-medium">Material Consumption per Ton</div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <RefRow
+                    label="Plastic Share"
+                    value={sheetDerived.plasticShare ? `${fmt(sheetDerived.plasticShare * 100, 2)}%` : "—"}
+                  />
+                  <RefRow
+                    label="Coating Share"
+                    value={engineering.materialSheet.coatingUsed === "Yes" ? `${fmt(sheetDerived.coatingShare * 100, 2)}%` : "0%"}
+                  />
+                  <RefRow
+                    label="Coating Kg / Ton"
+                    value={engineering.materialSheet.coatingUsed === "Yes" ? `${fmt(sheetDerived.coatingKgPerTon, 3)} kg` : "0 kg"}
+                  />
+                  <RefRow
+                    label="Total Weight / m²"
+                    value={sheetDerived.totalWeightPerM2_g ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²` : "—"}
+                  />
+                </div>
+
+                <div className="overflow-auto rounded-xl border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left p-3">Material</th>
+                        <th className="text-left p-3">Combined %</th>
+                        <th className="text-left p-3">Kg / Ton</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sheetDerived.materialPerTonRows.map((row) => (
+                        <tr key={row.name} className="border-t">
+                          <td className="p-3">{row.name}</td>
+                          <td className="p-3">{fmt(row.pct, 2)}%</td>
+                          <td className="p-3">{fmt(row.kgPerTon, 3)} kg</td>
+                        </tr>
+                      ))}
+                      {engineering.materialSheet.coatingUsed === "Yes" && (
+                        <tr className="border-t bg-yellow-50">
+                          <td className="p-3">{engineering.materialSheet.coatingName || "Coating"}</td>
+                          <td className="p-3">{fmt(sheetDerived.coatingShare * 100, 2)}%</td>
+                          <td className="p-3">{fmt(sheetDerived.coatingKgPerTon, 3)} kg</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="rounded-xl border p-4 space-y-4">
@@ -1478,7 +1655,10 @@ export default function EngineeringReview() {
           <>
             <RefRow label="Requested Product" value={product.productType} />
             <RefRow label="Material" value={baseMaterial} />
-            <RefRow label="Requested Width / Thickness" value={`${product.sheetWidthMm || "—"} mm / ${product.sheetThicknessMicron || "—"} micron`} />
+            <RefRow
+              label="Requested Width / Thickness"
+              value={`${product.sheetWidthMm || "—"} mm / ${product.sheetThicknessMicron || "—"} micron`}
+            />
           </>
         }
         right={
@@ -1517,14 +1697,14 @@ export default function EngineeringReview() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field label={`Gross Speed Extruder A (optimum ${extrusionDerived.opt.A || 0})`}>
+              <Field label={`Gross Speed Extruder A (optimum ${OPT_SPEED_MAP[baseMaterial]?.A || 0} kg/hr)`}>
                 <Input
                   value={engineering.extrusion.grossSpeedA_kg_hr}
                   onChange={(v) => updateSection("extrusion", { grossSpeedA_kg_hr: v })}
                 />
               </Field>
 
-              <Field label={`Gross Speed Extruder B (optimum ${extrusionDerived.opt.B || 0})`}>
+              <Field label={`Gross Speed Extruder B (optimum ${OPT_SPEED_MAP[baseMaterial]?.B || 0} kg/hr)`}>
                 <Input
                   value={engineering.extrusion.grossSpeedB_kg_hr}
                   onChange={(v) => updateSection("extrusion", { grossSpeedB_kg_hr: v })}
@@ -1543,12 +1723,12 @@ export default function EngineeringReview() {
                 {extrusionDerived.totalGross > 0 && (
                   <div
                     className={`rounded-lg px-3 py-2 w-full ${
-                      extrusionDerived.totalGross <= (extrusionDerived.opt.A + extrusionDerived.opt.B)
+                      extrusionDerived.totalGross <= totalOptGross
                         ? "bg-red-50 text-red-700 border border-red-200"
                         : "bg-green-50 text-green-700 border border-green-200"
                     }`}
                   >
-                    {extrusionDerived.totalGross <= (extrusionDerived.opt.A + extrusionDerived.opt.B)
+                    {extrusionDerived.totalGross <= totalOptGross
                       ? "Below optimum gross speed"
                       : "Above optimum gross speed"}
                   </div>
@@ -1595,7 +1775,10 @@ export default function EngineeringReview() {
           <>
             <RefRow label="Requested Weight (g)" value={product.productWeightG} />
             <RefRow label="Requested Type" value={product.productType} />
-            <RefRow label="Requested Packaging" value={`${packagingReq?.primary?.pcsPerStack || "—"} pcs/stack`} />
+            <RefRow
+              label="Requested Pieces / Stack"
+              value={packagingReq?.primary?.pcsPerStack}
+            />
           </>
         }
         right={
@@ -1689,7 +1872,7 @@ export default function EngineeringReview() {
                 </div>
               )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
               <RefRow label="Pcs / Hr" value={engineering.thermo.pcsPerHour ? fmt(engineering.thermo.pcsPerHour, 0) : "—"} />
               <RefRow label="Pcs / Shift (12h)" value={engineering.thermo.pcsPerShift12h ? fmt(engineering.thermo.pcsPerShift12h, 0) : "—"} />
               <RefRow label="Pcs / Day (24h)" value={engineering.thermo.pcsPerDay24h ? fmt(engineering.thermo.pcsPerDay24h, 0) : "—"} />
