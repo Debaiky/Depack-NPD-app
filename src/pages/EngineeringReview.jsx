@@ -667,7 +667,7 @@ const deliveryReq = payload?.delivery || {};
     if (rollDiameter > 0 && coreDiameter > 0 && netWidth > 0 && totalWeightPerM2_g > 0) {
       const area_m2 =
         Math.PI * ((rollDiameter / 2) ** 2 - (coreDiameter / 2) ** 2) * netWidth / 1_000_000_000;
-      calcRollWeight = area_m2 * totalWeightPerM2_g / 1000;
+      calcRollWeight = area_m2 * totalWeightPerM2_g;
     }
 
     let calcRollDiameter = 0;
@@ -702,28 +702,58 @@ const deliveryReq = payload?.delivery || {};
         ? (weightCalc_g / (surfaceArea_cm2 * density)) * 10000
         : 0;
 
-    const materialPerTonRows = [];
-    const layers = [
-      ...(engineering.materialSheet.layerA || []),
-      ...(engineering.materialSheet.layerB || []),
-    ];
+   const materialPerTonRows = [];
 
-    const grouped = {};
-    layers.forEach((row) => {
-      const name = String(row.name || "").trim();
-      const pct = n(row.pct);
-      if (!name || pct <= 0) return;
-      grouped[name] = (grouped[name] || 0) + pct;
-    });
+const layerAShare = n(engineering.materialSheet.layerAPct) / 100;
+const layerBShare = 1 - layerAShare;
 
-    Object.entries(grouped).forEach(([name, pct]) => {
-      const kgPerTon = (pct / 100) * 1000 * plasticShare;
-      materialPerTonRows.push({
-        name,
-        pct,
-        kgPerTon,
-      });
-    });
+const grouped = {};
+
+(engineering.materialSheet.layerA || []).forEach((row) => {
+  const name = String(row.name || "").trim();
+  const pct = n(row.pct) / 100;
+  if (!name || pct <= 0) return;
+
+  if (!grouped[name]) {
+    grouped[name] = {
+      pctLayerA: 0,
+      pctLayerB: 0,
+    };
+  }
+
+  grouped[name].pctLayerA += pct;
+});
+
+(engineering.materialSheet.layerB || []).forEach((row) => {
+  const name = String(row.name || "").trim();
+  const pct = n(row.pct) / 100;
+  if (!name || pct <= 0) return;
+
+  if (!grouped[name]) {
+    grouped[name] = {
+      pctLayerA: 0,
+      pctLayerB: 0,
+    };
+  }
+
+  grouped[name].pctLayerB += pct;
+});
+
+Object.entries(grouped).forEach(([name, parts]) => {
+  const totalMaterialShare =
+    parts.pctLayerA * layerAShare +
+    parts.pctLayerB * layerBShare;
+
+  const kgPerTon = totalMaterialShare * 1000 * plasticShare;
+
+  materialPerTonRows.push({
+    name,
+    pctLayerA: parts.pctLayerA * 100,
+    pctLayerB: parts.pctLayerB * 100,
+    totalPct: totalMaterialShare * 100,
+    kgPerTon,
+  });
+});
 
     const coatingKgPerTon = coatingShare * 1000;
 
@@ -993,7 +1023,18 @@ const deliveryReq = payload?.delivery || {};
         : {}),
     });
   }, [freightDerived, isSheet]);
+const layerATotalPct = (engineering.materialSheet.layerA || []).reduce(
+  (sum, row) => sum + n(row.pct),
+  0
+);
 
+const layerBTotalPct = (engineering.materialSheet.layerB || []).reduce(
+  (sum, row) => sum + n(row.pct),
+  0
+);
+
+const layerAIsValid = Math.abs(layerATotalPct - 100) < 0.001;
+const layerBIsValid = Math.abs(layerBTotalPct - 100) < 0.001;
   const requestedWeight = n(product.productWeightG);
   const weightDiffPct =
     requestedWeight > 0 &&
@@ -1123,6 +1164,12 @@ if (!payload) {
                   value={engineering.materialSheet.layerAPct}
                   onChange={(v) => updateSection("materialSheet", { layerAPct: v })}
                 />
+                {(n(engineering.materialSheet.layerAPct) < 0 ||
+  n(engineering.materialSheet.layerAPct) > 100) && (
+  <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
+    Layer A % must be between 0 and 100.
+  </div>
+)}
               </Field>
 
               <Field label="Process Waste %">
@@ -1169,6 +1216,29 @@ if (!payload) {
             <div className="rounded-xl border p-4 space-y-4">
               <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div className="font-medium">Layer Material Mix</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+  <div
+    className={`rounded-lg border p-3 text-sm ${
+      layerAIsValid
+        ? "border-green-200 bg-green-50 text-green-700"
+        : "border-red-200 bg-red-50 text-red-700"
+    }`}
+  >
+    Layer A total = {fmt(layerATotalPct, 2)}%
+    {!layerAIsValid && " — must equal 100%"}
+  </div>
+
+  <div
+    className={`rounded-lg border p-3 text-sm ${
+      layerBIsValid
+        ? "border-green-200 bg-green-50 text-green-700"
+        : "border-red-200 bg-red-50 text-red-700"
+    }`}
+  >
+    Layer B total = {fmt(layerBTotalPct, 2)}%
+    {!layerBIsValid && " — must equal 100%"}
+  </div>
+</div>
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -1199,7 +1269,7 @@ if (!payload) {
                         <Input
                           value={row.pct}
                           onChange={(v) => updateMaterialRow("layerA", row.id, { pct: v })}
-                          placeholder="%"
+                          placeholder="% in layer"
                         />
                       </div>
                       <div className="col-span-1">
@@ -1236,7 +1306,7 @@ if (!payload) {
                         <Input
                           value={row.pct}
                           onChange={(v) => updateMaterialRow("layerB", row.id, { pct: v })}
-                          placeholder="%"
+                          placeholder="% in layer"
                           disabled={engineering.materialSheet.syncLayerBWithA}
                         />
                       </div>
@@ -1518,19 +1588,23 @@ if (!payload) {
                 <div className="overflow-auto rounded-xl border">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
-                      <tr>
-                        <th className="text-left p-3">Material</th>
-                        <th className="text-left p-3">Combined %</th>
-                        <th className="text-left p-3">Kg / Ton</th>
-                      </tr>
+                    <tr>
+  <th className="text-left p-3">Material</th>
+  <th className="text-left p-3">Layer A %</th>
+  <th className="text-left p-3">Layer B %</th>
+  <th className="text-left p-3">Final %</th>
+  <th className="text-left p-3">Kg / Ton</th>
+</tr>
                     </thead>
                     <tbody>
                       {sheetDerived.materialPerTonRows.map((row) => (
-                        <tr key={row.name} className="border-t">
-                          <td className="p-3">{row.name}</td>
-                          <td className="p-3">{fmt(row.pct, 2)}%</td>
-                          <td className="p-3">{fmt(row.kgPerTon, 3)} kg</td>
-                        </tr>
+                       <tr key={row.name} className="border-t">
+  <td className="p-3">{row.name}</td>
+  <td className="p-3">{fmt(row.pctLayerA, 2)}%</td>
+  <td className="p-3">{fmt(row.pctLayerB, 2)}%</td>
+  <td className="p-3">{fmt(row.totalPct, 2)}%</td>
+  <td className="p-3">{fmt(row.kgPerTon, 3)} kg</td>
+</tr>
                       ))}
                       {engineering.materialSheet.coatingUsed === "Yes" && (
                         <tr className="border-t bg-yellow-50">
