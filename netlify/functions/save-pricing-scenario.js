@@ -19,6 +19,11 @@ const handler = async (event) => {
       totalCostPer1000,
       sellingPricePer1000,
       marginPct,
+      compareSelected,
+      scenarioCurrency,
+      usdEgp,
+      eurUsd,
+      workspacePassword,
     } = body;
 
     if (!requestId) {
@@ -52,6 +57,11 @@ const handler = async (event) => {
       TotalCostPer1000: totalCostPer1000 || "",
       SellingPricePer1000: sellingPricePer1000 || "",
       MarginPct: marginPct || "",
+      CompareSelected: Boolean(compareSelected),
+      ScenarioCurrency: scenarioCurrency || "",
+      UsdEgp: usdEgp || "",
+      EurUsd: eurUsd || "",
+      WorkspacePassword: workspacePassword || "",
     });
 
     return {
