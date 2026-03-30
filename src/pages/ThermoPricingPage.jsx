@@ -47,6 +47,7 @@ export default function ThermoPricingPage() {
   const [scenarioMeta, setScenarioMeta] = useState(null);
   const [pricingRoot, setPricingRoot] = useState(null);
   const [engineeringData, setEngineeringData] = useState(null);
+  const [requestData, setRequestData] = useState(null);
   const [saveMessage, setSaveMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -111,16 +112,22 @@ export default function ThermoPricingPage() {
       try {
         setLoading(true);
 
-        const [scRes, engRes] = await Promise.all([
+        const [scRes, engRes, reqRes] = await Promise.all([
           fetch(`/.netlify/functions/get-pricing-scenario?pricingId=${pricingId}`),
           fetch(`/.netlify/functions/get-engineering-data?requestId=${requestId}`),
+          fetch(`/.netlify/functions/get-request?requestId=${requestId}`),
         ]);
 
         const scJson = await scRes.json();
         const engJson = await engRes.json();
+        const reqJson = await reqRes.json();
 
         if (engJson.success) {
           setEngineeringData(engJson.engineeringData || {});
+        }
+
+        if (reqJson.success) {
+          setRequestData(reqJson.payload || {});
         }
 
         if (scJson.success) {
@@ -195,7 +202,8 @@ export default function ThermoPricingPage() {
             : prev.type,
         printing: {
           ...prev.printing,
-          ink_g_per_1000: prev.printing.ink_g_per_1000 || decoEng?.dryOffset?.ink_g_per_1000 || "",
+          ink_g_per_1000:
+            prev.printing.ink_g_per_1000 || decoEng?.dryOffset?.ink_g_per_1000 || "",
         },
       }));
     }
@@ -214,6 +222,14 @@ export default function ThermoPricingPage() {
     );
   }
 
+  const customer = requestData?.customer || {};
+  const product = requestData?.product || {};
+  const thumb =
+    product?.productThumbnailPreview ||
+    (product?.productThumbnailBase64
+      ? `data:image/*;base64,${product.productThumbnailBase64}`
+      : "");
+
   const engThermo = engineeringData?.thermo || {};
 
   const unitWeightAlert =
@@ -231,9 +247,12 @@ export default function ThermoPricingPage() {
     engThermo.cpm &&
     String(spec.cpm) !== String(engThermo.cpm);
 
-  const currency = sheetBundle.currency || "EGP";
-  const usdEgp = Math.max(0, toNum(sheetBundle.usdEgp || 60));
+  const currency = scenarioMeta?.ScenarioCurrency || sheetBundle.currency || "EGP";
+  const usdEgp = Math.max(0, toNum(scenarioMeta?.UsdEgp || sheetBundle.usdEgp || 60));
+  const eurUsd = Math.max(0, toNum(scenarioMeta?.EurUsd || pricingRoot?.eurUsd || 1.08));
+
   const sheetMaterialCostPerTon = toNum(sheetBundle.sheetMaterialCostPerTon || 0);
+  const netExtruderKgPerHour = toNum(sheetBundle.netExtruderKgPerHour || 0);
   const netExtruderKgPerDay = toNum(sheetBundle.netExtruderKgPerDay || 0);
   const bomPerTon = sheetBundle.bomPerTon || [];
 
@@ -244,7 +263,13 @@ export default function ThermoPricingPage() {
   const unit_g = toNum(spec.unitWeight_g);
 
   const pcsPerHour = cpm * 60 * cav * eff;
+  const pcsPerShift = pcsPerHour * 12;
   const pcsPerDay = pcsPerHour * 24;
+
+  const sheetConsumptionKgPerHour =
+    util > 0 ? (unit_g * pcsPerHour) / 1000 / util : 0;
+  const sheetConsumptionKgPerShift = sheetConsumptionKgPerHour * 12;
+  const sheetConsumptionKgPerDay = sheetConsumptionKgPerHour * 24;
 
   const sheetCostPer1000 =
     (sheetMaterialCostPerTon / 1_000_000) * unit_g * 1000;
@@ -325,6 +350,9 @@ export default function ThermoPricingPage() {
   const paybackQtyPcs =
     convPer1000 > 0 ? totalInvestEGP / (convPer1000 / 1000) : 0;
 
+  const pricePerCarton =
+    pcsPerSecondary > 0 ? (totalPer1000 / 1000) * pcsPerSecondary : 0;
+
   const saveThermoScenario = async () => {
     try {
       const pricingData = {
@@ -341,6 +369,11 @@ export default function ThermoPricingPage() {
             totalPer1000,
             paybackQtyPcs,
             usdEgp,
+            eurUsd,
+            pricePerCarton,
+            sheetConsumptionKgPerHour,
+            sheetConsumptionKgPerShift,
+            sheetConsumptionKgPerDay,
           },
         },
       };
@@ -357,6 +390,10 @@ export default function ThermoPricingPage() {
           scenarioNote: scenarioMeta?.ScenarioNote || "",
           createdBy: scenarioMeta?.CreatedBy || "",
           scenarioStatus: scenarioMeta?.ScenarioStatus || "Draft",
+          compareSelected: (scenarioMeta?.CompareSelected || "") === "Yes",
+          scenarioCurrency: currency,
+          usdEgp,
+          eurUsd,
           pricingData,
           totalCostPer1000: totalPer1000,
           sellingPricePer1000: finance.desiredPricePer1000 || "",
@@ -380,9 +417,25 @@ export default function ThermoPricingPage() {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold">Thermoformed Product Pricing</h1>
-          <p className="text-sm text-gray-500">{requestId} • {pricingId}</p>
+        <div className="flex items-center gap-4">
+          {thumb ? (
+            <img
+              src={thumb}
+              alt="Product thumbnail"
+              className="w-16 h-16 rounded-xl border object-cover bg-white"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-xl border bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+              No image
+            </div>
+          )}
+
+          <div>
+            <h1 className="text-xl font-semibold">Thermoformed Product Pricing</h1>
+            <p className="text-sm text-gray-500">
+              {customer.projectName || requestId} • {pricingId}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -404,12 +457,28 @@ export default function ThermoPricingPage() {
 
       {saveMessage ? <div className="text-sm text-green-600">{saveMessage}</div> : null}
 
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <InfoTile label="Currency" value={currency} />
+        <InfoTile label="USD / EGP" value={fmt(usdEgp, 3)} />
+        <InfoTile label="EUR / USD" value={fmt(eurUsd, 4)} />
+        <InfoTile label="Net Extruder kg/hr" value={fmt(netExtruderKgPerHour)} />
+        <InfoTile label="Net Extruder kg/day" value={fmt(netExtruderKgPerDay)} />
+      </div>
+
       <div className="bg-white border rounded-xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
         <Field label="Product Name">
-          <input className="w-full border rounded-md px-3 py-2" value={spec.productName} onChange={(e) => setSpec({ ...spec, productName: e.target.value })} />
+          <input
+            className="w-full border rounded-md px-3 py-2"
+            value={spec.productName}
+            onChange={(e) => setSpec({ ...spec, productName: e.target.value })}
+          />
         </Field>
         <Field label="Product Code">
-          <input className="w-full border rounded-md px-3 py-2" value={spec.productCode} onChange={(e) => setSpec({ ...spec, productCode: e.target.value })} />
+          <input
+            className="w-full border rounded-md px-3 py-2"
+            value={spec.productCode}
+            onChange={(e) => setSpec({ ...spec, productCode: e.target.value })}
+          />
         </Field>
         <Field label="Unit Weight (g)">
           <NumInput value={spec.unitWeight_g} onChange={(v) => setSpec({ ...spec, unitWeight_g: v })} />
@@ -448,6 +517,7 @@ export default function ThermoPricingPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <InfoTile label="Pcs / hour" value={fmt(pcsPerHour)} />
+        <InfoTile label="Pcs / shift (12h)" value={fmt(pcsPerShift)} />
         <InfoTile label="Pcs / day" value={fmt(pcsPerDay)} />
         <InfoTile label="Sheet cost / 1000" value={fmt(sheetCostPer1000)} />
         <InfoTile label="Packaging / 1000" value={fmt(packagingPer1000)} />
@@ -455,7 +525,9 @@ export default function ThermoPricingPage() {
         <InfoTile label="Working Cap / 1000" value={fmt(workingCapPer1000)} />
         <InfoTile label="Conversion / 1000" value={fmt(convPer1000)} />
         <InfoTile label="Total / 1000" value={fmt(totalPer1000)} />
-        <InfoTile label="FX Rate" value={fmt(usdEgp, 3)} />
+        <InfoTile label="Price / carton" value={fmt(pricePerCarton)} />
+        <InfoTile label="Sheet consumption kg/hr" value={fmt(sheetConsumptionKgPerHour)} />
+        <InfoTile label="Sheet consumption kg/day" value={fmt(sheetConsumptionKgPerDay)} />
       </div>
 
       <div className="bg-white border rounded-xl p-4">
@@ -489,9 +561,14 @@ export default function ThermoPricingPage() {
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
           <InfoTile label="Sheet Material / ton" value={fmt(sheetMaterialCostPerTon)} />
-          <InfoTile label="Payback Qty (pcs)" value={fmt(totalInvestEGP && convPer1000 > 0 ? paybackQtyPcs : 0, 0)} />
+          <InfoTile label="Net Extruder kg/hr" value={fmt(netExtruderKgPerHour)} />
+          <InfoTile label="Net Extruder kg/day" value={fmt(netExtruderKgPerDay)} />
+          <InfoTile
+            label="Payback Qty (pcs)"
+            value={fmt(totalInvestEGP && convPer1000 > 0 ? paybackQtyPcs : 0, 0)}
+          />
         </div>
       </div>
     </div>
