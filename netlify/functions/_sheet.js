@@ -258,7 +258,36 @@ async function upsertPricingScenario({
   ScenarioCurrency,
   UsdEgp,
   EurUsd,
-}) 
+}) {
+  const rowData = {
+    PricingID: PricingID || "",
+    RequestID: RequestID || "",
+    ScenarioName: ScenarioName || "",
+    ScenarioNote: ScenarioNote || "",
+    CreatedBy: CreatedBy || "",
+    CreatedDate: CreatedDate || "",
+    ScenarioStatus: ScenarioStatus || "",
+    PricingJSON: PricingJSON || "",
+    TotalCostPer1000: TotalCostPer1000 || "",
+    SellingPricePer1000: SellingPricePer1000 || "",
+    MarginPct: MarginPct || "",
+    CompareSelected: CompareSelected ? "Yes" : "",
+    ScenarioCurrency: ScenarioCurrency || "",
+    UsdEgp: UsdEgp || "",
+    EurUsd: EurUsd || "",
+  };
+
+  const existingRowIndex = PricingID
+    ? await findPricingScenarioRowById(PricingID)
+    : null;
+
+  if (existingRowIndex) {
+    return await updateRowByIndex(PRICING_SHEET, existingRowIndex, rowData);
+  }
+
+  return await appendRow(PRICING_SHEET, rowData);
+}
+
 /* ================= DELETE HELPERS ================= */
 
 async function getSheetIdByName(sheetName) {
@@ -272,14 +301,15 @@ async function getSheetIdByName(sheetName) {
     (s) => s.properties.title === sheetName
   );
 
-  if (!sheet) throw new Error(`Sheet ${sheetName} not found`);
+  if (!sheet) {
+    throw new Error(`Sheet ${sheetName} not found`);
+  }
 
   return sheet.properties.sheetId;
 }
 
 async function deleteRowByIndex(sheetName, rowIndex) {
   const sheets = await getSheetsClient();
-
   const sheetId = await getSheetIdByName(sheetName);
 
   await sheets.spreadsheets.batchUpdate({
@@ -301,35 +331,6 @@ async function deleteRowByIndex(sheetName, rowIndex) {
   });
 
   return true;
-}
-{
-  const rowData = {
-    PricingID: PricingID || "",
-    RequestID: RequestID || "",
-    ScenarioName: ScenarioName || "",
-    ScenarioNote: ScenarioNote || "",
-    CreatedBy: CreatedBy || "",
-    CreatedDate: CreatedDate || "",
-    ScenarioStatus: ScenarioStatus || "",
-    PricingJSON: PricingJSON || "",
-    TotalCostPer1000: TotalCostPer1000 || "",
-    SellingPricePer1000: SellingPricePer1000 || "",
-    MarginPct: MarginPct || "",
-    CompareSelected: CompareSelected || "No",
-    ScenarioCurrency: ScenarioCurrency || "",
-    UsdEgp: UsdEgp || "",
-    EurUsd: EurUsd || "",
-  };
-
-  const existingRowIndex = PricingID
-    ? await findPricingScenarioRowById(PricingID)
-    : null;
-
-  if (existingRowIndex) {
-    return await updateRowByIndex(PRICING_SHEET, existingRowIndex, rowData);
-  }
-
-  return await appendRow(PRICING_SHEET, rowData);
 }
 
 /* ================= EXPORTS ================= */
@@ -359,5 +360,7 @@ module.exports = {
   findPricingScenarioRowById,
   makePricingId,
   upsertPricingScenario,
+
+  getSheetIdByName,
   deleteRowByIndex,
 };
