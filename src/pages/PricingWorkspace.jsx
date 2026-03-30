@@ -433,13 +433,13 @@ export default function PricingWorkspace() {
   };
 
   const openComparison = () => {
-    if (selectedForComparison.length === 0) {
-      alert("Please select at least one scenario for comparison.");
-      return;
-    }
+  if (selectedForComparison.length === 0) {
+    alert("Please select at least one scenario for comparison.");
+    return;
+  }
 
-    alert("Comparison page will be added next. Selected scenarios are already marked and saved.");
-  };
+  navigate(`/pricing/${requestId}/compare`);
+};
 
   if (loading) return <div className="p-6">Loading pricing workspace...</div>;
 
