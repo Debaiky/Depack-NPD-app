@@ -7,6 +7,7 @@ const SHEET_ID = process.env.GOOGLE_SHEETS_DATABASE_ID;
 const REQUESTS_SHEET = "Requests_Master";
 const ENGINEERING_SHEET = "Engineering_Data";
 const PRICING_SHEET = "Pricing_Scenarios";
+const PRICING_WORKSPACES_SHEET = "Pricing_Workspaces";
 
 /* ================= AUTH ================= */
 
@@ -192,6 +193,34 @@ async function upsertEngineeringRow({
   return await appendRow(ENGINEERING_SHEET, rowData);
 }
 
+/* ================= PRICING WORKSPACES ================= */
+
+async function getPricingWorkspaceByRequestId(requestId) {
+  return await getRowByField(PRICING_WORKSPACES_SHEET, "RequestID", requestId);
+}
+
+async function findPricingWorkspaceRowByRequestId(requestId) {
+  return await findRowIndexByField(PRICING_WORKSPACES_SHEET, "RequestID", requestId);
+}
+
+async function upsertPricingWorkspace({
+  RequestID,
+  WorkspacePassword,
+}) {
+  const rowData = {
+    RequestID: RequestID || "",
+    WorkspacePassword: WorkspacePassword || "",
+  };
+
+  const existingRowIndex = await findPricingWorkspaceRowByRequestId(RequestID);
+
+  if (existingRowIndex) {
+    return await updateRowByIndex(PRICING_WORKSPACES_SHEET, existingRowIndex, rowData);
+  }
+
+  return await appendRow(PRICING_WORKSPACES_SHEET, rowData);
+}
+
 /* ================= PRICING SCENARIOS ================= */
 
 async function getPricingScenariosByRequestId(requestId) {
@@ -225,6 +254,10 @@ async function upsertPricingScenario({
   TotalCostPer1000,
   SellingPricePer1000,
   MarginPct,
+  CompareSelected,
+  ScenarioCurrency,
+  UsdEgp,
+  EurUsd,
 }) {
   const rowData = {
     PricingID: PricingID || "",
@@ -238,6 +271,10 @@ async function upsertPricingScenario({
     TotalCostPer1000: TotalCostPer1000 || "",
     SellingPricePer1000: SellingPricePer1000 || "",
     MarginPct: MarginPct || "",
+    CompareSelected: CompareSelected || "No",
+    ScenarioCurrency: ScenarioCurrency || "",
+    UsdEgp: UsdEgp || "",
+    EurUsd: EurUsd || "",
   };
 
   const existingRowIndex = PricingID
@@ -268,6 +305,10 @@ module.exports = {
   findEngineeringRowByRequestId,
   getEngineeringRowByRequestId,
   upsertEngineeringRow,
+
+  getPricingWorkspaceByRequestId,
+  findPricingWorkspaceRowByRequestId,
+  upsertPricingWorkspace,
 
   getPricingScenariosByRequestId,
   getPricingScenarioById,
