@@ -508,10 +508,10 @@ export default function EngineeringReview() {
 
 
 
-  const customer = payload.customer || {};
-  const product = payload.product || {};
-  const packagingReq = payload.packaging || {};
-  const deliveryReq = payload.delivery || {};
+const customer = payload?.customer || {};
+const product = payload?.product || {};
+const packagingReq = payload?.packaging || {};
+const deliveryReq = payload?.delivery || {};
   const isSheet = product.productType === "Sheet Roll";
 
   const thumb =
