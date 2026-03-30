@@ -506,7 +506,7 @@ export default function EngineeringReview() {
     }
   };
 
-  if (!payload) return <div className="p-6">Loading...</div>;
+
 
   const customer = payload.customer || {};
   const product = payload.product || {};
@@ -1002,7 +1002,9 @@ export default function EngineeringReview() {
       : 0;
 
   const totalOptGross = (OPT_SPEED_MAP[baseMaterial]?.A || 0) + (OPT_SPEED_MAP[baseMaterial]?.B || 0);
-
+if (!payload) {
+  return <div className="p-6">Loading...</div>;
+}
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 space-y-6">
       <div className="flex justify-between items-center gap-4 flex-wrap">
