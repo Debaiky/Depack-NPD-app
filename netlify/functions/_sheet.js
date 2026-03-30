@@ -258,7 +258,51 @@ async function upsertPricingScenario({
   ScenarioCurrency,
   UsdEgp,
   EurUsd,
-}) {
+}) 
+/* ================= DELETE HELPERS ================= */
+
+async function getSheetIdByName(sheetName) {
+  const sheets = await getSheetsClient();
+
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SHEET_ID,
+  });
+
+  const sheet = meta.data.sheets.find(
+    (s) => s.properties.title === sheetName
+  );
+
+  if (!sheet) throw new Error(`Sheet ${sheetName} not found`);
+
+  return sheet.properties.sheetId;
+}
+
+async function deleteRowByIndex(sheetName, rowIndex) {
+  const sheets = await getSheetsClient();
+
+  const sheetId = await getSheetIdByName(sheetName);
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              startIndex: rowIndex - 1,
+              endIndex: rowIndex,
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  return true;
+}
+{
   const rowData = {
     PricingID: PricingID || "",
     RequestID: RequestID || "",
@@ -315,4 +359,5 @@ module.exports = {
   findPricingScenarioRowById,
   makePricingId,
   upsertPricingScenario,
+  deleteRowByIndex,
 };
