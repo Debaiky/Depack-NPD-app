@@ -150,11 +150,8 @@ export default function Dashboard() {
                 <th className="p-3 w-[180px]">Customer</th>
                 <th className="p-3 w-[140px]">Product</th>
                 <th className="p-3 w-[140px]">Requester</th>
-                <th className="p-3 w-[120px]">Target Price</th>
-                <th className="p-3 w-[140px]">Annual Qty</th>
-                <th className="p-3 w-[170px]">Annual Turnover</th>
-                <th className="p-3 w-[140px]">Status</th>
-                <th className="p-3 w-[110px]">Priority</th>
+              <th className="p-3 w-[170px]">Annual Turnover</th>
+<th className="p-3 w-[140px]">Status</th>
                 <th className="p-3 w-[150px] text-center">Actions</th>
               </tr>
             </thead>
@@ -162,7 +159,7 @@ export default function Dashboard() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="12" className="p-6 text-center text-gray-500">
+                  <td colSpan="9" className="p-6 text-center text-gray-500">
                     No requests found.
                   </td>
                 </tr>
@@ -196,21 +193,7 @@ export default function Dashboard() {
 
                     <td className="p-3 break-words whitespace-normal">{r.Requester}</td>
 
-                    <td className="p-3 break-words whitespace-normal">
-                      {r.TargetSellingPrice !== "" &&
-                      r.TargetSellingPrice !== null &&
-                      r.TargetSellingPrice !== undefined
-                        ? fmtNumber(r.TargetSellingPrice, 2)
-                        : "—"}
-                    </td>
-
-                    <td className="p-3 break-words whitespace-normal">
-                      {r.ForecastAnnualVolume !== "" &&
-                      r.ForecastAnnualVolume !== null &&
-                      r.ForecastAnnualVolume !== undefined
-                        ? fmtNumber(r.ForecastAnnualVolume, 0)
-                        : "—"}
-                    </td>
+                   
 
                     <td className="p-3 break-words whitespace-normal font-medium">
                       {r.AnnualTurnover !== "" &&
@@ -224,9 +207,7 @@ export default function Dashboard() {
                       <StatusBadge status={r.Status} />
                     </td>
 
-                    <td className="p-3">
-                      <PriorityBadge value={r.Priority} />
-                    </td>
+                   
 
                     <td className="p-3">
                       <div className="flex items-center justify-center gap-3">
