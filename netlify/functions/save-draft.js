@@ -69,7 +69,7 @@ const handler = async (event) => {
       targetSellingPrice, // P
       forecastAnnualVolume, // Q
       annualTurnover || "", // R
-      body?.product?.productThumbnailPreview || "", // S
+      body?.product?.productThumbnailUrl || "", // S
     ];
 
     const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:A`;

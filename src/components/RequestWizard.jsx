@@ -119,6 +119,8 @@ project: {
     productThumbnailName: "",
     productThumbnailBase64: "",
     productThumbnailPreview: "",
+    productThumbnailUrl: "",
+productThumbnailFileName: "",
   },
 
   decoration: {
@@ -635,19 +637,21 @@ useEffect(() => {
   };
 
   const handleThumbnailChange = (file) => {
-    if (!file) return;
+  if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      const base64 = result.split(",")[1] || "";
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = String(reader.result || "");
+    const base64 = result.split(",")[1] || "";
 
-      update("product.productThumbnailName", file.name);
-      update("product.productThumbnailBase64", base64);
-      update("product.productThumbnailPreview", result);
-    };
-    reader.readAsDataURL(file);
+    update("product.productThumbnailName", file.name);
+    update("product.productThumbnailFileName", file.name);
+    update("product.productThumbnailBase64", base64);
+    update("product.productThumbnailPreview", result);
   };
+
+  reader.readAsDataURL(file);
+};
   const updateCustomerDraft = (field, value) => {
   update(`customer.customerDraft.${field}`, value);
 };
@@ -1005,67 +1009,62 @@ if (!form.product.productThumbnailName) req.push("Product Picture");
 
     return req;
   }, [form]);
+const saveDraft = async () => {
+  try {
+    let workingForm = { ...form };
 
-  const saveDraft = async () => {
-    try {
-      const firstSaveRes = await fetch("/.netlify/functions/save-draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
+    const folderRes = await fetch("/.netlify/functions/ensure-request-folder", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId: workingForm?.metadata?.requestId,
+      }),
+    });
 
-      const firstSaveData = await firstSaveRes.json();
+    const folderData = await folderRes.json();
 
-      if (!firstSaveData.success) {
-        setSaveMessage("Save failed");
-        return;
-      }
-
-      const folderRes = await fetch("/.netlify/functions/ensure-request-folder", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          requestId: form?.metadata?.requestId,
-        }),
-      });
-
-      const folderData = await folderRes.json();
-
-      if (!folderData.success) {
-        setSaveMessage("Draft saving worked but folder creation failed");
-        return;
-      }
-
-      const updatedForm = {
-        ...form,
-        metadata: {
-          ...form.metadata,
-          driveFolderId: folderData.requestFolder?.id || "",
-        },
-      };
-
-      setForm(updatedForm);
-
-      await fetch("/.netlify/functions/save-draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedForm),
-      });
-
-      await uploadPendingFiles(folderData.subfolders);
-
-      setSaveMessage(`Saved successfully at ${new Date().toLocaleTimeString()}`);
-    } catch (error) {
-      console.error("Save draft failed:", error);
-      setSaveMessage("Save failed");
+    if (!folderData.success) {
+      setSaveMessage("Folder creation failed");
+      return;
     }
-  };
+
+    workingForm = {
+      ...workingForm,
+      metadata: {
+        ...workingForm.metadata,
+        driveFolderId: folderData.requestFolder?.id || "",
+      },
+    };
+
+    workingForm = await uploadThumbnailIfNeeded(folderData, workingForm);
+
+    setForm(workingForm);
+
+    const saveRes = await fetch("/.netlify/functions/save-draft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(workingForm),
+    });
+
+    const saveData = await saveRes.json();
+
+    if (!saveData.success) {
+      setSaveMessage("Save failed");
+      return;
+    }
+
+    await uploadPendingFiles(folderData.subfolders);
+
+    setSaveMessage(`Saved successfully at ${new Date().toLocaleTimeString()}`);
+  } catch (error) {
+    console.error("Save draft failed:", error);
+    setSaveMessage("Save failed");
+  }
+};
 
   const nextStep = () => setCurrentStep((s) => Math.min(s + 1, steps.length - 1));
   const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 0));
