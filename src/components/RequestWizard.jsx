@@ -52,21 +52,24 @@ const initialForm = {
     driveFolderId: "",
   },
 
-  customer: {
-    customerName: "",
-    contactPerson: "",
-    contactEmail: "",
-    contactPhone: "",
-    countryMarket: "",
-    deliveryLocation: "",
-    projectName: "",
-    customerSkuRef: "",
-    targetLaunchDate: "",
-    forecastAnnualVolume: "",
-    targetSellingPrice: "",
-    currency: "EGP",
-    customerNotes: "",
-  },
+customers: [],
+customerDraft: {
+  customerName: "",
+  contactPerson: "",
+  contactEmail: "",
+  contactPhone: "",
+  countryMarket: "",
+  deliveryLocation: "",
+  customerNotes: "",
+},
+project: {
+  projectName: "",
+  customerProductCode: "",
+  targetLaunchDate: "",
+  forecastAnnualVolume: "",
+  targetSellingPrice: "",
+  currency: "EGP",
+},
 
   product: {
     productType: "",
@@ -434,33 +437,37 @@ function WizardStepper({ currentStep, status }) {
 }
 
 function SummaryPanel({ form, currentStep, missingRequired }) {
-  const packagingSummary = useMemo(() => {
-    if (form.product.productType === "Sheet Roll") {
-      const bits = [];
-      if (form.product.rollWeightKg) {
-        bits.push(`${form.product.rollWeightKg} kg/roll`);
-      }
-      if (form.packaging.sheet.rollsPerPallet) {
-        bits.push(`${form.packaging.sheet.rollsPerPallet} rolls/pallet`);
-      }
-      if (form.packaging.sheet.palletType) {
-        bits.push(form.packaging.sheet.palletType);
-      }
-      return bits.length ? bits.join(", ") : "Not complete yet";
-    }
+  const primaryCustomer = form.customers?.[0] || {};
 
-    const p = form.packaging.primary;
-    const s = form.packaging.secondary;
-    const pal = form.packaging.pallet;
+ const packagingSummary = useMemo(() => {
+  if (form.product.productType === "Sheet Roll") {
     const bits = [];
-    if (p.pcsPerStack) bits.push(`${p.pcsPerStack} pcs/stack`);
-    if (p.stacksPerBag) bits.push(`${p.stacksPerBag} stacks/bag`);
-    if (s.bagsPerCarton) bits.push(`${s.bagsPerCarton} bags/carton`);
-    if (!pal.noPalletNeeded && pal.cartonsPerPallet) {
-      bits.push(`${pal.cartonsPerPallet} cartons/pallet`);
+    if (form.packaging.sheet.rollsPerPallet) {
+      bits.push(`${form.packaging.sheet.rollsPerPallet} rolls/pallet`);
+    }
+    if (form.packaging.sheet.rollWeightKg) {
+      bits.push(`${form.packaging.sheet.rollWeightKg} kg/roll`);
+    }
+    if (form.packaging.sheet.coreSize) {
+      bits.push(`${form.packaging.sheet.coreSize} core`);
     }
     return bits.length ? bits.join(", ") : "Not complete yet";
-  }, [form]);
+  }
+
+  const p = form.packaging.primary;
+  const s = form.packaging.secondary;
+  const pal = form.packaging.pallet;
+  const bits = [];
+
+  if (p.pcsPerStack) bits.push(`${p.pcsPerStack} pcs/stack`);
+  if (p.stacksPerBag) bits.push(`${p.stacksPerBag} stacks/bag`);
+  if (s.bagsPerCarton) bits.push(`${s.bagsPerCarton} bags/carton`);
+  if (!pal.noPalletNeeded && pal.cartonsPerPallet) {
+    bits.push(`${pal.cartonsPerPallet} cartons/pallet`);
+  }
+
+  return bits.length ? bits.join(", ") : "Not complete yet";
+}, [form]);
 
   const attachmentCount = Object.values(form.attachments).reduce(
     (acc, arr) => acc + (Array.isArray(arr) ? arr.length : 0),
@@ -488,12 +495,12 @@ function SummaryPanel({ form, currentStep, missingRequired }) {
 
           <div>
             <div className="text-muted-foreground">Customer</div>
-            <div className="font-medium">{form.customer.customerName || "—"}</div>
+            <div className="font-medium">{primaryCustomer.customerName || "—"}</div>
           </div>
 
           <div>
             <div className="text-muted-foreground">Project</div>
-            <div className="font-medium">{form.customer.projectName || "—"}</div>
+            <div className="font-medium">{form.project?.projectName || "—"}</div>
           </div>
 
           <div>
@@ -532,7 +539,7 @@ function SummaryPanel({ form, currentStep, missingRequired }) {
           <div>
             <div className="text-muted-foreground">Delivery Location</div>
             <div className="font-medium">
-              {form.delivery.deliveryLocationConfirm || form.customer.deliveryLocation || "—"}
+              {form.delivery.deliveryLocationConfirm || primaryCustomer.deliveryLocation || "—"}
             </div>
           </div>
 
@@ -540,32 +547,6 @@ function SummaryPanel({ form, currentStep, missingRequired }) {
             <div className="text-muted-foreground">Attachments</div>
             <div className="font-medium">{attachmentCount} files</div>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-2xl shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Validation</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {missingRequired.length === 0 ? (
-            <div className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4" /> No blocking items in this draft.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <AlertTriangle className="h-4 w-4" /> Missing required items
-              </div>
-              <div className="space-y-2">
-                {missingRequired.map((item) => (
-                  <div key={item} className="rounded-xl border px-3 py-2 text-sm">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
@@ -606,11 +587,12 @@ export default function RequestWizard({
     cartonLabelArtworkFiles: [],
     customerBriefFiles: [],
   });
-
+    const [savedCustomers, setSavedCustomers] = useState([]);
+    const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const requestId = form.metadata.requestId || "—";
   const status = form.metadata.status || "Draft";
   const productName =
-    form.customer.projectName || form.product.productType || "Untitled Request";
+  form.project.projectName || form.product.productType || "Untitled Request";
 
   useEffect(() => {
     if (
@@ -620,7 +602,22 @@ export default function RequestWizard({
       update("decoration.decorationType", "No decoration");
     }
   }, [form.product.productType, form.decoration.decorationType]);
+useEffect(() => {
+  const loadCustomers = async () => {
+    try {
+      const res = await fetch("/.netlify/functions/list-customers");
+      const json = await res.json();
 
+      if (json?.success) {
+        setSavedCustomers(Array.isArray(json.customers) ? json.customers : []);
+      }
+    } catch (err) {
+      console.error("Failed to load customers:", err);
+    }
+  };
+
+  loadCustomers();
+}, []);
   const update = (path, value) => {
     setForm((prev) => {
       const next = structuredClone(prev);
@@ -648,6 +645,130 @@ export default function RequestWizard({
     };
     reader.readAsDataURL(file);
   };
+  const updateCustomerDraft = (field, value) => {
+  update(`customerDraft.${field}`, value);
+};
+
+const addNewCustomerToRequest = async () => {
+  const draft = form.customerDraft || {};
+
+  if (
+    !draft.customerName ||
+    !draft.contactPerson ||
+    !draft.contactEmail ||
+    !draft.contactPhone ||
+    !draft.countryMarket ||
+    !draft.deliveryLocation
+  ) {
+    alert("Please complete all customer fields before adding the customer.");
+    return;
+  }
+
+  try {
+    const res = await fetch("/.netlify/functions/save-customer", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customerName: draft.customerName,
+        contactPerson: draft.contactPerson,
+        contactEmail: draft.contactEmail,
+        contactPhone: draft.contactPhone,
+        countryMarket: draft.countryMarket,
+        deliveryLocation: draft.deliveryLocation,
+        notes: draft.customerNotes || "",
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!json.success) {
+      alert(json.error || "Failed to save customer");
+      return;
+    }
+
+    const customerToAdd = {
+      customerId: json.customer?.CustomerID || "",
+      customerName: json.customer?.CustomerName || draft.customerName,
+      contactPerson: json.customer?.ContactPerson || draft.contactPerson,
+      contactEmail: json.customer?.ContactEmail || draft.contactEmail,
+      contactPhone: json.customer?.ContactPhone || draft.contactPhone,
+      countryMarket: json.customer?.CountryMarket || draft.countryMarket,
+      deliveryLocation: json.customer?.DeliveryLocation || draft.deliveryLocation,
+      customerNotes: json.customer?.Notes || draft.customerNotes || "",
+    };
+
+    const alreadyExists = (form.customers || []).some(
+      (c) =>
+        c.customerName === customerToAdd.customerName &&
+        c.contactEmail === customerToAdd.contactEmail
+    );
+
+    if (!alreadyExists) {
+      update("customers", [...(form.customers || []), customerToAdd]);
+    }
+
+    const refreshed = await fetch("/.netlify/functions/list-customers");
+    const refreshedJson = await refreshed.json();
+    if (refreshedJson?.success) {
+      setSavedCustomers(Array.isArray(refreshedJson.customers) ? refreshedJson.customers : []);
+    }
+
+    update("customerDraft", {
+      customerName: "",
+      contactPerson: "",
+      contactEmail: "",
+      contactPhone: "",
+      countryMarket: "",
+      deliveryLocation: "",
+      customerNotes: "",
+    });
+
+    setSelectedCustomerId("");
+  } catch (err) {
+    console.error(err);
+    alert("Failed to add customer");
+  }
+};
+
+const addExistingCustomerToRequest = () => {
+  if (!selectedCustomerId) return;
+
+  const selected = savedCustomers.find((c) => c.CustomerID === selectedCustomerId);
+  if (!selected) return;
+
+  const customerToAdd = {
+    customerId: selected.CustomerID || "",
+    customerName: selected.CustomerName || "",
+    contactPerson: selected.ContactPerson || "",
+    contactEmail: selected.ContactEmail || "",
+    contactPhone: selected.ContactPhone || "",
+    countryMarket: selected.CountryMarket || "",
+    deliveryLocation: selected.DeliveryLocation || "",
+    customerNotes: selected.Notes || "",
+  };
+
+  const alreadyExists = (form.customers || []).some(
+    (c) =>
+      c.customerName === customerToAdd.customerName &&
+      c.contactEmail === customerToAdd.contactEmail
+  );
+
+  if (alreadyExists) {
+    alert("This customer is already added to the request.");
+    return;
+  }
+
+  update("customers", [...(form.customers || []), customerToAdd]);
+  setSelectedCustomerId("");
+};
+
+const removeCustomerFromRequest = (index) => {
+  const next = [...(form.customers || [])];
+  next.splice(index, 1);
+  update("customers", next);
+};
 
   const handleAttachmentAdd = (field, pickedFiles) => {
     setPendingUploads((prev) => ({
@@ -774,40 +895,43 @@ export default function RequestWizard({
   const missingRequired = useMemo(() => {
     const req = [];
 
-    if (!form.metadata.createdBy) req.push("Requested By");
-    if (!form.customer.customerName) req.push("Customer Name");
-    if (!form.customer.contactPerson) req.push("Contact Person");
-    if (!form.customer.countryMarket) req.push("Country / Market");
-    if (!form.customer.deliveryLocation) req.push("Delivery Location");
-    if (!form.customer.projectName) req.push("Project Name");
-    if (!form.customer.forecastAnnualVolume) req.push("Forecast Annual Volume");
-    if (!form.customer.targetSellingPrice) req.push("Target Selling Price");
-    if (!form.product.productType) req.push("Product Type");
-    if (!form.product.productThumbnailPreview) req.push("Product Picture");
+   if (!form.metadata.createdBy) req.push("Requested By");
+
+if (!Array.isArray(form.customers) || form.customers.length === 0) {
+  req.push("At least one customer must be added");
+} else {
+  form.customers.forEach((customer, index) => {
+    const n = index + 1;
+    if (!customer.customerName) req.push(`Customer ${n}: Customer Name`);
+    if (!customer.contactPerson) req.push(`Customer ${n}: Contact Person`);
+    if (!customer.contactEmail) req.push(`Customer ${n}: Contact Email`);
+    if (!customer.contactPhone) req.push(`Customer ${n}: Contact Phone`);
+    if (!customer.countryMarket) req.push(`Customer ${n}: Country / Market`);
+    if (!customer.deliveryLocation) req.push(`Customer ${n}: Delivery Location`);
+  });
+}
+
+if (!form.project?.projectName) req.push("Project Name");
+if (!form.project?.forecastAnnualVolume) req.push("Forecast Annual Quantity");
+if (!form.project?.targetSellingPrice) req.push("Target Selling Price");
+if (!form.product.productType) req.push("Product Type");
+if (!form.product.productThumbnailName) req.push("Product Picture");
 
     if (form.product.productType === "Sheet Roll") {
-      if (!form.product.sheetMaterial) req.push("Sheet Material");
-      if (!form.product.sheetWidthMm) req.push("Sheet Width");
-      if (!form.product.sheetThicknessMicron) req.push("Sheet Thickness");
-      if (!form.product.rollWeightKg) req.push("Roll Weight");
-      if (!form.product.rollDiameterMm) req.push("Roll Diameter");
-      if (!form.product.coreDiameterMm) req.push("Core Diameter");
-      if (!form.product.coreMaterial) req.push("Core Material");
-      if (!form.product.sheetLayerColors) req.push("Sheet Layer Colors");
-
-      if (form.product.sheetMaterial === "PS") {
-        if (!form.product.hipsPct) req.push("% HIPS");
-        if (!form.product.gppsPct) req.push("% GPPS");
-      }
-
-      if (form.product.sheetMaterial === "PET") {
-        if (!form.product.rpetPct) req.push("% rPET");
-        if (!form.product.virginPetPct) req.push("% Virgin PET");
-      }
-
-      if (!form.packaging.sheet.coreSize) req.push("Core Size");
-      if (!form.packaging.sheet.rollsPerPallet) req.push("Rolls per Pallet");
-      if (!form.packaging.sheet.palletType) req.push("Pallet Type");
+     if (!form.product.sheetMaterial) req.push("Sheet Material");
+if (!form.product.sheetWidthMm) req.push("Sheet Width");
+if (!form.product.sheetThicknessMicron) req.push("Sheet Thickness");
+if (!form.product.rollDiameterMm) req.push("Roll Diameter");
+if (!form.product.coreMaterial) req.push("Core Type");
+if (!form.packaging.sheet.coreSize) req.push("Core Size");
+if (!form.packaging.sheet.rollWeightKg) req.push("Roll Weight");
+if (!form.packaging.sheet.labelsPerRoll) req.push("Labels per Roll");
+if (!form.packaging.sheet.palletType) req.push("Pallet Type");
+if (!form.packaging.sheet.rollsPerPallet) req.push("Rolls per Pallet");
+if (!form.packaging.sheet.strapLengthPerPalletM && form.packaging.sheet.strapLengthPerPalletM !== "0") req.push("Strap Length per Pallet");
+if (!form.packaging.sheet.foamLengthPerPalletM && form.packaging.sheet.foamLengthPerPalletM !== "0") req.push("Foam Length per Pallet");
+if (!form.packaging.sheet.stretchWeightPerPalletKg && form.packaging.sheet.stretchWeightPerPalletKg !== "0") req.push("Stretch Film Weight per Pallet");
+if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPallet !== "0") req.push("Labels per Pallet");
 
       if (!form.delivery.deliveryLocationConfirm && !form.customer.deliveryLocation) {
         req.push("Delivery Location");
@@ -986,46 +1110,144 @@ export default function RequestWizard({
                   </div>
                 </SectionCard>
 
-                <SectionCard title="Customer Details">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Customer Name *">
-                      <Input
-                        value={form.customer.customerName}
-                        onChange={(e) => update("customer.customerName", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Contact Person *">
-                      <Input
-                        value={form.customer.contactPerson}
-                        onChange={(e) => update("customer.contactPerson", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Contact Email">
-                      <Input
-                        value={form.customer.contactEmail}
-                        onChange={(e) => update("customer.contactEmail", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Contact Phone">
-                      <Input
-                        value={form.customer.contactPhone}
-                        onChange={(e) => update("customer.contactPhone", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Country / Market *">
-                      <Input
-                        value={form.customer.countryMarket}
-                        onChange={(e) => update("customer.countryMarket", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Delivery Location *">
-                      <Input
-                        value={form.customer.deliveryLocation}
-                        onChange={(e) => update("customer.deliveryLocation", e.target.value)}
-                      />
-                    </Field>
-                  </div>
-                </SectionCard>
+                <SectionCard
+  title="Customers"
+  description="You can add one or more customers to the same request. Select from saved customers or add a new one."
+>
+  <div className="space-y-6">
+    <div className="grid md:grid-cols-3 gap-4 items-end">
+      <Field label="Select Existing Customer">
+        <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Choose a saved customer" />
+          </SelectTrigger>
+          <SelectContent>
+            {savedCustomers.length === 0 ? (
+              <SelectItem value="__no_customers__" disabled>
+                No saved customers
+              </SelectItem>
+            ) : (
+              savedCustomers.map((cust) => (
+                <SelectItem key={cust.customerId} value={cust.customerId}>
+                  {cust.customerName} {cust.countryMarket ? `- ${cust.countryMarket}` : ""}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </Field>
+
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={addExistingCustomerToRequest}
+        >
+          Add Existing Customer
+        </Button>
+      </div>
+    </div>
+
+    <div className="rounded-2xl border p-4 space-y-4 bg-muted/20">
+      <div className="font-medium">Add New Customer</div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <Field label="Customer Name *">
+          <Input
+            value={form.customerDraft.customerName}
+            onChange={(e) => updateCustomerDraft("customerName", e.target.value)}
+          />
+        </Field>
+
+        <Field label="Contact Person *">
+          <Input
+            value={form.customerDraft.contactPerson}
+            onChange={(e) => updateCustomerDraft("contactPerson", e.target.value)}
+          />
+        </Field>
+
+        <Field label="Contact Email *">
+          <Input
+            value={form.customerDraft.contactEmail}
+            onChange={(e) => updateCustomerDraft("contactEmail", e.target.value)}
+          />
+        </Field>
+
+        <Field label="Contact Phone *">
+          <Input
+            value={form.customerDraft.contactPhone}
+            onChange={(e) => updateCustomerDraft("contactPhone", e.target.value)}
+          />
+        </Field>
+
+        <Field label="Country / Market *">
+          <Input
+            value={form.customerDraft.countryMarket}
+            onChange={(e) => updateCustomerDraft("countryMarket", e.target.value)}
+          />
+        </Field>
+
+        <Field label="Delivery Location *">
+          <Input
+            value={form.customerDraft.deliveryLocation}
+            onChange={(e) => updateCustomerDraft("deliveryLocation", e.target.value)}
+          />
+        </Field>
+      </div>
+
+      <div>
+        <Button type="button" onClick={addNewCustomerToRequest}>
+          Add New Customer
+        </Button>
+      </div>
+    </div>
+
+    <div className="space-y-3">
+      <div className="font-medium">Customers Added to This Request</div>
+
+      {form.customers?.length === 0 ? (
+        <div className="text-sm text-muted-foreground">
+          No customers added yet.
+        </div>
+      ) : (
+        form.customers.map((cust, index) => (
+          <div
+            key={`${cust.customerId || cust.customerName}-${index}`}
+            className="rounded-2xl border p-4 flex items-start justify-between gap-4"
+          >
+            <div className="space-y-1 min-w-0">
+              <div className="font-medium">{cust.customerName || "—"}</div>
+              <div className="text-sm text-muted-foreground">
+                Contact: {cust.contactPerson || "—"}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Email: {cust.contactEmail || "—"}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Phone: {cust.contactPhone || "—"}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Market: {cust.countryMarket || "—"}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Delivery: {cust.deliveryLocation || "—"}
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => removeCustomerFromRequest(index)}
+            >
+              Remove
+            </Button>
+          </div>
+        ))
+      )}
+    </div>
+  </div>
+</SectionCard>
 
                 <SectionCard title="Project Details">
                   <div className="grid md:grid-cols-2 gap-4">
@@ -1931,120 +2153,151 @@ export default function RequestWizard({
             )}
 
             {currentStep === 3 && form.product.productType === "Sheet Roll" && (
-              <div className="space-y-6">
-                <SectionCard title="Sheet Packaging">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Core Size *">
-                      <Select
-                        value={form.packaging.sheet.coreSize}
-                        onValueChange={(v) => update("packaging.sheet.coreSize", v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select core size" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="3 inch">3 inch</SelectItem>
-                          <SelectItem value="6 inch">6 inch</SelectItem>
-                          <SelectItem value="8 inch">8 inch</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
+  <div className="space-y-6">
+    <SectionCard title="Sheet Packaging">
+      <div className="grid md:grid-cols-2 gap-4">
+        <Field label="Roll Weight (kg)">
+          <Input
+            value={form.packaging.sheet.rollWeightKg}
+            onChange={(e) => update("packaging.sheet.rollWeightKg", e.target.value)}
+          />
+        </Field>
 
-                    <Field label="Roll Weight (kg)">
-                      <Input value={form.product.rollWeightKg} disabled />
-                    </Field>
+        <Field label="Roll Diameter (mm)">
+          <Input
+            value={form.product.rollDiameterMm}
+            onChange={(e) => update("product.rollDiameterMm", e.target.value)}
+          />
+        </Field>
 
-                    <Field label="Rolls per Pallet *">
-                      <Input
-                        value={form.packaging.sheet.rollsPerPallet}
-                        onChange={(e) => update("packaging.sheet.rollsPerPallet", e.target.value)}
-                      />
-                    </Field>
+        <Field label="Core Size">
+          <Select
+            value={form.packaging.sheet.coreSize}
+            onValueChange={(v) => update("packaging.sheet.coreSize", v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select core size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3 inch">3 inch</SelectItem>
+              <SelectItem value="6 inch">6 inch</SelectItem>
+              <SelectItem value="8 inch">8 inch</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
 
-                    <Field label="Pallet Type *">
-                      <Select
-                        value={form.packaging.sheet.palletType}
-                        onValueChange={(v) => update("packaging.sheet.palletType", v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select pallet type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="UK pallet">UK pallet</SelectItem>
-                          <SelectItem value="EURO pallet">EURO pallet</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
+        <Field label="Core Type">
+          <Select
+            value={form.product.coreMaterial}
+            onValueChange={(v) => {
+              update("product.coreMaterial", v);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select core type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Wooden">Wooden</SelectItem>
+              <SelectItem value="Plastic">Plastic</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
 
-                    <Field label="Strap Length per Pallet (m)">
-                      <Input
-                        value={form.packaging.sheet.strapLengthPerPalletM}
-                        onChange={(e) =>
-                          update("packaging.sheet.strapLengthPerPalletM", e.target.value)
-                        }
-                      />
-                    </Field>
+        <Field label="Labels per Roll">
+          <Input
+            value={form.packaging.sheet.labelsPerRoll}
+            onChange={(e) => update("packaging.sheet.labelsPerRoll", e.target.value)}
+          />
+        </Field>
 
-                    <Field label="Foam Length per Pallet (m)">
-                      <Input
-                        value={form.packaging.sheet.foamLengthPerPalletM}
-                        onChange={(e) =>
-                          update("packaging.sheet.foamLengthPerPalletM", e.target.value)
-                        }
-                      />
-                    </Field>
+        <Field label="Pallet Required?">
+          <YesNoSelect
+            value={form.packaging.sheet.palletType ? "Yes" : "No"}
+            onChange={(v) => {
+              if (v === "No") {
+                update("packaging.sheet.palletType", "");
+                update("packaging.sheet.rollsPerPallet", "");
+                update("packaging.sheet.strapLengthPerPalletM", "");
+                update("packaging.sheet.foamLengthPerPalletM", "");
+                update("packaging.sheet.stretchWeightPerPalletKg", "");
+                update("packaging.sheet.labelsPerPallet", "");
+              }
+            }}
+          />
+        </Field>
 
-                    <Field label="Labels per Roll">
-                      <Input
-                        value={form.packaging.sheet.labelsPerRoll}
-                        onChange={(e) => update("packaging.sheet.labelsPerRoll", e.target.value)}
-                      />
-                    </Field>
+        <Field label="Pallet Type">
+          <Select
+            value={form.packaging.sheet.palletType}
+            onValueChange={(v) => update("packaging.sheet.palletType", v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select pallet type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="UK pallet">UK pallet</SelectItem>
+              <SelectItem value="EURO pallet">EURO pallet</SelectItem>
+              <SelectItem value="Other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
 
-                    <Field label="Labels per Pallet">
-                      <Input
-                        value={form.packaging.sheet.labelsPerPallet}
-                        onChange={(e) =>
-                          update("packaging.sheet.labelsPerPallet", e.target.value)
-                        }
-                      />
-                    </Field>
+        <Field label="No. of Rolls per Pallet">
+          <Input
+            value={form.packaging.sheet.rollsPerPallet}
+            onChange={(e) => update("packaging.sheet.rollsPerPallet", e.target.value)}
+          />
+        </Field>
 
-                    <Field label="Stretch Weight per Pallet (kg)">
-                      <Input
-                        value={form.packaging.sheet.stretchWeightPerPalletKg}
-                        onChange={(e) =>
-                          update("packaging.sheet.stretchWeightPerPalletKg", e.target.value)
-                        }
-                      />
-                    </Field>
+        <Field label="Strap Length per Pallet (m)">
+          <Input
+            value={form.packaging.sheet.strapLengthPerPalletM}
+            onChange={(e) =>
+              update("packaging.sheet.strapLengthPerPalletM", e.target.value)
+            }
+          />
+        </Field>
 
-                    <Field label="Operators per Pallet">
-                      <Input
-                        value={form.packaging.sheet.operatorsPerPallet}
-                        onChange={(e) =>
-                          update("packaging.sheet.operatorsPerPallet", e.target.value)
-                        }
-                      />
-                    </Field>
-                  </div>
+        <Field label="Foam Length per Pallet (m)">
+          <Input
+            value={form.packaging.sheet.foamLengthPerPalletM}
+            onChange={(e) =>
+              update("packaging.sheet.foamLengthPerPalletM", e.target.value)
+            }
+          />
+        </Field>
 
-                  <div
-                    className={`rounded-xl border px-3 py-3 text-sm ${
-                      estimatedSheetRollPalletLoadKg > 1000
-                        ? "bg-red-50 border-red-200 text-red-700"
-                        : "bg-green-50 border-green-200 text-green-700"
-                    }`}
-                  >
-                    Estimated pallet load = {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
-                    {estimatedSheetRollPalletLoadKg > 1000
-                      ? " — Above 1 ton"
-                      : " — Within 1 ton"}
-                  </div>
-                </SectionCard>
-              </div>
-            )}
+        <Field label="Stretch Film Weight per Pallet (kg)">
+          <Input
+            value={form.packaging.sheet.stretchWeightPerPalletKg}
+            onChange={(e) =>
+              update("packaging.sheet.stretchWeightPerPalletKg", e.target.value)
+            }
+          />
+        </Field>
+
+        <Field label="Labels per Pallet">
+          <Input
+            value={form.packaging.sheet.labelsPerPallet}
+            onChange={(e) => update("packaging.sheet.labelsPerPallet", e.target.value)}
+          />
+        </Field>
+      </div>
+
+      <div
+        className={`rounded-xl border px-3 py-3 text-sm ${
+          estimatedSheetRollPalletLoadKg > 1000
+            ? "bg-red-50 border-red-200 text-red-700"
+            : "bg-green-50 border-green-200 text-green-700"
+        }`}
+      >
+        Estimated pallet load = {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
+        {estimatedSheetRollPalletLoadKg > 1000 ? " — Above 1 ton" : " — Within 1 ton"}
+      </div>
+    </SectionCard>
+  </div>
+)}
 
             {currentStep === 3 && form.product.productType !== "Sheet Roll" && (
               <div className="space-y-6">
@@ -2091,13 +2344,16 @@ export default function RequestWizard({
                       />
                     </Field>
                     <Field label="Bag / Sleeve Dimensions (mm)">
-                      <Input
-                        value={form.packaging.primary.bagSleeveDimensionsMm}
-                        onChange={(e) =>
-                          update("packaging.primary.bagSleeveDimensionsMm", e.target.value)
-                        }
-                      />
-                    </Field>
+  <Input
+    value={form.packaging.primary.bagSleeveDimensionsMm}
+    onChange={(e) =>
+      update(
+        "packaging.primary.bagSleeveDimensionsMm",
+        e.target.value
+      )
+    }
+  />
+</Field>
                     <Field label="Sleeve Thickness (micron)">
                       <Input
                         value={form.packaging.primary.bagSleeveThicknessMicron}
@@ -2743,15 +2999,15 @@ export default function RequestWizard({
                         </div>
                         <div>
                           <span className="text-muted-foreground">Name:</span>{" "}
-                          {form.customer.customerName || "—"}
+                          {(form.customers?.[0]?.customerName) || "—"}
                         </div>
                         <div>
                           <span className="text-muted-foreground">Project:</span>{" "}
-                          {form.customer.projectName || "—"}
+                          {form.project.projectName || "—"}
                         </div>
                         <div>
                           <span className="text-muted-foreground">Market:</span>{" "}
-                          {form.customer.countryMarket || "—"}
+                          {(form.customers?.[0]?.countryMarket) || "—"}
                         </div>
                       </CardContent>
                     </Card>
@@ -2798,20 +3054,24 @@ export default function RequestWizard({
                       </CardHeader>
                       <CardContent className="text-sm space-y-2">
                         {form.product.productType === "Sheet Roll" ? (
-                          <>
-                            <div>
-                              <span className="text-muted-foreground">Rolls per Pallet:</span>{" "}
-                              {form.packaging.sheet.rollsPerPallet || "—"}
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Pallet Type:</span>{" "}
-                              {form.packaging.sheet.palletType || "—"}
-                            </div>
-                            <div>
-                              <span className="text-muted-foreground">Pallet Load:</span>{" "}
-                              {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
-                            </div>
-                          </>
+                         <>
+  <div>
+    <span className="text-muted-foreground">Rolls per Pallet:</span>{" "}
+    {form.packaging.sheet.rollsPerPallet || "—"}
+  </div>
+  <div>
+    <span className="text-muted-foreground">Pallet Type:</span>{" "}
+    {form.packaging.sheet.palletType || "—"}
+  </div>
+  <div>
+    <span className="text-muted-foreground">Roll Weight:</span>{" "}
+    {form.packaging.sheet.rollWeightKg || "—"} kg
+  </div>
+  <div>
+    <span className="text-muted-foreground">Pallet Load:</span>{" "}
+    {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
+  </div>
+</>
                         ) : (
                           <>
                             <div>{`${form.packaging.primary.pcsPerStack || "—"} pcs/stack`}</div>
