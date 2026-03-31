@@ -20,19 +20,11 @@ function getCell(row, headerMap, ...possibleHeaders) {
   return "";
 }
 
-function safeJsonParse(value) {
-  try {
-    return value ? JSON.parse(value) : {};
-  } catch {
-    return {};
-  }
-}
-
 export async function handler() {
   try {
     const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
 
-    const requestsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:P`;
+    const requestsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:S`;
     const filesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Files!A:G`;
 
     const requestsResult = await googleJsonFetch(requestsUrl, {
@@ -80,77 +72,27 @@ export async function handler() {
     const requests = dataRows
       .map((row) => {
         const requestId = getCell(row, headerMap, "RequestID", "Request ID");
-        const createdDate = getCell(row, headerMap, "CreatedDate", "Created Date");
-        const createdBy = getCell(row, headerMap, "CreatedBy", "Created By");
-        const status = getCell(row, headerMap, "Status") || "Draft";
-        const projectName = getCell(row, headerMap, "ProjectName", "Project Name");
-        const customerSummary = getCell(row, headerMap, "CustomerSummary", "Customer Summary");
-        const customerProductCode = getCell(
-          row,
-          headerMap,
-          "CustomerProductCode",
-          "Customer Product Code"
-        );
-        const targetSellingPrice = getCell(
-          row,
-          headerMap,
-          "TargetSellingPrice",
-          "Target Selling Price"
-        );
-        const currency = getCell(row, headerMap, "Currency");
-        const forecastAnnualQty = getCell(
-          row,
-          headerMap,
-          "ForecastAnnualQty",
-          "Forecast Annual Qty"
-        );
-        const expectedAnnualTurnover = getCell(
-          row,
-          headerMap,
-          "ExpectedAnnualTurnover",
-          "Expected Annual Turnover"
-        );
-        const productType = getCell(row, headerMap, "ProductType", "Product Type");
-        const payloadJson = getCell(row, headerMap, "PayloadJSON", "Payload JSON");
-        const driveFolderId = getCell(row, headerMap, "DriveFolderID", "Drive Folder ID");
-        const productThumbnailFileName = getCell(
-          row,
-          headerMap,
-          "ProductThumbnailFileName",
-          "Product Thumbnail File Name"
-        );
-        const productThumbnailDriveLink = getCell(
-          row,
-          headerMap,
-          "ProductThumbnailDriveLink",
-          "Product Thumbnail Drive Link"
-        );
-
-        const payload = safeJsonParse(payloadJson);
-        const thumbPreview =
-          payload?.product?.productThumbnailPreview ||
-          (payload?.product?.productThumbnailBase64
-            ? `data:image/*;base64,${payload.product.productThumbnailBase64}`
-            : "");
 
         return {
           RequestID: requestId,
-          CreatedDate: createdDate,
-          CreatedBy: createdBy,
-          Status: status,
-          ProjectName: projectName || "Untitled Project",
-          CustomerSummary: customerSummary || "—",
-          CustomerProductCode: customerProductCode || "",
-          TargetSellingPrice: targetSellingPrice || "",
-          Currency: currency || "",
-          ForecastAnnualQty: forecastAnnualQty || "",
-          ExpectedAnnualTurnover: expectedAnnualTurnover || "",
-          ProductType: productType || "",
-          PayloadJSON: payloadJson,
-          DriveFolderID: driveFolderId,
-          ProductThumbnailFileName: productThumbnailFileName || "",
-          ProductThumbnailDriveLink: productThumbnailDriveLink || "",
-          ProductThumbnailPreview: thumbPreview || "",
+          CreatedDate: getCell(row, headerMap, "CreatedDate", "Created Date"),
+          CreatedBy: getCell(row, headerMap, "CreatedBy", "Created By"),
+          Status: getCell(row, headerMap, "Status") || "Draft",
+          CustomerName: getCell(row, headerMap, "CustomerName", "Customer Name"),
+          ContactPerson: getCell(row, headerMap, "ContactPerson", "Contact Person"),
+          CountryMarket: getCell(row, headerMap, "CountryMarket", "Country Market"),
+          DeliveryLocation: getCell(row, headerMap, "DeliveryLocation", "Delivery Location"),
+          ProjectName: getCell(row, headerMap, "ProjectName", "Project Name"),
+          ProjectType: getCell(row, headerMap, "ProjectType", "Project Type"),
+          ProductType: getCell(row, headerMap, "ProductType", "Product Type"),
+          ProductMaterial: getCell(row, headerMap, "ProductMaterial", "Product Material"),
+          DecorationType: getCell(row, headerMap, "DecorationType", "Decoration Type"),
+          PayloadJSON: getCell(row, headerMap, "PayloadJSON", "Payload JSON"),
+          DriveFolderID: getCell(row, headerMap, "DriveFolderID", "Drive Folder ID"),
+          TargetSellingPrice: getCell(row, headerMap, "TargetSellingPrice"),
+          ForecastAnnualVolume: getCell(row, headerMap, "ForecastAnnualVolume"),
+          AnnualTurnover: getCell(row, headerMap, "AnnualTurnover"),
+          Thumbnail: getCell(row, headerMap, "Thumbnail"),
           FileCount: fileCountMap[requestId] || 0,
         };
       })
