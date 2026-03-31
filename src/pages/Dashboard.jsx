@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Eye, Wrench, BadgeDollarSign } from "lucide-react";
+
+function fmtNumber(v) {
+  const n = Number(String(v || "").replace(/,/g, ""));
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(n);
+}
 
 export default function Dashboard() {
   const [requests, setRequests] = useState([]);
@@ -42,10 +51,15 @@ export default function Dashboard() {
       ...r,
       RequestID: r?.RequestID || "",
       ProjectName: r?.ProjectName || "Untitled Project",
-      CustomerName: r?.CustomerName || "Unknown Customer",
+      CustomerSummary: r?.CustomerSummary || "—",
       Requester: r?.Requester || r?.CreatedBy || "—",
       Status: r?.Status || "Draft",
-      Priority: r?.Priority || "Normal",
+      ProductType: r?.ProductType || "—",
+      ForecastAnnualQty: r?.ForecastAnnualQty || "",
+      TargetSellingPrice: r?.TargetSellingPrice || "",
+      Currency: r?.Currency || "",
+      ExpectedAnnualTurnover: r?.ExpectedAnnualTurnover || "",
+      ProductThumbnailPreview: r?.ProductThumbnailPreview || "",
     }));
   }, [requests]);
 
@@ -57,8 +71,9 @@ export default function Dashboard() {
       data = data.filter(
         (r) =>
           r.ProjectName.toLowerCase().includes(q) ||
-          r.CustomerName.toLowerCase().includes(q) ||
-          r.RequestID.toLowerCase().includes(q)
+          r.CustomerSummary.toLowerCase().includes(q) ||
+          r.RequestID.toLowerCase().includes(q) ||
+          r.ProductType.toLowerCase().includes(q)
       );
     }
 
@@ -88,7 +103,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-4">
+    <div className="p-6 max-w-[1600px] mx-auto space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-xl font-semibold">Projects Dashboard</h1>
 
@@ -102,8 +117,8 @@ export default function Dashboard() {
 
       <div className="flex gap-3 flex-wrap">
         <input
-          placeholder="Search project, customer, or request ID..."
-          className="border px-3 py-2 rounded w-72"
+          placeholder="Search project, customer, request ID, or product type..."
+          className="border px-3 py-2 rounded w-80"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -123,52 +138,103 @@ export default function Dashboard() {
       </div>
 
       <div className="bg-white border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead className="bg-gray-100 text-left">
             <tr>
-              <th className="p-3">Request ID</th>
-              <th className="p-3">Project</th>
-              <th className="p-3">Customer</th>
-              <th className="p-3">Requester</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Priority</th>
-              <th className="p-3">Action</th>
+              <th className="p-3 w-20">Image</th>
+              <th className="p-3 w-32">Request ID</th>
+              <th className="p-3 w-52">Project</th>
+              <th className="p-3 w-52">Customer(s)</th>
+              <th className="p-3 w-28">Product</th>
+              <th className="p-3 w-28">Requester</th>
+              <th className="p-3 w-28">Status</th>
+              <th className="p-3 w-28">Annual Qty</th>
+              <th className="p-3 w-28">Target Price</th>
+              <th className="p-3 w-32">Annual Turnover</th>
+              <th className="p-3 w-28 text-center">Actions</th>
             </tr>
           </thead>
 
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan="7" className="p-6 text-center text-gray-500">
+                <td colSpan="11" className="p-6 text-center text-gray-500">
                   No requests found.
                 </td>
               </tr>
             ) : (
               filtered.map((r) => (
-                <tr key={r.RequestID} className="border-t">
-                  <td className="p-3 font-medium">{r.RequestID}</td>
+                <tr key={r.RequestID} className="border-t align-top">
+                  <td className="p-3">
+                    {r.ProductThumbnailPreview ? (
+                      <img
+                        src={r.ProductThumbnailPreview}
+                        alt="Product thumbnail"
+                        className="w-14 h-14 rounded-lg object-cover border bg-white"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg border bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 text-center px-1">
+                        No image
+                      </div>
+                    )}
+                  </td>
 
-                  <td className="p-3">{r.ProjectName}</td>
+                  <td className="p-3 font-medium break-words">{r.RequestID}</td>
 
-                  <td className="p-3">{r.CustomerName}</td>
+                  <td className="p-3 break-words whitespace-normal">{r.ProjectName}</td>
 
-                  <td className="p-3">{r.Requester}</td>
+                  <td className="p-3 break-words whitespace-normal">{r.CustomerSummary}</td>
+
+                  <td className="p-3 break-words whitespace-normal">{r.ProductType}</td>
+
+                  <td className="p-3 break-words whitespace-normal">{r.Requester}</td>
 
                   <td className="p-3">
                     <StatusBadge status={r.Status} />
                   </td>
 
-                  <td className="p-3">
-                    <PriorityBadge value={r.Priority} />
+                  <td className="p-3 break-words whitespace-normal">
+                    {fmtNumber(r.ForecastAnnualQty)}
+                  </td>
+
+                  <td className="p-3 break-words whitespace-normal">
+                    {r.TargetSellingPrice
+                      ? `${fmtNumber(r.TargetSellingPrice)} ${r.Currency || ""}`.trim()
+                      : "—"}
+                  </td>
+
+                  <td className="p-3 break-words whitespace-normal font-medium">
+                    {r.ExpectedAnnualTurnover
+                      ? `${fmtNumber(r.ExpectedAnnualTurnover)} ${r.Currency || ""}`.trim()
+                      : "—"}
                   </td>
 
                   <td className="p-3">
-                    <Link
-                      to={`/request/${r.RequestID}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Open
-                    </Link>
+                    <div className="flex items-center justify-center gap-3">
+                      <Link
+                        to={`/request/${r.RequestID}`}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Open request"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
+
+                      <Link
+                        to={`/engineering/${r.RequestID}`}
+                        className="text-amber-600 hover:text-amber-800"
+                        title="Go to engineering"
+                      >
+                        <Wrench className="h-4 w-4" />
+                      </Link>
+
+                      <Link
+                        to={`/pricing/${r.RequestID}`}
+                        className="text-emerald-600 hover:text-emerald-800"
+                        title="Go to pricing"
+                      >
+                        <BadgeDollarSign className="h-4 w-4" />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -195,20 +261,6 @@ function StatusBadge({ status }) {
   return (
     <span className={`px-2 py-1 rounded text-xs ${colors[status] || "bg-gray-100 text-gray-800"}`}>
       {status}
-    </span>
-  );
-}
-
-function PriorityBadge({ value }) {
-  const colors = {
-    High: "bg-red-100 text-red-800",
-    Normal: "bg-gray-100 text-gray-800",
-    Low: "bg-green-100 text-green-800",
-  };
-
-  return (
-    <span className={`px-2 py-1 rounded text-xs ${colors[value] || "bg-gray-100 text-gray-800"}`}>
-      {value || "Normal"}
     </span>
   );
 }
