@@ -121,7 +121,7 @@ export default function RequestDetail() {
               Product / Project
             </div>
             <div className="text-base font-medium truncate">
-              {customer.projectName || product.productType || "—"}
+              {project.projectName || product.productType || "—"}
             </div>
           </div>
 
@@ -168,15 +168,15 @@ export default function RequestDetail() {
             <DetailItem label="Contact Phone" value={customer.contactPhone} />
             <DetailItem label="Country / Market" value={customer.countryMarket} />
             <DetailItem label="Delivery Location" value={customer.deliveryLocation} />
-            <DetailItem label="Project Name" value={customer.projectName} />
-            <DetailItem label="Customer SKU Ref" value={customer.customerSkuRef} />
+            <DetailItem label="Project Name" value={project.projectName} />
+            <DetailItem label="Customer SKU Ref" value={project.customerSkuRef} />
             <DetailItem label="Project Type" value={customer.projectType} />
-            <DetailItem label="Target Launch Date" value={customer.targetLaunchDate} />
-            <DetailItem label="Forecast Annual Volume" value={customer.forecastAnnualVolume} />
+            <DetailItem label="Target Launch Date" value={project.targetLaunchDate} />
+            <DetailItem label="Forecast Annual Volume" value={project.forecastAnnualVolume} />
             <DetailItem label="MOQ" value={customer.moq} />
-            <DetailItem label="Target Selling Price" value={customer.targetSellingPrice} />
-            <DetailItem label="Currency" value={customer.currency} />
-            <DetailItem label="Customer Notes" value={customer.customerNotes} />
+            <DetailItem label="Target Selling Price" value={project.targetSellingPrice} />
+            <DetailItem label="Currency" value={project.currency} />
+            <DetailItem label="Customer Notes" value={project.customerNotes} />
           </DetailCard>
 
           <DetailCard title="Product Technical Specifications">

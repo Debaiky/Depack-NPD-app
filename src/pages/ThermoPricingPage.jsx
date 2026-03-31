@@ -582,7 +582,7 @@ export default function ThermoPricingPage() {
           <div>
             <h1 className="text-xl font-semibold">Thermoformed Product Pricing</h1>
             <p className="text-sm text-gray-500">
-              {customer.projectName || requestId} • {pricingId}
+              {project.projectName || requestId} • {pricingId}
             </p>
           </div>
         </div>

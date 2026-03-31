@@ -1078,7 +1078,7 @@ if (!payload) {
 
           <div className="flex-1 min-w-[220px]">
             <div className="text-xs uppercase tracking-wide text-gray-500">Project</div>
-            <div className="text-xl font-semibold">{customer.projectName || "—"}</div>
+            <div className="text-xl font-semibold">{project.projectName || "—"}</div>
             <div className="text-sm text-gray-500">
               {product.productType || "—"} • {requestedBaseMaterial || "—"}
             </div>

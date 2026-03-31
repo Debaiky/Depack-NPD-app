@@ -37,7 +37,7 @@ export default function PricingReview() {
   const { requestId } = useParams();
 
   const [request, setRequest] = useState(null);
-  const [engineeringRaw, setEngineeringRaw] = useState(null);
+  const [engineeringData, setEngineeringData] = useState(null);
 
   const [pricing, setPricing] = useState({
     materialPricePerKg: "",
@@ -46,8 +46,8 @@ export default function PricingReview() {
     thermoMachineCostPerHour: "",
     thermoLaborCostPerHour: "",
     packagingCostPer1000: "",
-    transportCostPer1000: "",
     decorationCostPer1000: "",
+    transportCostPer1000: "",
     marginPct: "20",
   });
 
@@ -69,7 +69,7 @@ export default function PricingReview() {
         }
 
         if (engJson.success) {
-          setEngineeringRaw(engJson.engineeringData || {});
+          setEngineeringData(engJson.engineeringData || {});
         }
       } catch (error) {
         console.error("Failed to load pricing data:", error);
@@ -79,51 +79,30 @@ export default function PricingReview() {
     load();
   }, [requestId]);
 
+  const engineering = engineeringData || {};
   const requestProduct = request?.product || {};
-  const requestPackaging = request?.packaging || {};
-  const requestDecoration = request?.decoration || {};
-  const engineering = engineeringRaw || {};
+  const requestCustomer = request?.customer || {};
 
-  const materialConsumptionPerTon = useMemo(() => {
-    const material = engineering.material || {};
-    const extrusion = engineering.extrusion || {};
+  const derived = useMemo(() => {
+    const kgPerHour = Number(engineering?.sheet?.kgPerHour || 0);
+    const wastePct = Number(engineering?.sheet?.wastePct || 0);
 
-    const wastePct = Number(extrusion.waste || 0);
-    const rawInputPerTonNet =
-      1 - wastePct / 100 > 0 ? 1000 / (1 - wastePct / 100) : 0;
+    const cpm = Number(engineering?.thermo?.cpm || 0);
+    const cavities = Number(engineering?.thermo?.cavities || 0);
+    const efficiencyPct = Number(engineering?.thermo?.efficiency || 0);
+
+    const pcsPerHour = cpm * cavities * (efficiencyPct / 100) * 60;
+
+    const netKgPerHour = kgPerHour * (1 + wastePct / 100);
 
     return {
+      kgPerHour,
       wastePct,
-      rawInputPerTonNet,
-    };
-  }, [engineering]);
-
-  const thermoStats = useMemo(() => {
-    const thermo = engineering.thermo || {};
-
-    const cpm = Number(thermo.cpm || 0);
-    const cavities = Number(thermo.cavities || 0);
-    const efficiency = Number(thermo.efficiency || 0) / 100;
-    const sheetUtilizationPct = Number(thermo.sheetUtilizationPct || 0);
-
-    const pcsPerHour = cpm * cavities * efficiency * 60;
-    const pcsPerDay = pcsPerHour * 24;
-
-    const realisticNetKgPerHour = Number(engineering.extrusion?.realisticNet || 0);
-
-    const sheetConsumptionKgPerHour =
-      sheetUtilizationPct > 0
-        ? realisticNetKgPerHour / (sheetUtilizationPct / 100)
-        : 0;
-
-    const sheetConsumptionKgPerDay = sheetConsumptionKgPerHour * 24;
-
-    return {
+      cpm,
+      cavities,
+      efficiencyPct,
       pcsPerHour,
-      pcsPerDay,
-      sheetConsumptionKgPerHour,
-      sheetConsumptionKgPerDay,
-      sheetUtilizationPct,
+      netKgPerHour,
     };
   }, [engineering]);
 
@@ -142,70 +121,50 @@ export default function PricingReview() {
     const thermoLaborCostPerHour = Number(
       pricing.thermoLaborCostPerHour || 0
     );
+
     const packagingCostPer1000 = Number(pricing.packagingCostPer1000 || 0);
-    const transportCostPer1000 = Number(pricing.transportCostPer1000 || 0);
     const decorationCostPer1000 = Number(pricing.decorationCostPer1000 || 0);
+    const transportCostPer1000 = Number(pricing.transportCostPer1000 || 0);
     const marginPct = Number(pricing.marginPct || 0);
 
-    const rawInputPerTonNet = materialConsumptionPerTon.rawInputPerTonNet;
-    const materialCostPerTonNet = rawInputPerTonNet * materialPricePerKg;
-    const materialCostPerKgNet =
-      rawInputPerTonNet > 0 ? materialCostPerTonNet / 1000 : 0;
+    const materialCostPerHour = derived.netKgPerHour * materialPricePerKg;
 
     const extrusionConversionCostPerHour =
       extrusionMachineCostPerHour + extrusionLaborCostPerHour;
 
-    const extrusionRealisticNetKgPerHour = Number(
-      engineering.extrusion?.realisticNet || 0
-    );
-
-    const extrusionConversionCostPerKg =
-      extrusionRealisticNetKgPerHour > 0
-        ? extrusionConversionCostPerHour / extrusionRealisticNetKgPerHour
-        : 0;
-
-    const totalSheetCostPerKg =
-      materialCostPerKgNet + extrusionConversionCostPerKg;
-
     const thermoConversionCostPerHour =
       thermoMachineCostPerHour + thermoLaborCostPerHour;
 
-    const pcsPerHour = thermoStats.pcsPerHour;
-    const sheetConsumptionKgPerHour = thermoStats.sheetConsumptionKgPerHour;
-
-    const thermoMaterialCostPerHour =
-      sheetConsumptionKgPerHour * totalSheetCostPerKg;
-
-    const totalThermoCostPerHour =
-      thermoMaterialCostPerHour + thermoConversionCostPerHour;
+    const totalManufacturingCostPerHour =
+      materialCostPerHour +
+      extrusionConversionCostPerHour +
+      thermoConversionCostPerHour;
 
     const manufacturingCostPer1000 =
-      pcsPerHour > 0 ? (totalThermoCostPerHour / pcsPerHour) * 1000 : 0;
+      derived.pcsPerHour > 0
+        ? (totalManufacturingCostPerHour / derived.pcsPerHour) * 1000
+        : 0;
 
     const totalCostPer1000 =
       manufacturingCostPer1000 +
       packagingCostPer1000 +
-      transportCostPer1000 +
-      decorationCostPer1000;
+      decorationCostPer1000 +
+      transportCostPer1000;
 
     const sellingPricePer1000 = totalCostPer1000 * (1 + marginPct / 100);
 
     return {
-      materialCostPerTonNet,
-      materialCostPerKgNet,
+      materialCostPerHour,
       extrusionConversionCostPerHour,
-      extrusionConversionCostPerKg,
-      totalSheetCostPerKg,
       thermoConversionCostPerHour,
-      thermoMaterialCostPerHour,
-      totalThermoCostPerHour,
+      totalManufacturingCostPerHour,
       manufacturingCostPer1000,
       totalCostPer1000,
       sellingPricePer1000,
     };
-  }, [pricing, engineering, materialConsumptionPerTon, thermoStats]);
+  }, [derived, pricing]);
 
-  if (!request || !engineeringRaw) {
+  if (!request || !engineeringData) {
     return <div className="p-6">Loading pricing data...</div>;
   }
 
@@ -228,53 +187,24 @@ export default function PricingReview() {
 
         <Section title="Project Reference">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <ReadBox label="Customer" value={request?.customer?.customerName} />
-            <ReadBox label="Project" value={request?.customer?.projectName} />
-            <ReadBox label="Product Type" value={requestProduct.productType} />
+            <ReadBox label="Customer" value={requestCustomer.customerName} />
+            <ReadBox label="Project" value={requestproject.projectName} />
+            <ReadBox label="Product" value={requestProduct.productType} />
             <ReadBox
-              label="Decoration"
-              value={requestDecoration.decorationType}
-            />
-            <ReadBox
-              label="Requested Material"
+              label="Material"
               value={requestProduct.sheetMaterial || requestProduct.productMaterial}
-            />
-            <ReadBox
-              label="Requested Packaging"
-              value={
-                requestPackaging?.secondary?.cartonType ||
-                requestPackaging?.pallet?.palletType
-              }
             />
           </div>
         </Section>
 
-        <Section title="Engineering Reference Data">
+        <Section title="Engineering Inputs Pulled Automatically">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <ReadBox
-              label="Extrusion Realistic Net Speed"
-              value={`${engineering?.extrusion?.realisticNet || 0} kg/hr`}
-            />
-            <ReadBox
-              label="Extrusion Waste"
-              value={`${engineering?.extrusion?.waste || 0}%`}
-            />
-            <ReadBox
-              label="Thermo Productivity"
-              value={`${thermoStats.pcsPerHour.toFixed(0)} pcs/hr`}
-            />
-            <ReadBox
-              label="Sheet Consumption"
-              value={`${thermoStats.sheetConsumptionKgPerHour.toFixed(2)} kg/hr`}
-            />
-            <ReadBox
-              label="Sheet Utilization"
-              value={`${thermoStats.sheetUtilizationPct || 0}%`}
-            />
-            <ReadBox
-              label="Material Input / Ton Net"
-              value={`${materialConsumptionPerTon.rawInputPerTonNet.toFixed(2)} kg`}
-            />
+            <ReadBox label="Sheet Consumption" value={`${derived.kgPerHour} kg/hr`} />
+            <ReadBox label="Waste" value={`${derived.wastePct}%`} />
+            <ReadBox label="CPM" value={derived.cpm} />
+            <ReadBox label="Cavities" value={derived.cavities} />
+            <ReadBox label="Efficiency" value={`${derived.efficiencyPct}%`} />
+            <ReadBox label="Productivity" value={`${derived.pcsPerHour.toFixed(0)} pcs/hr`} />
           </div>
         </Section>
 
@@ -338,20 +268,20 @@ export default function PricingReview() {
             />
 
             <Input
-              label="Decoration Cost / 1000 pcs"
-              type="number"
-              value={pricing.decorationCostPer1000}
-              onChange={(v) =>
-                setPricing((prev) => ({ ...prev, decorationCostPer1000: v }))
-              }
-            />
-
-            <Input
               label="Packaging Cost / 1000 pcs"
               type="number"
               value={pricing.packagingCostPer1000}
               onChange={(v) =>
                 setPricing((prev) => ({ ...prev, packagingCostPer1000: v }))
+              }
+            />
+
+            <Input
+              label="Decoration Cost / 1000 pcs"
+              type="number"
+              value={pricing.decorationCostPer1000}
+              onChange={(v) =>
+                setPricing((prev) => ({ ...prev, decorationCostPer1000: v }))
               }
             />
 
@@ -375,39 +305,23 @@ export default function PricingReview() {
           </div>
         </Section>
 
-        <Section title="Pricing Results">
+        <Section title="Calculated Results">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             <ReadBox
-              label="Material Cost / Ton Net Sheet"
-              value={results.materialCostPerTonNet.toFixed(2)}
-            />
-            <ReadBox
-              label="Material Cost / Kg Net Sheet"
-              value={results.materialCostPerKgNet.toFixed(4)}
+              label="Material Cost / Hr"
+              value={results.materialCostPerHour.toFixed(2)}
             />
             <ReadBox
               label="Extrusion Conversion / Hr"
               value={results.extrusionConversionCostPerHour.toFixed(2)}
             />
             <ReadBox
-              label="Extrusion Conversion / Kg"
-              value={results.extrusionConversionCostPerKg.toFixed(4)}
-            />
-            <ReadBox
-              label="Total Sheet Cost / Kg"
-              value={results.totalSheetCostPerKg.toFixed(4)}
-            />
-            <ReadBox
               label="Thermo Conversion / Hr"
               value={results.thermoConversionCostPerHour.toFixed(2)}
             />
             <ReadBox
-              label="Thermo Material Cost / Hr"
-              value={results.thermoMaterialCostPerHour.toFixed(2)}
-            />
-            <ReadBox
-              label="Total Thermo Cost / Hr"
-              value={results.totalThermoCostPerHour.toFixed(2)}
+              label="Manufacturing Cost / Hr"
+              value={results.totalManufacturingCostPerHour.toFixed(2)}
             />
             <ReadBox
               label="Manufacturing Cost / 1000 pcs"

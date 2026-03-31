@@ -52,16 +52,19 @@ const initialForm = {
     driveFolderId: "",
   },
 
-customers: [],
-customerDraft: {
-  customerName: "",
-  contactPerson: "",
-  contactEmail: "",
-  contactPhone: "",
-  countryMarket: "",
-  deliveryLocation: "",
-  customerNotes: "",
+customer: {
+  customers: [],
+  customerDraft: {
+    customerName: "",
+    contactPerson: "",
+    contactEmail: "",
+    contactPhone: "",
+    countryMarket: "",
+    deliveryLocation: "",
+    customerNotes: "",
+  },
 },
+
 project: {
   projectName: "",
   customerProductCode: "",
@@ -69,6 +72,7 @@ project: {
   forecastAnnualVolume: "",
   targetSellingPrice: "",
   currency: "EGP",
+  customerNotes: "",
 },
 
   product: {
@@ -103,7 +107,6 @@ project: {
     sheetThicknessMicron: "",
     sheetThicknessTolerancePlusMicron: "",
     sheetThicknessToleranceMinusMicron: "",
-
     rollWeightKg: "",
     rollDiameterMm: "",
     coreDiameterMm: "",
@@ -168,16 +171,17 @@ project: {
 
   packaging: {
     sheet: {
-      coreSize: "",
-      rollsPerPallet: "",
-      palletType: "",
-      strapLengthPerPalletM: "",
-      foamLengthPerPalletM: "",
-      labelsPerRoll: "",
-      labelsPerPallet: "",
-      stretchWeightPerPalletKg: "",
-      operatorsPerPallet: "",
-    },
+  coreSize: "",
+  palletRequired: "No",
+  rollsPerPallet: "",
+  palletType: "",
+  strapLengthPerPalletM: "",
+  foamLengthPerPalletM: "",
+  labelsPerRoll: "",
+  labelsPerPallet: "",
+  stretchWeightPerPalletKg: "",
+  operatorsPerPallet: "",
+},
 
     primary: {
       pcsPerStack: "",
@@ -437,17 +441,16 @@ function WizardStepper({ currentStep, status }) {
 }
 
 function SummaryPanel({ form, currentStep, missingRequired }) {
-  const primaryCustomer = form.customers?.[0] || {};
-
+const primaryCustomer = form.customer?.customers?.[0] || {};
  const packagingSummary = useMemo(() => {
   if (form.product.productType === "Sheet Roll") {
     const bits = [];
     if (form.packaging.sheet.rollsPerPallet) {
       bits.push(`${form.packaging.sheet.rollsPerPallet} rolls/pallet`);
     }
-    if (form.packaging.sheet.rollWeightKg) {
-      bits.push(`${form.packaging.sheet.rollWeightKg} kg/roll`);
-    }
+  if (form.product.rollWeightKg) {
+  bits.push(`${form.product.rollWeightKg} kg/roll`);
+}
     if (form.packaging.sheet.coreSize) {
       bits.push(`${form.packaging.sheet.coreSize} core`);
     }
@@ -646,11 +649,10 @@ useEffect(() => {
     reader.readAsDataURL(file);
   };
   const updateCustomerDraft = (field, value) => {
-  update(`customerDraft.${field}`, value);
+  update(`customer.customerDraft.${field}`, value);
 };
-
 const addNewCustomerToRequest = async () => {
-  const draft = form.customerDraft || {};
+  const draft = form.customer?.customerDraft || {};
 
   if (
     !draft.customerName ||
@@ -699,14 +701,14 @@ const addNewCustomerToRequest = async () => {
       customerNotes: json.customer?.Notes || draft.customerNotes || "",
     };
 
-    const alreadyExists = (form.customers || []).some(
+    const alreadyExists = (form.customer?.customers || []).some(
       (c) =>
         c.customerName === customerToAdd.customerName &&
         c.contactEmail === customerToAdd.contactEmail
     );
 
     if (!alreadyExists) {
-      update("customers", [...(form.customers || []), customerToAdd]);
+      update("customer.customers", [...(form.customer?.customers || []), customerToAdd]);
     }
 
     const refreshed = await fetch("/.netlify/functions/list-customers");
@@ -715,15 +717,15 @@ const addNewCustomerToRequest = async () => {
       setSavedCustomers(Array.isArray(refreshedJson.customers) ? refreshedJson.customers : []);
     }
 
-    update("customerDraft", {
-      customerName: "",
-      contactPerson: "",
-      contactEmail: "",
-      contactPhone: "",
-      countryMarket: "",
-      deliveryLocation: "",
-      customerNotes: "",
-    });
+    update("customer.customerDraft", {
+  customerName: "",
+  contactPerson: "",
+  contactEmail: "",
+  contactPhone: "",
+  countryMarket: "",
+  deliveryLocation: "",
+  customerNotes: "",
+});
 
     setSelectedCustomerId("");
   } catch (err) {
@@ -749,7 +751,7 @@ const addExistingCustomerToRequest = () => {
     customerNotes: selected.Notes || "",
   };
 
-  const alreadyExists = (form.customers || []).some(
+  const alreadyExists = (form.customer?.customers || []).some(
     (c) =>
       c.customerName === customerToAdd.customerName &&
       c.contactEmail === customerToAdd.contactEmail
@@ -760,14 +762,14 @@ const addExistingCustomerToRequest = () => {
     return;
   }
 
-  update("customers", [...(form.customers || []), customerToAdd]);
+  update("customer.customers", [...(form.customer?.customers || []), customerToAdd]);
   setSelectedCustomerId("");
 };
 
 const removeCustomerFromRequest = (index) => {
-  const next = [...(form.customers || [])];
-  next.splice(index, 1);
-  update("customers", next);
+  const next = [...(form.customer?.customers || [])];
+next.splice(index, 1);
+update("customer.customers", next);
 };
 
   const handleAttachmentAdd = (field, pickedFiles) => {
@@ -897,10 +899,10 @@ const removeCustomerFromRequest = (index) => {
 
    if (!form.metadata.createdBy) req.push("Requested By");
 
-if (!Array.isArray(form.customers) || form.customers.length === 0) {
+if (!Array.isArray(form.customer?.customers) || form.customer.customers.length === 0) {
   req.push("At least one customer must be added");
 } else {
-  form.customers.forEach((customer, index) => {
+  form.customer.customers.forEach((customer, index) => {
     const n = index + 1;
     if (!customer.customerName) req.push(`Customer ${n}: Customer Name`);
     if (!customer.contactPerson) req.push(`Customer ${n}: Contact Person`);
@@ -917,29 +919,71 @@ if (!form.project?.targetSellingPrice) req.push("Target Selling Price");
 if (!form.product.productType) req.push("Product Type");
 if (!form.product.productThumbnailName) req.push("Product Picture");
 
-    if (form.product.productType === "Sheet Roll") {
-     if (!form.product.sheetMaterial) req.push("Sheet Material");
-if (!form.product.sheetWidthMm) req.push("Sheet Width");
-if (!form.product.sheetThicknessMicron) req.push("Sheet Thickness");
-if (!form.product.rollDiameterMm) req.push("Roll Diameter");
-if (!form.product.coreMaterial) req.push("Core Type");
-if (!form.packaging.sheet.coreSize) req.push("Core Size");
-if (!form.packaging.sheet.rollWeightKg) req.push("Roll Weight");
-if (!form.packaging.sheet.labelsPerRoll) req.push("Labels per Roll");
-if (!form.packaging.sheet.palletType) req.push("Pallet Type");
-if (!form.packaging.sheet.rollsPerPallet) req.push("Rolls per Pallet");
-if (!form.packaging.sheet.strapLengthPerPalletM && form.packaging.sheet.strapLengthPerPalletM !== "0") req.push("Strap Length per Pallet");
-if (!form.packaging.sheet.foamLengthPerPalletM && form.packaging.sheet.foamLengthPerPalletM !== "0") req.push("Foam Length per Pallet");
-if (!form.packaging.sheet.stretchWeightPerPalletKg && form.packaging.sheet.stretchWeightPerPalletKg !== "0") req.push("Stretch Film Weight per Pallet");
-if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPallet !== "0") req.push("Labels per Pallet");
+  if (form.product.productType === "Sheet Roll") {
+  if (!form.product.sheetMaterial) req.push("Sheet Material");
+  if (!form.product.sheetWidthMm) req.push("Sheet Width");
+  if (!form.product.sheetThicknessMicron) req.push("Sheet Thickness");
+  if (!form.product.rollWeightKg) req.push("Roll Weight");
+  if (!form.product.rollDiameterMm) req.push("Roll Diameter");
+  if (!form.product.coreMaterial) req.push("Core Type");
+  if (!form.packaging.sheet.coreSize) req.push("Core Size");
+  if (!form.packaging.sheet.labelsPerRoll) req.push("Labels per Roll");
+  if (!form.packaging.sheet.palletRequired) req.push("Pallet Required");
 
-      if (!form.delivery.deliveryLocationConfirm && !form.customer.deliveryLocation) {
-        req.push("Delivery Location");
-      }
-      if (!form.delivery.desiredQtyPerTruck) req.push("Required Qty per Truck");
-      if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
-      if (!form.delivery.truckSize) req.push("Truck Size");
-    } else {
+  if (form.product.sheetMaterial === "PS") {
+    if (!form.product.hipsPct) req.push("% HIPS");
+    if (!form.product.gppsPct) req.push("% GPPS");
+  }
+
+  if (form.product.sheetMaterial === "PET") {
+    if (!form.product.rpetPct) req.push("% rPET");
+    if (!form.product.virginPetPct) req.push("% Virgin PET");
+  }
+
+  if (form.packaging.sheet.palletRequired === "Yes") {
+    if (!form.packaging.sheet.palletType) req.push("Pallet Type");
+    if (!form.packaging.sheet.rollsPerPallet) req.push("Rolls per Pallet");
+
+    if (
+      !form.packaging.sheet.strapLengthPerPalletM &&
+      form.packaging.sheet.strapLengthPerPalletM !== "0"
+    ) {
+      req.push("Strap Length per Pallet");
+    }
+
+    if (
+      !form.packaging.sheet.foamLengthPerPalletM &&
+      form.packaging.sheet.foamLengthPerPalletM !== "0"
+    ) {
+      req.push("Foam Length per Pallet");
+    }
+
+    if (
+      !form.packaging.sheet.stretchWeightPerPalletKg &&
+      form.packaging.sheet.stretchWeightPerPalletKg !== "0"
+    ) {
+      req.push("Stretch Film Weight per Pallet");
+    }
+
+    if (
+      !form.packaging.sheet.labelsPerPallet &&
+      form.packaging.sheet.labelsPerPallet !== "0"
+    ) {
+      req.push("Labels per Pallet");
+    }
+  }
+
+  if (
+    !form.delivery.deliveryLocationConfirm &&
+    !form.customer?.customers?.[0]?.deliveryLocation
+  ) {
+    req.push("Delivery Location");
+  }
+
+  if (!form.delivery.desiredQtyPerTruck) req.push("Required Qty per Truck");
+  if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
+  if (!form.delivery.truckSize) req.push("Truck Size");
+} else {
       if (!form.product.productMaterial) req.push("Product Material");
       if (!form.decoration.decorationType) req.push("Decoration Type");
       if (!form.packaging.primary.pcsPerStack) req.push("Pieces per Stack");
@@ -1127,11 +1171,11 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
                 No saved customers
               </SelectItem>
             ) : (
-              savedCustomers.map((cust) => (
-                <SelectItem key={cust.customerId} value={cust.customerId}>
-                  {cust.customerName} {cust.countryMarket ? `- ${cust.countryMarket}` : ""}
-                </SelectItem>
-              ))
+             savedCustomers.map((cust) => (
+  <SelectItem key={cust.CustomerID} value={cust.CustomerID}>
+    {cust.CustomerName} {cust.CountryMarket ? `- ${cust.CountryMarket}` : ""}
+  </SelectItem>
+))
             )}
           </SelectContent>
         </Select>
@@ -1155,42 +1199,41 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
       <div className="grid md:grid-cols-2 gap-4">
         <Field label="Customer Name *">
           <Input
-            value={form.customerDraft.customerName}
-            onChange={(e) => updateCustomerDraft("customerName", e.target.value)}
+            value={form.customer.customerDraft.customerName}
+onChange={(e) => updateCustomerDraft("customerName", e.target.value)}
           />
         </Field>
-
-        <Field label="Contact Person *">
-          <Input
-            value={form.customerDraft.contactPerson}
-            onChange={(e) => updateCustomerDraft("contactPerson", e.target.value)}
-          />
-        </Field>
+<Field label="Contact Person *">
+  <Input
+    value={form.customer.customerDraft.contactPerson}
+    onChange={(e) => updateCustomerDraft("contactPerson", e.target.value)}
+  />
+</Field>
 
         <Field label="Contact Email *">
           <Input
-            value={form.customerDraft.contactEmail}
+            value={form.customer.customerDraft.contactEmail}
             onChange={(e) => updateCustomerDraft("contactEmail", e.target.value)}
           />
         </Field>
 
         <Field label="Contact Phone *">
           <Input
-            value={form.customerDraft.contactPhone}
+            value={form.customer.customerDraft.contactPhone}
             onChange={(e) => updateCustomerDraft("contactPhone", e.target.value)}
           />
         </Field>
 
         <Field label="Country / Market *">
           <Input
-            value={form.customerDraft.countryMarket}
+            value={form.customer.customerDraft.countryMarket}
             onChange={(e) => updateCustomerDraft("countryMarket", e.target.value)}
           />
         </Field>
 
         <Field label="Delivery Location *">
           <Input
-            value={form.customerDraft.deliveryLocation}
+            value={form.customer.customerDraft.deliveryLocation}
             onChange={(e) => updateCustomerDraft("deliveryLocation", e.target.value)}
           />
         </Field>
@@ -1206,12 +1249,12 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
     <div className="space-y-3">
       <div className="font-medium">Customers Added to This Request</div>
 
-      {form.customers?.length === 0 ? (
+     {form.customer?.customers?.length === 0 ? (
         <div className="text-sm text-muted-foreground">
           No customers added yet.
         </div>
       ) : (
-        form.customers.map((cust, index) => (
+        form.customer.customers.map((cust, index) => (
           <div
             key={`${cust.customerId || cust.customerName}-${index}`}
             className="rounded-2xl border p-4 flex items-start justify-between gap-4"
@@ -1253,44 +1296,44 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
                   <div className="grid md:grid-cols-2 gap-4">
                     <Field label="Project Name *">
                       <Input
-                        value={form.customer.projectName}
-                        onChange={(e) => update("customer.projectName", e.target.value)}
+                       value={form.project.projectName}
+onChange={(e) => update("project.projectName", e.target.value)}
                       />
                     </Field>
 
                     <Field label="Customer Product Code (if applicable)">
                       <Input
-                        value={form.customer.customerSkuRef}
-                        onChange={(e) => update("customer.customerSkuRef", e.target.value)}
+                        value={form.project.customerProductCode}
+onChange={(e) => update("project.customerProductCode", e.target.value)}
                       />
                     </Field>
 
                     <Field label="Target Launch Date">
                       <Input
                         type="date"
-                        value={form.customer.targetLaunchDate}
-                        onChange={(e) => update("customer.targetLaunchDate", e.target.value)}
+                        value={form.project.targetLaunchDate}
+onChange={(e) => update("project.targetLaunchDate", e.target.value)}
                       />
                     </Field>
 
                     <Field label="Forecast Annual Volume *">
                       <Input
-                        value={form.customer.forecastAnnualVolume}
-                        onChange={(e) => update("customer.forecastAnnualVolume", e.target.value)}
+                  value={form.project.forecastAnnualVolume}
+onChange={(e) => update("project.forecastAnnualVolume", e.target.value)}
                       />
                     </Field>
 
                     <Field label="Target Selling Price *">
                       <Input
-                        value={form.customer.targetSellingPrice}
-                        onChange={(e) => update("customer.targetSellingPrice", e.target.value)}
+                    value={form.project.targetSellingPrice}
+onChange={(e) => update("project.targetSellingPrice", e.target.value)}
                       />
                     </Field>
 
                     <Field label="Currency">
                       <Select
-                        value={form.customer.currency}
-                        onValueChange={(v) => update("customer.currency", v)}
+                       value={form.project.currency}
+onValueChange={(v) => update("project.currency", v)}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -1307,8 +1350,8 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
 
                   <Field label="Customer Notes">
                     <Textarea
-                      value={form.customer.customerNotes}
-                      onChange={(e) => update("customer.customerNotes", e.target.value)}
+                     value={form.project.customerNotes}
+onChange={(e) => update("project.customerNotes", e.target.value)}
                       rows={5}
                     />
                   </Field>
@@ -2156,12 +2199,12 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
   <div className="space-y-6">
     <SectionCard title="Sheet Packaging">
       <div className="grid md:grid-cols-2 gap-4">
-        <Field label="Roll Weight (kg)">
-          <Input
-            value={form.packaging.sheet.rollWeightKg}
-            onChange={(e) => update("packaging.sheet.rollWeightKg", e.target.value)}
-          />
-        </Field>
+       <Field label="Roll Weight (kg)">
+  <Input
+    value={form.product.rollWeightKg}
+    onChange={(e) => update("product.rollWeightKg", e.target.value)}
+  />
+</Field>
 
         <Field label="Roll Diameter (mm)">
           <Input
@@ -2212,89 +2255,97 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
         </Field>
 
         <Field label="Pallet Required?">
-          <YesNoSelect
-            value={form.packaging.sheet.palletType ? "Yes" : "No"}
-            onChange={(v) => {
-              if (v === "No") {
-                update("packaging.sheet.palletType", "");
-                update("packaging.sheet.rollsPerPallet", "");
-                update("packaging.sheet.strapLengthPerPalletM", "");
-                update("packaging.sheet.foamLengthPerPalletM", "");
-                update("packaging.sheet.stretchWeightPerPalletKg", "");
-                update("packaging.sheet.labelsPerPallet", "");
-              }
-            }}
-          />
-        </Field>
+  <YesNoSelect
+    value={form.packaging.sheet.palletRequired}
+    onChange={(v) => {
+      update("packaging.sheet.palletRequired", v);
 
-        <Field label="Pallet Type">
-          <Select
-            value={form.packaging.sheet.palletType}
-            onValueChange={(v) => update("packaging.sheet.palletType", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select pallet type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="UK pallet">UK pallet</SelectItem>
-              <SelectItem value="EURO pallet">EURO pallet</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
+      if (v === "No") {
+        update("packaging.sheet.palletType", "");
+        update("packaging.sheet.rollsPerPallet", "");
+        update("packaging.sheet.strapLengthPerPalletM", "");
+        update("packaging.sheet.foamLengthPerPalletM", "");
+        update("packaging.sheet.stretchWeightPerPalletKg", "");
+        update("packaging.sheet.labelsPerPallet", "");
+      }
+    }}
+  />
+</Field>
 
-        <Field label="No. of Rolls per Pallet">
-          <Input
-            value={form.packaging.sheet.rollsPerPallet}
-            onChange={(e) => update("packaging.sheet.rollsPerPallet", e.target.value)}
-          />
-        </Field>
-
-        <Field label="Strap Length per Pallet (m)">
-          <Input
-            value={form.packaging.sheet.strapLengthPerPalletM}
-            onChange={(e) =>
-              update("packaging.sheet.strapLengthPerPalletM", e.target.value)
-            }
-          />
-        </Field>
-
-        <Field label="Foam Length per Pallet (m)">
-          <Input
-            value={form.packaging.sheet.foamLengthPerPalletM}
-            onChange={(e) =>
-              update("packaging.sheet.foamLengthPerPalletM", e.target.value)
-            }
-          />
-        </Field>
-
-        <Field label="Stretch Film Weight per Pallet (kg)">
-          <Input
-            value={form.packaging.sheet.stretchWeightPerPalletKg}
-            onChange={(e) =>
-              update("packaging.sheet.stretchWeightPerPalletKg", e.target.value)
-            }
-          />
-        </Field>
-
-        <Field label="Labels per Pallet">
-          <Input
-            value={form.packaging.sheet.labelsPerPallet}
-            onChange={(e) => update("packaging.sheet.labelsPerPallet", e.target.value)}
-          />
-        </Field>
-      </div>
-
-      <div
-        className={`rounded-xl border px-3 py-3 text-sm ${
-          estimatedSheetRollPalletLoadKg > 1000
-            ? "bg-red-50 border-red-200 text-red-700"
-            : "bg-green-50 border-green-200 text-green-700"
-        }`}
+      {form.packaging.sheet.palletRequired === "Yes" && (
+  <>
+    <Field label="Pallet Type">
+      <Select
+        value={form.packaging.sheet.palletType}
+        onValueChange={(v) => update("packaging.sheet.palletType", v)}
       >
-        Estimated pallet load = {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
-        {estimatedSheetRollPalletLoadKg > 1000 ? " — Above 1 ton" : " — Within 1 ton"}
+        <SelectTrigger>
+          <SelectValue placeholder="Select pallet type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="UK pallet">UK pallet</SelectItem>
+          <SelectItem value="EURO pallet">EURO pallet</SelectItem>
+          <SelectItem value="Other">Other</SelectItem>
+        </SelectContent>
+      </Select>
+    </Field>
+
+    <Field label="No. of Rolls per Pallet">
+      <Input
+        value={form.packaging.sheet.rollsPerPallet}
+        onChange={(e) => update("packaging.sheet.rollsPerPallet", e.target.value)}
+      />
+    </Field>
+
+    <Field label="Strap Length per Pallet (m)">
+      <Input
+        value={form.packaging.sheet.strapLengthPerPalletM}
+        onChange={(e) =>
+          update("packaging.sheet.strapLengthPerPalletM", e.target.value)
+        }
+      />
+    </Field>
+
+    <Field label="Foam Length per Pallet (m)">
+      <Input
+        value={form.packaging.sheet.foamLengthPerPalletM}
+        onChange={(e) =>
+          update("packaging.sheet.foamLengthPerPalletM", e.target.value)
+        }
+      />
+    </Field>
+
+    <Field label="Stretch Film Weight per Pallet (kg)">
+      <Input
+        value={form.packaging.sheet.stretchWeightPerPalletKg}
+        onChange={(e) =>
+          update("packaging.sheet.stretchWeightPerPalletKg", e.target.value)
+        }
+      />
+    </Field>
+
+    <Field label="Labels per Pallet">
+      <Input
+        value={form.packaging.sheet.labelsPerPallet}
+        onChange={(e) => update("packaging.sheet.labelsPerPallet", e.target.value)}
+      />
+    </Field>
+  </>
+)}
       </div>
+
+    {form.packaging.sheet.palletRequired === "Yes" && (
+  <div
+    className={`rounded-xl border px-3 py-3 text-sm ${
+      estimatedSheetRollPalletLoadKg > 1000
+        ? "bg-red-50 border-red-200 text-red-700"
+        : "bg-green-50 border-green-200 text-green-700"
+    }`}
+  >
+    Estimated pallet load = {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
+    {estimatedSheetRollPalletLoadKg > 1000 ? " — Above 1 ton" : " — Within 1 ton"}
+  </div>
+)}
     </SectionCard>
   </div>
 )}
@@ -2736,7 +2787,7 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
                       onChange={(e) =>
                         update("delivery.deliveryLocationConfirm", e.target.value)
                       }
-                      placeholder={form.customer.deliveryLocation || "Enter delivery location"}
+                      placeholder={form.customer?.customers?.[0]?.deliveryLocation || "Enter delivery location"}
                     />
                   </Field>
 
@@ -2800,7 +2851,7 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
                       onChange={(e) =>
                         update("delivery.deliveryLocationConfirm", e.target.value)
                       }
-                      placeholder={form.customer.deliveryLocation || "Enter delivery location"}
+                     placeholder={form.customer?.customers?.[0]?.deliveryLocation || "Enter delivery location"}
                     />
                   </Field>
 
@@ -2999,7 +3050,7 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
                         </div>
                         <div>
                           <span className="text-muted-foreground">Name:</span>{" "}
-                          {(form.customers?.[0]?.customerName) || "—"}
+                          {(form.customer?.customers?.[0]?.customerName) || "—"}
                         </div>
                         <div>
                           <span className="text-muted-foreground">Project:</span>{" "}
@@ -3007,7 +3058,7 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
                         </div>
                         <div>
                           <span className="text-muted-foreground">Market:</span>{" "}
-                          {(form.customers?.[0]?.countryMarket) || "—"}
+                          {(form.customer?.customers?.[0]?.countryMarket) || "—"}
                         </div>
                       </CardContent>
                     </Card>
@@ -3054,23 +3105,33 @@ if (!form.packaging.sheet.labelsPerPallet && form.packaging.sheet.labelsPerPalle
                       </CardHeader>
                       <CardContent className="text-sm space-y-2">
                         {form.product.productType === "Sheet Roll" ? (
-                         <>
-  <div>
-    <span className="text-muted-foreground">Rolls per Pallet:</span>{" "}
-    {form.packaging.sheet.rollsPerPallet || "—"}
-  </div>
-  <div>
-    <span className="text-muted-foreground">Pallet Type:</span>{" "}
-    {form.packaging.sheet.palletType || "—"}
-  </div>
+                        <>
   <div>
     <span className="text-muted-foreground">Roll Weight:</span>{" "}
-    {form.packaging.sheet.rollWeightKg || "—"} kg
+    {form.product.rollWeightKg || "—"} kg
   </div>
+
   <div>
-    <span className="text-muted-foreground">Pallet Load:</span>{" "}
-    {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
+    <span className="text-muted-foreground">Pallet Required:</span>{" "}
+    {form.packaging.sheet.palletRequired || "No"}
   </div>
+
+  {form.packaging.sheet.palletRequired === "Yes" && (
+    <>
+      <div>
+        <span className="text-muted-foreground">Rolls per Pallet:</span>{" "}
+        {form.packaging.sheet.rollsPerPallet || "—"}
+      </div>
+      <div>
+        <span className="text-muted-foreground">Pallet Type:</span>{" "}
+        {form.packaging.sheet.palletType || "—"}
+      </div>
+      <div>
+        <span className="text-muted-foreground">Pallet Load:</span>{" "}
+        {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
+      </div>
+    </>
+  )}
 </>
                         ) : (
                           <>

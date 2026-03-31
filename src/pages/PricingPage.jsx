@@ -283,7 +283,7 @@ function buildInitialScenarioFromEngineering(requestData, engineeringData) {
 
   return {
     scenarioSheet: {
-      productName: customer.projectName || requestData?.metadata?.requestId || "Project",
+      productName: project.projectName || requestData?.metadata?.requestId || "Project",
       productCode: requestData?.metadata?.requestId || "",
       baseMaterial,
       density: density ? String(density) : "",
@@ -433,7 +433,7 @@ export default function PricingPage() {
       ms.baseMaterial || product.sheetMaterial || product.productMaterial || "";
 
     return {
-      productName: customer.projectName || requestId,
+      productName: project.projectName || requestId,
       productCode: requestId,
       baseMaterial,
       density:
@@ -471,7 +471,7 @@ export default function PricingPage() {
       efficiencyPct: ex.efficiencyPct || "",
       sheetUtilizationPct: ex.netEfficiencyPct || ex.sheetUtilizationPct || "",
     };
-  }, [customer.projectName, ex, ms, product, requestId, ss]);
+  }, [project.projectName, ex, ms, product, requestId, ss]);
 
   const scenarioDerived = useMemo(() => {
     if (!scenarioSheet) return null;
@@ -842,7 +842,7 @@ export default function PricingPage() {
     const bundle = {
       requestId,
       pricingId,
-      sheetName: customer.projectName || product.productType || "Sheet",
+      sheetName: project.projectName || product.productType || "Sheet",
       sheetCode: requestId,
       usdEgp: pricing.usdEgp,
       eurUsd: pricing.eurUsd,
@@ -937,7 +937,7 @@ export default function PricingPage() {
           <div>
             <h1 className="text-xl font-semibold">Pricing Scenario — Sheet Roll</h1>
             <p className="text-sm text-gray-500">
-              {customer.projectName || requestId} • {product.productType || "—"} • {pricingId}
+              {project.projectName || requestId} • {product.productType || "—"} • {pricingId}
             </p>
           </div>
         </div>

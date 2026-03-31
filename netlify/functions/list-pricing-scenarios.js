@@ -16,6 +16,12 @@ const handler = async (event) => {
 
     const scenarios = await getPricingScenariosByRequestId(requestId);
 
+    scenarios.sort((a, b) => {
+      const da = a.CreatedDate || "";
+      const db = b.CreatedDate || "";
+      return da < db ? 1 : -1;
+    });
+
     return {
       statusCode: 200,
       body: JSON.stringify({
@@ -24,12 +30,12 @@ const handler = async (event) => {
       }),
     };
   } catch (err) {
-    console.error("LIST PRICING ERROR:", err);
+    console.error("LIST PRICING SCENARIOS ERROR:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        error: err.message,
+        error: err.message || "Failed to list pricing scenarios",
       }),
     };
   }

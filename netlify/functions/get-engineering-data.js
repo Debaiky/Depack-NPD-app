@@ -24,6 +24,8 @@ const handler = async (event) => {
           engineeringData: {},
           status: "",
           engineerName: "",
+          note: "",
+          savedAt: "",
         }),
       };
     }
@@ -44,6 +46,8 @@ const handler = async (event) => {
         engineeringData,
         status: row.Status || "",
         engineerName: row.EngineerName || "",
+        note: row.Note || "",
+        savedAt: row.SavedAt || "",
       }),
     };
   } catch (err) {
@@ -52,7 +56,7 @@ const handler = async (event) => {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        error: err.message,
+        error: err.message || "Failed to get engineering data",
       }),
     };
   }

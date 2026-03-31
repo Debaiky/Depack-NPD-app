@@ -305,7 +305,7 @@ export default function PricingComparisonPage() {
     const product = requestData?.product || {};
     return {
       customerName: customer.customerName || "—",
-      projectName: customer.projectName || "—",
+      projectName: project.projectName || "—",
       productType: product.productType || "—",
       thumbnail:
         product?.productThumbnailPreview ||

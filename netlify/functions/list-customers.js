@@ -22,13 +22,11 @@ export async function handler() {
   try {
     const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
 
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Customers_Master!A:I`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Customers_Master!A:J`;
 
-    const data = await googleJsonFetch(url, {
-      scopes: SHEETS_SCOPE,
-    });
-
+    const data = await googleJsonFetch(url, { scopes: SHEETS_SCOPE });
     const rows = data.values || [];
+
     if (rows.length === 0) {
       return {
         statusCode: 200,
@@ -40,29 +38,30 @@ export async function handler() {
     }
 
     const headers = rows[0];
-    const dataRows = rows.slice(1);
+    const bodyRows = rows.slice(1);
 
     const headerMap = {};
-    headers.forEach((header, index) => {
-      headerMap[normalizeHeader(header)] = index;
+    headers.forEach((h, i) => {
+      headerMap[normalizeHeader(h)] = i;
     });
 
-    const customers = dataRows
+    const customers = bodyRows
       .map((row) => ({
-        CustomerID: getCell(row, headerMap, "CustomerID", "Customer ID"),
-        CustomerName: getCell(row, headerMap, "CustomerName", "Customer Name"),
-        ContactPerson: getCell(row, headerMap, "ContactPerson", "Contact Person"),
-        ContactEmail: getCell(row, headerMap, "ContactEmail", "Contact Email"),
-        ContactPhone: getCell(row, headerMap, "ContactPhone", "Contact Phone"),
-        CountryMarket: getCell(row, headerMap, "CountryMarket", "Country Market"),
-        DeliveryLocation: getCell(row, headerMap, "DeliveryLocation", "Delivery Location"),
-        Notes: getCell(row, headerMap, "Notes"),
-        CreatedAt: getCell(row, headerMap, "CreatedAt", "Created At"),
+        customerId: getCell(row, headerMap, "CustomerID", "Customer Id"),
+        customerName: getCell(row, headerMap, "CustomerName", "Customer Name"),
+        contactPerson: getCell(row, headerMap, "ContactPerson", "Contact Person"),
+        contactEmail: getCell(row, headerMap, "ContactEmail", "Contact Email"),
+        contactPhone: getCell(row, headerMap, "ContactPhone", "Contact Phone"),
+        countryMarket: getCell(row, headerMap, "CountryMarket", "Country Market"),
+        deliveryLocation: getCell(row, headerMap, "DeliveryLocation", "Delivery Location"),
+        createdAt: getCell(row, headerMap, "CreatedAt", "Created At"),
+        updatedAt: getCell(row, headerMap, "UpdatedAt", "Updated At"),
+        notes: getCell(row, headerMap, "Notes"),
       }))
-      .filter((c) => c.CustomerName);
+      .filter((x) => x.customerId || x.customerName);
 
     customers.sort((a, b) =>
-      (a.CustomerName || "").localeCompare(b.CustomerName || "")
+      String(a.customerName || "").localeCompare(String(b.customerName || ""))
     );
 
     return {
@@ -74,7 +73,6 @@ export async function handler() {
     };
   } catch (error) {
     console.error("LIST CUSTOMERS ERROR:", error);
-
     return {
       statusCode: 500,
       body: JSON.stringify({

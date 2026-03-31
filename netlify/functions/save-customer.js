@@ -3,10 +3,19 @@ import { googleJsonFetch } from "./_google-rest.js";
 
 const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
 
-const generateCustomerId = () => `CUST-${Date.now()}`;
+function normalizeHeader(header) {
+  return String(header || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
 
-function normalize(value) {
+function normalizeValue(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function makeCustomerId() {
+  return `CUST-${Date.now()}`;
 }
 
 export async function handler(event) {
@@ -39,59 +48,93 @@ export async function handler(event) {
       };
     }
 
-    const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Customers_Master!A:I`;
-    const existing = await googleJsonFetch(getUrl, {
-      scopes: SHEETS_SCOPE,
-    });
+    const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Customers_Master!A:J`;
+    const existing = await googleJsonFetch(readUrl, { scopes: SHEETS_SCOPE });
 
     const rows = existing.values || [];
+    const now = new Date().toISOString();
 
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i] || [];
-      const rowName = normalize(row[1]);
-      const rowEmail = normalize(row[3]);
+    if (rows.length === 0) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          success: false,
+          error: "Customers_Master sheet is empty or missing headers",
+        }),
+      };
+    }
 
-      if (rowName === normalize(customerName) && rowEmail === normalize(contactEmail)) {
-        return {
-          statusCode: 200,
-          body: JSON.stringify({
-            success: true,
-            alreadyExists: true,
-            customer: {
-              CustomerID: row[0] || "",
-              CustomerName: row[1] || "",
-              ContactPerson: row[2] || "",
-              ContactEmail: row[3] || "",
-              ContactPhone: row[4] || "",
-              CountryMarket: row[5] || "",
-              DeliveryLocation: row[6] || "",
-              Notes: row[7] || "",
-              CreatedAt: row[8] || "",
-            },
-          }),
-        };
+    const headers = rows[0];
+    const headerMap = {};
+    headers.forEach((h, i) => {
+      headerMap[normalizeHeader(h)] = i;
+    });
+
+    let foundRowIndex = -1;
+    for (let i = 1; i < rows.length; i += 1) {
+      const row = rows[i];
+      const rowCustomerName = normalizeValue(row[headerMap[normalizeHeader("CustomerName")]]);
+      const rowContactEmail = normalizeValue(row[headerMap[normalizeHeader("ContactEmail")]]);
+      const rowCountryMarket = normalizeValue(row[headerMap[normalizeHeader("CountryMarket")]]);
+
+      if (
+        rowCustomerName === normalizeValue(customerName) &&
+        rowContactEmail === normalizeValue(contactEmail) &&
+        rowCountryMarket === normalizeValue(countryMarket)
+      ) {
+        foundRowIndex = i + 1;
+        break;
       }
     }
 
-    const newCustomer = [
-      generateCustomerId(),
+    if (foundRowIndex !== -1) {
+      const existingRow = rows[foundRowIndex - 1];
+      const customer = {
+        customerId: existingRow[headerMap[normalizeHeader("CustomerID")]] || "",
+        customerName: existingRow[headerMap[normalizeHeader("CustomerName")]] || customerName,
+        contactPerson: existingRow[headerMap[normalizeHeader("ContactPerson")]] || contactPerson,
+        contactEmail: existingRow[headerMap[normalizeHeader("ContactEmail")]] || contactEmail,
+        contactPhone: existingRow[headerMap[normalizeHeader("ContactPhone")]] || contactPhone,
+        countryMarket: existingRow[headerMap[normalizeHeader("CountryMarket")]] || countryMarket,
+        deliveryLocation:
+          existingRow[headerMap[normalizeHeader("DeliveryLocation")]] || deliveryLocation,
+        createdAt: existingRow[headerMap[normalizeHeader("CreatedAt")]] || "",
+        updatedAt: existingRow[headerMap[normalizeHeader("UpdatedAt")]] || "",
+        notes: existingRow[headerMap[normalizeHeader("Notes")]] || "",
+      };
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: true,
+          alreadyExists: true,
+          customer,
+        }),
+      };
+    }
+
+    const customerId = makeCustomerId();
+
+    const newRow = [
+      customerId,
       customerName,
       contactPerson,
       contactEmail,
       contactPhone,
       countryMarket,
       deliveryLocation,
+      now,
+      now,
       notes,
-      new Date().toISOString(),
     ];
 
-    const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Customers_Master!A:I:append?valueInputOption=USER_ENTERED`;
+    const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Customers_Master!A:J:append?valueInputOption=USER_ENTERED`;
 
     await googleJsonFetch(appendUrl, {
       method: "POST",
       scopes: SHEETS_SCOPE,
       body: {
-        values: [newCustomer],
+        values: [newRow],
       },
     });
 
@@ -101,21 +144,21 @@ export async function handler(event) {
         success: true,
         alreadyExists: false,
         customer: {
-          CustomerID: newCustomer[0],
-          CustomerName: newCustomer[1],
-          ContactPerson: newCustomer[2],
-          ContactEmail: newCustomer[3],
-          ContactPhone: newCustomer[4],
-          CountryMarket: newCustomer[5],
-          DeliveryLocation: newCustomer[6],
-          Notes: newCustomer[7],
-          CreatedAt: newCustomer[8],
+          customerId,
+          customerName,
+          contactPerson,
+          contactEmail,
+          contactPhone,
+          countryMarket,
+          deliveryLocation,
+          createdAt: now,
+          updatedAt: now,
+          notes,
         },
       }),
     };
   } catch (error) {
     console.error("SAVE CUSTOMER ERROR:", error);
-
     return {
       statusCode: 500,
       body: JSON.stringify({
