@@ -1,3 +1,4 @@
+/* eslint-env node */
 const { getOrCreateFolder } = require("./_drive");
 const { getRequestRowById, updateRequestRow } = require("./_sheet");
 
@@ -5,6 +6,9 @@ const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
     const requestId = body?.requestId;
+
+    console.log("ensure-request-folder body:", body);
+    console.log("ensure-request-folder requestId:", requestId);
 
     if (!requestId) {
       return {
@@ -17,6 +21,7 @@ const handler = async (event) => {
     }
 
     const existingRequest = await getRequestRowById(requestId);
+    console.log("ensure-request-folder existingRequest:", existingRequest);
 
     if (!existingRequest) {
       return {
@@ -29,6 +34,7 @@ const handler = async (event) => {
     }
 
     const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+    console.log("ensure-request-folder rootFolderId exists:", Boolean(rootFolderId));
 
     if (!rootFolderId) {
       return {
@@ -49,13 +55,13 @@ const handler = async (event) => {
         name: requestId,
       };
     } else {
- requestFolder = await getOrCreateFolder(requestId, rootFolderId);
-console.log("REQUEST FOLDER CREATED:", requestFolder);
+      requestFolder = await getOrCreateFolder(requestId, rootFolderId);
+      console.log("ensure-request-folder created request folder:", requestFolder);
 
-await updateRequestRow(requestId, {
-  DriveFolderID: requestFolder.id,
-});
-console.log("REQUEST ROW UPDATED WITH FOLDER ID:", requestFolder.id);
+      await updateRequestRow(requestId, {
+        DriveFolderID: requestFolder.id,
+      });
+    }
 
     const samplePhotos = await getOrCreateFolder("01 Sample Photos", requestFolder.id);
     const decorationArtwork = await getOrCreateFolder("02 Decoration Artwork", requestFolder.id);
