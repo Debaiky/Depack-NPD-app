@@ -22,7 +22,7 @@ function getCell(row, headerMap, ...possibleHeaders) {
 
 export async function handler(event) {
   try {
-    const requestId = event.queryStringParameters?.requestId;
+    const requestId = event.queryStringParameters?.requestId || "";
 
     if (!requestId) {
       return {
@@ -35,14 +35,16 @@ export async function handler(event) {
     }
 
     const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:S`;
 
-    const data = await googleJsonFetch(url, {
+    const requestsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:S`;
+
+    const requestsResult = await googleJsonFetch(requestsUrl, {
       scopes: SHEETS_SCOPE,
     });
 
-    const rows = data.values || [];
-    if (rows.length === 0) {
+    const requestRows = requestsResult.values || [];
+
+    if (requestRows.length === 0) {
       return {
         statusCode: 404,
         body: JSON.stringify({
@@ -52,20 +54,20 @@ export async function handler(event) {
       };
     }
 
-    const headers = rows[0];
-    const dataRows = rows.slice(1);
+    const headers = requestRows[0];
+    const dataRows = requestRows.slice(1);
 
     const headerMap = {};
     headers.forEach((header, index) => {
       headerMap[normalizeHeader(header)] = index;
     });
 
-    const found = dataRows.find((row) => {
+    const foundRow = dataRows.find((row) => {
       const rowRequestId = getCell(row, headerMap, "RequestID", "Request ID");
       return rowRequestId === requestId;
     });
 
-    if (!found) {
+    if (!foundRow) {
       return {
         statusCode: 404,
         body: JSON.stringify({
@@ -76,31 +78,32 @@ export async function handler(event) {
     }
 
     const request = {
-      RequestID: getCell(found, headerMap, "RequestID", "Request ID"),
-      CreatedDate: getCell(found, headerMap, "CreatedDate", "Created Date"),
-      CreatedBy: getCell(found, headerMap, "CreatedBy", "Created By"),
-      Status: getCell(found, headerMap, "Status") || "Draft",
-      CustomerName: getCell(found, headerMap, "CustomerName", "Customer Name"),
-      ContactPerson: getCell(found, headerMap, "ContactPerson", "Contact Person"),
-      CountryMarket: getCell(found, headerMap, "CountryMarket", "Country Market"),
-      DeliveryLocation: getCell(found, headerMap, "DeliveryLocation", "Delivery Location"),
-      ProjectName: getCell(found, headerMap, "ProjectName", "Project Name"),
-      ProjectType: getCell(found, headerMap, "ProjectType", "Project Type"),
-      ProductType: getCell(found, headerMap, "ProductType", "Product Type"),
-      ProductMaterial: getCell(found, headerMap, "ProductMaterial", "Product Material"),
-      DecorationType: getCell(found, headerMap, "DecorationType", "Decoration Type"),
-      PayloadJSON: getCell(found, headerMap, "PayloadJSON", "Payload JSON"),
-      DriveFolderID: getCell(found, headerMap, "DriveFolderID", "Drive Folder ID"),
-      TargetSellingPrice: getCell(found, headerMap, "TargetSellingPrice"),
-      ForecastAnnualVolume: getCell(found, headerMap, "ForecastAnnualVolume"),
-      AnnualTurnover: getCell(found, headerMap, "AnnualTurnover"),
-      Thumbnail: getCell(found, headerMap, "Thumbnail"),
+      RequestID: getCell(foundRow, headerMap, "RequestID", "Request ID"),
+      CreatedDate: getCell(foundRow, headerMap, "CreatedDate", "Created Date"),
+      CreatedBy: getCell(foundRow, headerMap, "CreatedBy", "Created By"),
+      Status: getCell(foundRow, headerMap, "Status") || "Draft",
+      CustomerName: getCell(foundRow, headerMap, "CustomerName", "Customer Name"),
+      ContactPerson: getCell(foundRow, headerMap, "ContactPerson", "Contact Person"),
+      CountryMarket: getCell(foundRow, headerMap, "CountryMarket", "Country Market"),
+      DeliveryLocation: getCell(foundRow, headerMap, "DeliveryLocation", "Delivery Location"),
+      ProjectName: getCell(foundRow, headerMap, "ProjectName", "Project Name"),
+      ProjectType: getCell(foundRow, headerMap, "ProjectType", "Project Type"),
+      ProductType: getCell(foundRow, headerMap, "ProductType", "Product Type"),
+      ProductMaterial: getCell(foundRow, headerMap, "ProductMaterial", "Product Material"),
+      DecorationType: getCell(foundRow, headerMap, "DecorationType", "Decoration Type"),
+      PayloadJSON: getCell(foundRow, headerMap, "PayloadJSON", "Payload JSON"),
+      DriveFolderID: getCell(foundRow, headerMap, "DriveFolderID", "Drive Folder ID"),
+      TargetSellingPrice: getCell(foundRow, headerMap, "TargetSellingPrice"),
+      ForecastAnnualVolume: getCell(foundRow, headerMap, "ForecastAnnualVolume"),
+      AnnualTurnover: getCell(foundRow, headerMap, "AnnualTurnover"),
+      Thumbnail: getCell(foundRow, headerMap, "Thumbnail"),
     };
 
     let payload = {};
     try {
       payload = JSON.parse(request.PayloadJSON || "{}");
-    } catch {
+    } catch (parseError) {
+      console.error("Failed to parse PayloadJSON:", parseError);
       payload = {};
     }
 

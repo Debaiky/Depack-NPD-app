@@ -14,13 +14,14 @@ const trimPayloadForSheet = (body) => {
   return clean;
 };
 
-const getPrimaryCustomer = (body) => {
-  if (Array.isArray(body?.customers) && body.customers.length > 0) {
-    return body.customers[0];
-  }
+const toNumber = (value) => {
+  const n = parseFloat(String(value ?? "").replace(/,/g, ""));
+  return Number.isNaN(n) ? 0 : n;
+};
 
-  if (body?.customer) {
-    return body.customer;
+const getPrimaryCustomer = (body) => {
+  if (Array.isArray(body?.customer?.customers) && body.customer.customers.length > 0) {
+    return body.customer.customers[0];
   }
 
   return {};
@@ -39,45 +40,36 @@ const handler = async (event) => {
     const status = body?.metadata?.status || "Draft";
     const driveFolderId = body?.metadata?.driveFolderId || "";
 
-    const targetSellingPrice =
-      primaryCustomer?.targetSellingPrice ||
-      body?.customer?.targetSellingPrice ||
-      "";
-
-    const forecastAnnualVolume =
-      primaryCustomer?.forecastAnnualVolume ||
-      body?.customer?.forecastAnnualVolume ||
-      "";
-
+    const targetSellingPrice = body?.project?.targetSellingPrice || "";
+    const forecastAnnualVolume = body?.project?.forecastAnnualVolume || "";
     const annualTurnover =
-      (parseFloat(String(targetSellingPrice).replace(/,/g, "")) || 0) *
-      (parseFloat(String(forecastAnnualVolume).replace(/,/g, "")) || 0);
+      toNumber(targetSellingPrice) * toNumber(forecastAnnualVolume);
 
     const payloadForSheet = trimPayloadForSheet(body);
     const payloadJson = JSON.stringify(payloadForSheet);
 
     const row = [
-      requestId,
-      createdAt,
-      createdBy,
-      status,
-      primaryCustomer?.customerName || "",
-      primaryCustomer?.contactPerson || "",
-      primaryCustomer?.countryMarket || "",
-      primaryCustomer?.deliveryLocation || "",
-      body?.project?.projectName || body?.customer?.projectName || "",
-      "New product",
-      body?.product?.productType || "",
+      requestId, // A
+      createdAt, // B
+      createdBy, // C
+      status, // D
+      primaryCustomer?.customerName || "", // E
+      primaryCustomer?.contactPerson || "", // F
+      primaryCustomer?.countryMarket || "", // G
+      primaryCustomer?.deliveryLocation || "", // H
+      body?.project?.projectName || "", // I
+      "New product", // J
+      body?.product?.productType || "", // K
       body?.product?.productType === "Sheet Roll"
         ? body?.product?.sheetMaterial || ""
-        : body?.product?.productMaterial || "",
-      body?.decoration?.decorationType || "",
-      payloadJson,
-      driveFolderId,
-      targetSellingPrice,
-      forecastAnnualVolume,
-      annualTurnover || "",
-      body?.product?.productThumbnailPreview || "",
+        : body?.product?.productMaterial || "", // L
+      body?.decoration?.decorationType || "", // M
+      payloadJson, // N
+      driveFolderId, // O
+      targetSellingPrice, // P
+      forecastAnnualVolume, // Q
+      annualTurnover || "", // R
+      body?.product?.productThumbnailPreview || "", // S
     ];
 
     const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:A`;
@@ -89,7 +81,7 @@ const handler = async (event) => {
     let rowIndex = -1;
 
     for (let i = 1; i < rows.length; i++) {
-      if (rows[i][0] === requestId) {
+      if ((rows[i][0] || "") === requestId) {
         rowIndex = i + 1;
         break;
       }

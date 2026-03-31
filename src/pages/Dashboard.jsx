@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, Wrench, BadgeDollarSign } from "lucide-react";
+import { Eye, FlaskConical, Calculator } from "lucide-react";
 
-function fmtNumber(v) {
-  const n = Number(String(v || "").replace(/,/g, ""));
-  if (!Number.isFinite(n)) return "—";
+const fmtNumber = (v, digits = 0) => {
+  const n = parseFloat(String(v ?? "").replace(/,/g, ""));
+  if (Number.isNaN(n)) return "—";
+
   return new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
   }).format(n);
-}
+};
 
 export default function Dashboard() {
   const [requests, setRequests] = useState([]);
@@ -51,15 +53,15 @@ export default function Dashboard() {
       ...r,
       RequestID: r?.RequestID || "",
       ProjectName: r?.ProjectName || "Untitled Project",
-      CustomerSummary: r?.CustomerSummary || "—",
+      CustomerName: r?.CustomerName || "Unknown Customer",
       Requester: r?.Requester || r?.CreatedBy || "—",
       Status: r?.Status || "Draft",
+      Priority: r?.Priority || "Normal",
       ProductType: r?.ProductType || "—",
-      ForecastAnnualQty: r?.ForecastAnnualQty || "",
-      TargetSellingPrice: r?.TargetSellingPrice || "",
-      Currency: r?.Currency || "",
-      ExpectedAnnualTurnover: r?.ExpectedAnnualTurnover || "",
-      ProductThumbnailPreview: r?.ProductThumbnailPreview || "",
+      TargetSellingPrice: r?.TargetSellingPrice ?? "",
+      ForecastAnnualVolume: r?.ForecastAnnualVolume ?? "",
+      AnnualTurnover: r?.AnnualTurnover ?? "",
+      Thumbnail: r?.Thumbnail || "",
     }));
   }, [requests]);
 
@@ -71,7 +73,7 @@ export default function Dashboard() {
       data = data.filter(
         (r) =>
           r.ProjectName.toLowerCase().includes(q) ||
-          r.CustomerSummary.toLowerCase().includes(q) ||
+          r.CustomerName.toLowerCase().includes(q) ||
           r.RequestID.toLowerCase().includes(q) ||
           r.ProductType.toLowerCase().includes(q)
       );
@@ -103,7 +105,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-4">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-xl font-semibold">Projects Dashboard</h1>
 
@@ -117,14 +119,14 @@ export default function Dashboard() {
 
       <div className="flex gap-3 flex-wrap">
         <input
-          placeholder="Search project, customer, request ID, or product type..."
-          className="border px-3 py-2 rounded w-80"
+          placeholder="Search project, customer, request ID, or product..."
+          className="border px-3 py-2 rounded w-80 bg-white"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <select
-          className="border px-3 py-2 rounded"
+          className="border px-3 py-2 rounded bg-white"
           value={requester}
           onChange={(e) => setRequester(e.target.value)}
         >
@@ -138,109 +140,127 @@ export default function Dashboard() {
       </div>
 
       <div className="bg-white border rounded-xl overflow-hidden">
-        <table className="w-full table-fixed text-sm">
-          <thead className="bg-gray-100 text-left">
-            <tr>
-              <th className="p-3 w-20">Image</th>
-              <th className="p-3 w-32">Request ID</th>
-              <th className="p-3 w-52">Project</th>
-              <th className="p-3 w-52">Customer(s)</th>
-              <th className="p-3 w-28">Product</th>
-              <th className="p-3 w-28">Requester</th>
-              <th className="p-3 w-28">Status</th>
-              <th className="p-3 w-28">Annual Qty</th>
-              <th className="p-3 w-28">Target Price</th>
-              <th className="p-3 w-32">Annual Turnover</th>
-              <th className="p-3 w-28 text-center">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.length === 0 ? (
+        <div className="w-full">
+          <table className="w-full text-xs md:text-sm table-fixed">
+            <thead className="bg-gray-100 text-left">
               <tr>
-                <td colSpan="11" className="p-6 text-center text-gray-500">
-                  No requests found.
-                </td>
+                <th className="p-3 w-[90px]">Image</th>
+                <th className="p-3 w-[140px]">Request ID</th>
+                <th className="p-3 w-[220px]">Project</th>
+                <th className="p-3 w-[180px]">Customer</th>
+                <th className="p-3 w-[140px]">Product</th>
+                <th className="p-3 w-[140px]">Requester</th>
+                <th className="p-3 w-[120px]">Target Price</th>
+                <th className="p-3 w-[140px]">Annual Qty</th>
+                <th className="p-3 w-[170px]">Annual Turnover</th>
+                <th className="p-3 w-[140px]">Status</th>
+                <th className="p-3 w-[110px]">Priority</th>
+                <th className="p-3 w-[150px] text-center">Actions</th>
               </tr>
-            ) : (
-              filtered.map((r) => (
-                <tr key={r.RequestID} className="border-t align-top">
-                  <td className="p-3">
-                    {r.ProductThumbnailPreview ? (
-                      <img
-                        src={r.ProductThumbnailPreview}
-                        alt="Product thumbnail"
-                        className="w-14 h-14 rounded-lg object-cover border bg-white"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 rounded-lg border bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 text-center px-1">
-                        No image
-                      </div>
-                    )}
-                  </td>
+            </thead>
 
-                  <td className="p-3 font-medium break-words">{r.RequestID}</td>
-
-                  <td className="p-3 break-words whitespace-normal">{r.ProjectName}</td>
-
-                  <td className="p-3 break-words whitespace-normal">{r.CustomerSummary}</td>
-
-                  <td className="p-3 break-words whitespace-normal">{r.ProductType}</td>
-
-                  <td className="p-3 break-words whitespace-normal">{r.Requester}</td>
-
-                  <td className="p-3">
-                    <StatusBadge status={r.Status} />
-                  </td>
-
-                  <td className="p-3 break-words whitespace-normal">
-                    {fmtNumber(r.ForecastAnnualQty)}
-                  </td>
-
-                  <td className="p-3 break-words whitespace-normal">
-                    {r.TargetSellingPrice
-                      ? `${fmtNumber(r.TargetSellingPrice)} ${r.Currency || ""}`.trim()
-                      : "—"}
-                  </td>
-
-                  <td className="p-3 break-words whitespace-normal font-medium">
-                    {r.ExpectedAnnualTurnover
-                      ? `${fmtNumber(r.ExpectedAnnualTurnover)} ${r.Currency || ""}`.trim()
-                      : "—"}
-                  </td>
-
-                  <td className="p-3">
-                    <div className="flex items-center justify-center gap-3">
-                      <Link
-                        to={`/request/${r.RequestID}`}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Open request"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Link>
-
-                      <Link
-                        to={`/engineering/${r.RequestID}`}
-                        className="text-amber-600 hover:text-amber-800"
-                        title="Go to engineering"
-                      >
-                        <Wrench className="h-4 w-4" />
-                      </Link>
-
-                      <Link
-                        to={`/pricing/${r.RequestID}`}
-                        className="text-emerald-600 hover:text-emerald-800"
-                        title="Go to pricing"
-                      >
-                        <BadgeDollarSign className="h-4 w-4" />
-                      </Link>
-                    </div>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="12" className="p-6 text-center text-gray-500">
+                    No requests found.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filtered.map((r) => (
+                  <tr key={r.RequestID} className="border-t align-top">
+                    <td className="p-3">
+                      {r.Thumbnail ? (
+                        <img
+                          src={r.Thumbnail}
+                          alt={r.ProjectName}
+                          className="w-14 h-14 rounded-lg border object-cover bg-white"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-lg border bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 text-center px-1">
+                          No image
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="p-3 font-medium break-words">{r.RequestID}</td>
+
+                    <td className="p-3 break-words whitespace-normal">{r.ProjectName}</td>
+
+                    <td className="p-3 break-words whitespace-normal">{r.CustomerName}</td>
+
+                    <td className="p-3 break-words whitespace-normal">{r.ProductType}</td>
+
+                    <td className="p-3 break-words whitespace-normal">{r.Requester}</td>
+
+                    <td className="p-3 break-words whitespace-normal">
+                      {r.TargetSellingPrice !== "" &&
+                      r.TargetSellingPrice !== null &&
+                      r.TargetSellingPrice !== undefined
+                        ? fmtNumber(r.TargetSellingPrice, 2)
+                        : "—"}
+                    </td>
+
+                    <td className="p-3 break-words whitespace-normal">
+                      {r.ForecastAnnualVolume !== "" &&
+                      r.ForecastAnnualVolume !== null &&
+                      r.ForecastAnnualVolume !== undefined
+                        ? fmtNumber(r.ForecastAnnualVolume, 0)
+                        : "—"}
+                    </td>
+
+                    <td className="p-3 break-words whitespace-normal font-medium">
+                      {r.AnnualTurnover !== "" &&
+                      r.AnnualTurnover !== null &&
+                      r.AnnualTurnover !== undefined
+                        ? fmtNumber(r.AnnualTurnover, 2)
+                        : "—"}
+                    </td>
+
+                    <td className="p-3">
+                      <StatusBadge status={r.Status} />
+                    </td>
+
+                    <td className="p-3">
+                      <PriorityBadge value={r.Priority} />
+                    </td>
+
+                    <td className="p-3">
+                      <div className="flex items-center justify-center gap-3">
+                        <Link
+                          to={`/request/${r.RequestID}`}
+                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+                          title="Open request"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
+
+                        <Link
+                          to={`/engineering/${r.RequestID}`}
+                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+                          title="Go to engineering"
+                        >
+                          <FlaskConical className="h-4 w-4" />
+                        </Link>
+
+                        <Link
+                          to={`/pricing/${r.RequestID}`}
+                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+                          title="Go to pricing"
+                        >
+                          <Calculator className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -259,8 +279,30 @@ function StatusBadge({ status }) {
   };
 
   return (
-    <span className={`px-2 py-1 rounded text-xs ${colors[status] || "bg-gray-100 text-gray-800"}`}>
+    <span
+      className={`inline-block px-2 py-1 rounded text-xs whitespace-normal ${
+        colors[status] || "bg-gray-100 text-gray-800"
+      }`}
+    >
       {status}
+    </span>
+  );
+}
+
+function PriorityBadge({ value }) {
+  const colors = {
+    High: "bg-red-100 text-red-800",
+    Normal: "bg-gray-100 text-gray-800",
+    Low: "bg-green-100 text-green-800",
+  };
+
+  return (
+    <span
+      className={`inline-block px-2 py-1 rounded text-xs whitespace-normal ${
+        colors[value] || "bg-gray-100 text-gray-800"
+      }`}
+    >
+      {value || "Normal"}
     </span>
   );
 }

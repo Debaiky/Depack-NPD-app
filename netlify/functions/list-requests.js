@@ -20,6 +20,19 @@ function getCell(row, headerMap, ...possibleHeaders) {
   return "";
 }
 
+function safeJsonParse(value) {
+  try {
+    return value ? JSON.parse(value) : {};
+  } catch {
+    return {};
+  }
+}
+
+function toNumber(value) {
+  const n = parseFloat(String(value ?? "").replace(/,/g, ""));
+  return Number.isNaN(n) ? 0 : n;
+}
+
 export async function handler() {
   try {
     const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
@@ -72,27 +85,71 @@ export async function handler() {
     const requests = dataRows
       .map((row) => {
         const requestId = getCell(row, headerMap, "RequestID", "Request ID");
+        const payloadJson = getCell(row, headerMap, "PayloadJSON", "Payload JSON");
+        const payload = safeJsonParse(payloadJson);
+
+        const firstCustomer = payload?.customer?.customers?.[0] || {};
+        const project = payload?.project || {};
+        const product = payload?.product || {};
+
+        const targetSellingPrice =
+          getCell(row, headerMap, "TargetSellingPrice") || project?.targetSellingPrice || "";
+
+        const forecastAnnualVolume =
+          getCell(row, headerMap, "ForecastAnnualVolume") || project?.forecastAnnualVolume || "";
+
+        const annualTurnoverCell = getCell(row, headerMap, "AnnualTurnover");
+        const calculatedAnnualTurnover =
+          toNumber(targetSellingPrice) * toNumber(forecastAnnualVolume);
 
         return {
           RequestID: requestId,
           CreatedDate: getCell(row, headerMap, "CreatedDate", "Created Date"),
           CreatedBy: getCell(row, headerMap, "CreatedBy", "Created By"),
           Status: getCell(row, headerMap, "Status") || "Draft",
-          CustomerName: getCell(row, headerMap, "CustomerName", "Customer Name"),
-          ContactPerson: getCell(row, headerMap, "ContactPerson", "Contact Person"),
-          CountryMarket: getCell(row, headerMap, "CountryMarket", "Country Market"),
-          DeliveryLocation: getCell(row, headerMap, "DeliveryLocation", "Delivery Location"),
-          ProjectName: getCell(row, headerMap, "ProjectName", "Project Name"),
+          CustomerName:
+            getCell(row, headerMap, "CustomerName", "Customer Name") ||
+            firstCustomer?.customerName ||
+            "",
+          ContactPerson:
+            getCell(row, headerMap, "ContactPerson", "Contact Person") ||
+            firstCustomer?.contactPerson ||
+            "",
+          CountryMarket:
+            getCell(row, headerMap, "CountryMarket", "Country Market") ||
+            firstCustomer?.countryMarket ||
+            "",
+          DeliveryLocation:
+            getCell(row, headerMap, "DeliveryLocation", "Delivery Location") ||
+            firstCustomer?.deliveryLocation ||
+            "",
+          ProjectName:
+            getCell(row, headerMap, "ProjectName", "Project Name") ||
+            project?.projectName ||
+            "",
           ProjectType: getCell(row, headerMap, "ProjectType", "Project Type"),
-          ProductType: getCell(row, headerMap, "ProductType", "Product Type"),
-          ProductMaterial: getCell(row, headerMap, "ProductMaterial", "Product Material"),
-          DecorationType: getCell(row, headerMap, "DecorationType", "Decoration Type"),
-          PayloadJSON: getCell(row, headerMap, "PayloadJSON", "Payload JSON"),
+          ProductType:
+            getCell(row, headerMap, "ProductType", "Product Type") ||
+            product?.productType ||
+            "",
+          ProductMaterial:
+            getCell(row, headerMap, "ProductMaterial", "Product Material") ||
+            (product?.productType === "Sheet Roll"
+              ? product?.sheetMaterial || ""
+              : product?.productMaterial || ""),
+          DecorationType:
+            getCell(row, headerMap, "DecorationType", "Decoration Type") ||
+            payload?.decoration?.decorationType ||
+            "",
+          PayloadJSON: payloadJson,
           DriveFolderID: getCell(row, headerMap, "DriveFolderID", "Drive Folder ID"),
-          TargetSellingPrice: getCell(row, headerMap, "TargetSellingPrice"),
-          ForecastAnnualVolume: getCell(row, headerMap, "ForecastAnnualVolume"),
-          AnnualTurnover: getCell(row, headerMap, "AnnualTurnover"),
-          Thumbnail: getCell(row, headerMap, "Thumbnail"),
+          TargetSellingPrice: targetSellingPrice,
+          ForecastAnnualVolume: forecastAnnualVolume,
+          AnnualTurnover: annualTurnoverCell || calculatedAnnualTurnover || "",
+          Thumbnail:
+            getCell(row, headerMap, "Thumbnail") ||
+            product?.productThumbnailPreview ||
+            "",
           FileCount: fileCountMap[requestId] || 0,
         };
       })
