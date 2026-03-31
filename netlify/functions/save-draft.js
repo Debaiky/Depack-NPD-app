@@ -25,28 +25,33 @@ const handler = async (event) => {
     const status = body?.metadata?.status || "Draft";
     const driveFolderId = body?.metadata?.driveFolderId || "";
 
+    const customer = body?.customer || {};
+    const product = body?.product || {};
+    const decoration = body?.decoration || {};
+
     const payloadForSheet = trimPayloadForSheet(body);
     const payloadJson = JSON.stringify(payloadForSheet);
 
     const row = [
-      requestId,
-      createdAt,
-      createdBy,
-      status,
-      body?.customer?.customerName || "",
-      body?.customer?.contactPerson || "",
-      body?.customer?.countryMarket || "",
-      body?.customer?.deliveryLocation || "",
-      body?.customer?.projectName || "",
-      body?.customer?.projectType || "",
-      body?.product?.productType || "",
-      body?.product?.productMaterial || "",
-      body?.decoration?.decorationType || "",
-      payloadJson,
-      driveFolderId,
+      requestId, // A
+      createdAt, // B
+      createdBy, // C
+      status, // D
+      customer.customerName || "", // E
+      customer.contactPerson || "", // F
+      customer.countryMarket || "", // G
+      customer.deliveryLocation || "", // H
+      customer.projectName || "", // I
+      customer.targetSellingPrice || "", // J
+      customer.forecastAnnualVolume || "", // K
+      product.productType || "", // L
+      product.productMaterial || product.sheetMaterial || "", // M
+      decoration.decorationType || "", // N
+      payloadJson, // O
+      driveFolderId, // P
     ];
 
-    const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:A`;
+    const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:P`;
     const existing = await googleJsonFetch(getUrl, {
       scopes: SHEETS_SCOPE,
     });
@@ -55,14 +60,14 @@ const handler = async (event) => {
     let rowIndex = -1;
 
     for (let i = 1; i < rows.length; i++) {
-      if (rows[i][0] === requestId) {
+      if ((rows[i][0] || "") === requestId) {
         rowIndex = i + 1;
         break;
       }
     }
 
     if (rowIndex === -1) {
-      const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:O:append?valueInputOption=USER_ENTERED`;
+      const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:P:append?valueInputOption=USER_ENTERED`;
       await googleJsonFetch(appendUrl, {
         method: "POST",
         scopes: SHEETS_SCOPE,
@@ -71,7 +76,7 @@ const handler = async (event) => {
         },
       });
     } else {
-      const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A${rowIndex}:O${rowIndex}?valueInputOption=USER_ENTERED`;
+      const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A${rowIndex}:P${rowIndex}?valueInputOption=USER_ENTERED`;
       await googleJsonFetch(updateUrl, {
         method: "PUT",
         scopes: SHEETS_SCOPE,
@@ -85,7 +90,10 @@ const handler = async (event) => {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        message: rowIndex === -1 ? "Draft created successfully" : "Draft updated successfully",
+        message:
+          rowIndex === -1
+            ? "Draft created successfully"
+            : "Draft updated successfully",
         requestId,
       }),
     };

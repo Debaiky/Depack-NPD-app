@@ -1,5 +1,5 @@
 /* eslint-env node */
-import { googleJsonFetch } from "./_google-rest.js";
+const { googleJsonFetch } = require("./_google-rest");
 
 const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
 
@@ -20,7 +20,7 @@ function getCell(row, headerMap, ...possibleHeaders) {
   return "";
 }
 
-export async function handler(event) {
+const handler = async (event) => {
   try {
     const requestId = event.queryStringParameters?.requestId;
 
@@ -35,8 +35,7 @@ export async function handler(event) {
     }
 
     const spreadsheetId = process.env.GOOGLE_SHEETS_DATABASE_ID;
-
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:O`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:P`;
 
     const data = await googleJsonFetch(url, {
       scopes: SHEETS_SCOPE,
@@ -86,7 +85,8 @@ export async function handler(event) {
       CountryMarket: getCell(found, headerMap, "CountryMarket", "Country Market"),
       DeliveryLocation: getCell(found, headerMap, "DeliveryLocation", "Delivery Location"),
       ProjectName: getCell(found, headerMap, "ProjectName", "Project Name"),
-      ProjectType: getCell(found, headerMap, "ProjectType", "Project Type"),
+      TargetSellingPrice: getCell(found, headerMap, "TargetSellingPrice", "Target Selling Price"),
+      ForecastAnnualVolume: getCell(found, headerMap, "ForecastAnnualVolume", "Forecast Annual Volume"),
       ProductType: getCell(found, headerMap, "ProductType", "Product Type"),
       ProductMaterial: getCell(found, headerMap, "ProductMaterial", "Product Material"),
       DecorationType: getCell(found, headerMap, "DecorationType", "Decoration Type"),
@@ -120,4 +120,6 @@ export async function handler(event) {
       }),
     };
   }
-}
+};
+
+module.exports = { handler };
