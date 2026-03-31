@@ -49,12 +49,13 @@ const handler = async (event) => {
         name: requestId,
       };
     } else {
-      requestFolder = await getOrCreateFolder(requestId, rootFolderId);
+ requestFolder = await getOrCreateFolder(requestId, rootFolderId);
+console.log("REQUEST FOLDER CREATED:", requestFolder);
 
-      await updateRequestRow(requestId, {
-        DriveFolderID: requestFolder.id,
-      });
-    }
+await updateRequestRow(requestId, {
+  DriveFolderID: requestFolder.id,
+});
+console.log("REQUEST ROW UPDATED WITH FOLDER ID:", requestFolder.id);
 
     const samplePhotos = await getOrCreateFolder("01 Sample Photos", requestFolder.id);
     const decorationArtwork = await getOrCreateFolder("02 Decoration Artwork", requestFolder.id);
