@@ -41,9 +41,7 @@ const steps = [
   { key: "review", label: "Review", icon: CheckCircle2 },
 ];
 
-const generateRequestId = () => {
-  return "REQ-" + Date.now();
-};
+const generateRequestId = () => `REQ-${Date.now()}`;
 
 const initialForm = {
   metadata: {
@@ -53,6 +51,7 @@ const initialForm = {
     createdAt: "",
     driveFolderId: "",
   },
+
   customer: {
     customerName: "",
     contactPerson: "",
@@ -62,62 +61,60 @@ const initialForm = {
     deliveryLocation: "",
     projectName: "",
     customerSkuRef: "",
-    projectType: "",
     targetLaunchDate: "",
     forecastAnnualVolume: "",
-    moq: "",
     targetSellingPrice: "",
     currency: "EGP",
     customerNotes: "",
   },
+
   product: {
-  productType: "",
-  productTypeOther: "",
-  sampleExists: "",
-  sampleInHand: "",
-  internalSampleCode: "",
-  productMaterial: "",
-  productMaterialOther: "",
-  materialGrade: "",
-  productWeightG: "",
-  topDiameterMm: "",
-  bottomDiameterMm: "",
-  productHeightMm: "",
-  rimNotes: "",
-  productColor: "",
-  masterbatchDetails: "",
-  additives: "",
-  specialFunction: "",
-  specialCutNotes: "",
-  technicalNotes: "",
+    productType: "",
+    productTypeOther: "",
+    sampleExists: "",
+    sampleInHand: "",
+    internalSampleCode: "",
 
-  sheetMaterial: "",
-  hipsPct: "",
-  gppsPct: "",
-  rpetPct: "",
-  virginPetPct: "",
+    productMaterial: "",
+    productMaterialOther: "",
+    productWeightG: "",
+    topDiameterMm: "",
+    productHeightMm: "",
+    rimNotes: "",
+    productColor: "",
+    additives: "",
+    specialFunction: "",
+    specialCutNotes: "",
+    technicalNotes: "",
 
-  sheetWidthMm: "",
-  sheetWidthTolerancePlusMm: "",
-  sheetWidthToleranceMinusMm: "",
+    sheetMaterial: "",
+    hipsPct: "",
+    gppsPct: "",
+    rpetPct: "",
+    virginPetPct: "",
 
-  sheetThicknessMicron: "",
-  sheetThicknessTolerancePlusMicron: "",
-  sheetThicknessToleranceMinusMicron: "",
+    sheetWidthMm: "",
+    sheetWidthTolerancePlusMm: "",
+    sheetWidthToleranceMinusMm: "",
 
-  rollWeightKg: "",
-  rollDiameterMm: "",
-  coreDiameterMm: "",
-  coreMaterial: "",
+    sheetThicknessMicron: "",
+    sheetThicknessTolerancePlusMicron: "",
+    sheetThicknessToleranceMinusMicron: "",
 
-  sheetLayerColors: "",
-  layerAColor: "",
-  layerBColor: "",
+    rollWeightKg: "",
+    rollDiameterMm: "",
+    coreDiameterMm: "",
+    coreMaterial: "",
 
-  productThumbnailName: "",
-  productThumbnailBase64: "",
-  productThumbnailPreview: "",
-},
+    sheetLayerColors: "",
+    layerAColor: "",
+    layerBColor: "",
+
+    productThumbnailName: "",
+    productThumbnailBase64: "",
+    productThumbnailPreview: "",
+  },
+
   decoration: {
     decorationType: "",
     dryOffset: {
@@ -155,89 +152,95 @@ const initialForm = {
       hybridAdditionalNotes: "",
     },
     label: {
-  useStandardLabelSpecs: false,
-  labelMaterial: "",
-  labelDimensionsMm: "",
-  labelType: "",
-  labelAdhesiveNotes: "",
-  labelArtworkAvailable: "",
-  labelPositionNotes: "",
-  labelAdditionalNotes: "",
-},
+      useStandardLabelSpecs: false,
+      labelMaterial: "",
+      labelDimensionsMm: "",
+      labelType: "",
+      labelAdhesiveNotes: "",
+      labelArtworkAvailable: "",
+      labelPositionNotes: "",
+      labelAdditionalNotes: "",
+    },
   },
+
   packaging: {
-  sheet: {
-    coreSize: "",
-    rollWeightKg: "",
-    rollsPerPallet: "",
-    palletType: "",
-    strapLengthPerPalletM: "",
-    foamLengthPerPalletM: "",
-    labelsPerRoll: "",
-    labelsPerPallet: "",
-    stretchWeightPerPalletKg: "",
-    operatorsPerPallet: "",
+    sheet: {
+      coreSize: "",
+      rollsPerPallet: "",
+      palletType: "",
+      strapLengthPerPalletM: "",
+      foamLengthPerPalletM: "",
+      labelsPerRoll: "",
+      labelsPerPallet: "",
+      stretchWeightPerPalletKg: "",
+      operatorsPerPallet: "",
+    },
+
+    primary: {
+      pcsPerStack: "",
+      stacksPerBag: "",
+      sleeveArtworkNeeded: "",
+      sleeveArtworkProvided: "",
+      primaryPackagingNotes: "",
+      bagSleeveMaterial: "",
+      bagSleeveDimensionsMm: "",
+      bagSleeveThicknessMicron: "",
+      bagSleeveWeight: "",
+    },
+
+    secondary: {
+      bagsPerCarton: "",
+      cartonType: "",
+      cartonInternalDimensionsMm: "",
+      cartonExternalDimensionsMm: "",
+      cartonArtworkNeeded: "",
+      cartonArtworkProvided: "",
+      cartonPackagingNotes: "",
+    },
+
+    labelInstructions: {
+      cartonLabelRequired: "",
+      cartonLabelDimensionsMm: "",
+      barcodeRequired: "",
+      barcodeType: "",
+      labelFieldProductCode: false,
+      labelFieldBatchNo: false,
+      labelFieldProdDate: false,
+      labelFieldExpiryDate: false,
+      labelFieldQuantity: false,
+      labelFieldCustomerCode: false,
+      labelFieldOther: "",
+      cartonLabelArtworkProvided: "",
+      cartonLabelNotes: "",
+    },
+
+    pallet: {
+      noPalletNeeded: false,
+      palletType: "",
+      palletDimensionsMm: "",
+      returnablePallet: "",
+      palletReturnCount: "",
+      cartonsPerPallet: "",
+      stretchWrapRequired: "",
+      stretchWrapKgPerPallet: "",
+      palletNotes: "",
+    },
   },
-  primary: {
-    pcsPerStack: "",
-    stacksPerBag: "",
-    sleeveArtworkNeeded: "",
-    sleeveArtworkProvided: "",
-    primaryPackagingNotes: "",
-    bagSleeveMaterial: "",
-    bagSleeveDimensionsMm: "",
-    bagSleeveThicknessMicron: "",
-    bagSleeveWeight: "",
-  },
-  secondary: {
-    bagsPerCarton: "",
-    cartonType: "",
-    cartonInternalDimensionsMm: "",
-    cartonExternalDimensionsMm: "",
-    cartonArtworkNeeded: "",
-    cartonArtworkProvided: "",
-    cartonPackagingNotes: "",
-  },
-  labelInstructions: {
-    cartonLabelRequired: "",
-    cartonLabelDimensionsMm: "",
-    barcodeRequired: "",
-    barcodeType: "",
-    labelFieldProductCode: false,
-    labelFieldBatchNo: false,
-    labelFieldProdDate: false,
-    labelFieldExpiryDate: false,
-    labelFieldQuantity: false,
-    labelFieldCustomerCode: false,
-    labelFieldOther: "",
-    cartonLabelArtworkProvided: "",
-    cartonLabelNotes: "",
-  },
-  pallet: {
-    noPalletNeeded: false,
-    palletType: "",
-    palletDimensionsMm: "",
-    returnablePallet: "",
-    palletReturnCount: "",
-    cartonsPerPallet: "",
-    stretchWrapRequired: "",
-    stretchWrapKgPerPallet: "",
-    palletNotes: "",
-  },
-},
+
   delivery: {
-  deliveryLocationConfirm: "",
-  deliveryTerm: "",
-  deliveryFrequency: "",
-  firstDeliveryDate: "",
-  receivingNotes: "",
-  loadingRestrictions: "",
-  requiredDeliveryDocs: "",
-  logisticsComments: "",
-  desiredQtyPerTruck: "",
-  desiredQtyPerTruckUnit: "",
-  truckSize: "",
-},
+    deliveryLocationConfirm: "",
+    deliveryTerm: "",
+    deliveryFrequency: "",
+    firstDeliveryDate: "",
+    receivingNotes: "",
+    loadingRestrictions: "",
+    requiredDeliveryDocs: "",
+    logisticsComments: "",
+    desiredQtyPerTruck: "",
+    desiredQtyPerTruckUnit: "",
+    truckSize: "",
+  },
+
   attachments: {
     samplePhotos: [],
     printArtworkFiles: [],
@@ -434,11 +437,14 @@ function SummaryPanel({ form, currentStep, missingRequired }) {
   const packagingSummary = useMemo(() => {
     if (form.product.productType === "Sheet Roll") {
       const bits = [];
-      if (form.packaging.pallet.rollsPerPallet) {
-        bits.push(`${form.packaging.pallet.rollsPerPallet} rolls/pallet`);
-      }
       if (form.product.rollWeightKg) {
         bits.push(`${form.product.rollWeightKg} kg/roll`);
+      }
+      if (form.packaging.sheet.rollsPerPallet) {
+        bits.push(`${form.packaging.sheet.rollsPerPallet} rolls/pallet`);
+      }
+      if (form.packaging.sheet.palletType) {
+        bits.push(form.packaging.sheet.palletType);
       }
       return bits.length ? bits.join(", ") : "Not complete yet";
     }
@@ -448,9 +454,11 @@ function SummaryPanel({ form, currentStep, missingRequired }) {
     const pal = form.packaging.pallet;
     const bits = [];
     if (p.pcsPerStack) bits.push(`${p.pcsPerStack} pcs/stack`);
-    if (p.stacksPerBag) bits.push(`${p.stacksPerBag} stacks/sleeve`);
-    if (s.bagsPerCarton) bits.push(`${s.bagsPerCarton} sleeves/carton`);
-    if (pal.cartonsPerPallet) bits.push(`${pal.cartonsPerPallet} cartons/pallet`);
+    if (p.stacksPerBag) bits.push(`${p.stacksPerBag} stacks/bag`);
+    if (s.bagsPerCarton) bits.push(`${s.bagsPerCarton} bags/carton`);
+    if (!pal.noPalletNeeded && pal.cartonsPerPallet) {
+      bits.push(`${pal.cartonsPerPallet} cartons/pallet`);
+    }
     return bits.length ? bits.join(", ") : "Not complete yet";
   }, [form]);
 
@@ -571,6 +579,7 @@ export default function RequestWizard({
 }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [saveMessage, setSaveMessage] = useState("Not saved yet");
+
   const [form, setForm] = useState(() => {
     if (initialData) return initialData;
 
@@ -597,7 +606,6 @@ export default function RequestWizard({
     cartonLabelArtworkFiles: [],
     customerBriefFiles: [],
   });
-  const isSheet = form.product.productType === "Sheet Roll";
 
   const requestId = form.metadata.requestId || "—";
   const status = form.metadata.status || "Draft";
@@ -614,32 +622,32 @@ export default function RequestWizard({
   }, [form.product.productType, form.decoration.decorationType]);
 
   const update = (path, value) => {
-  setForm((prev) => {
-    const next = structuredClone(prev);
-    const keys = path.split(".");
-    let ref = next;
-    for (let i = 0; i < keys.length - 1; i += 1) ref = ref[keys[i]];
-    ref[keys[keys.length - 1]] = value;
-    return next;
-  });
-};
-
-// ✅ ADD THIS RIGHT HERE (directly below update)
-const handleThumbnailChange = (file) => {
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    const result = String(reader.result || "");
-    const base64 = result.split(",")[1] || "";
-
-    update("product.productThumbnailName", file.name);
-    update("product.productThumbnailBase64", base64);
-    update("product.productThumbnailPreview", result);
+    setForm((prev) => {
+      const next = structuredClone(prev);
+      const keys = path.split(".");
+      let ref = next;
+      for (let i = 0; i < keys.length - 1; i += 1) {
+        ref = ref[keys[i]];
+      }
+      ref[keys[keys.length - 1]] = value;
+      return next;
+    });
   };
 
-  reader.readAsDataURL(file);
-};
+  const handleThumbnailChange = (file) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const base64 = result.split(",")[1] || "";
+
+      update("product.productThumbnailName", file.name);
+      update("product.productThumbnailBase64", base64);
+      update("product.productThumbnailPreview", result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleAttachmentAdd = (field, pickedFiles) => {
     setPendingUploads((prev) => ({
@@ -725,7 +733,7 @@ const handleThumbnailChange = (file) => {
 
         const data = await response.json();
 
-               if (data.success && !data.alreadyExists) {
+        if (data.success && !data.alreadyExists) {
           await fetch("/.netlify/functions/save-file-record", {
             method: "POST",
             headers: {
@@ -772,9 +780,10 @@ const handleThumbnailChange = (file) => {
     if (!form.customer.countryMarket) req.push("Country / Market");
     if (!form.customer.deliveryLocation) req.push("Delivery Location");
     if (!form.customer.projectName) req.push("Project Name");
-   if (!form.customer.projectType) req.push("Project Type");
-if (!form.customer.forecastAnnualVolume) req.push("Forecast Annual Volume");
-if (!form.product.productType) req.push("Product Type");
+    if (!form.customer.forecastAnnualVolume) req.push("Forecast Annual Volume");
+    if (!form.customer.targetSellingPrice) req.push("Target Selling Price");
+    if (!form.product.productType) req.push("Product Type");
+    if (!form.product.productThumbnailPreview) req.push("Product Picture");
 
     if (form.product.productType === "Sheet Roll") {
       if (!form.product.sheetMaterial) req.push("Sheet Material");
@@ -797,32 +806,33 @@ if (!form.product.productType) req.push("Product Type");
       }
 
       if (!form.packaging.sheet.coreSize) req.push("Core Size");
-if (!form.packaging.sheet.rollWeightKg) req.push("Roll Weight");
-if (!form.packaging.sheet.rollsPerPallet) req.push("Rolls per Pallet");
-if (!form.packaging.sheet.palletType) req.push("Pallet Type");
+      if (!form.packaging.sheet.rollsPerPallet) req.push("Rolls per Pallet");
+      if (!form.packaging.sheet.palletType) req.push("Pallet Type");
+
       if (!form.delivery.deliveryLocationConfirm && !form.customer.deliveryLocation) {
         req.push("Delivery Location");
       }
       if (!form.delivery.desiredQtyPerTruck) req.push("Required Qty per Truck");
-if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
-if (!form.delivery.truckSize) req.push("Truck Size");
+      if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
+      if (!form.delivery.truckSize) req.push("Truck Size");
     } else {
       if (!form.product.productMaterial) req.push("Product Material");
-      if (form.decoration.decorationType === "") req.push("Decoration Type");
+      if (!form.decoration.decorationType) req.push("Decoration Type");
       if (!form.packaging.primary.pcsPerStack) req.push("Pieces per Stack");
-      if (!form.packaging.primary.stacksPerBag) req.push("Stacks per Bag / Sleeve");
-      if (!form.packaging.secondary.bagsPerCarton) req.push("Bags / Sleeves per Carton");
+      if (!form.packaging.primary.stacksPerBag) req.push("Stacks per Bag");
+      if (!form.packaging.secondary.bagsPerCarton) req.push("Bags per Carton");
       if (!form.packaging.secondary.cartonType) req.push("Carton Type");
-      if (!form.packaging.pallet.noPalletNeeded) {
-  if (!form.packaging.pallet.palletType) req.push("Pallet Type");
-  if (!form.packaging.pallet.returnablePallet) req.push("Returnable Pallet");
-  if (!form.packaging.pallet.cartonsPerPallet) req.push("Cartons per Pallet");
-  if (!form.packaging.pallet.stretchWrapRequired) req.push("Stretch Wrap Required");
-}
 
-if (!form.delivery.desiredQtyPerTruck) req.push("Required Qty per Truck");
-if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
-if (!form.delivery.truckSize) req.push("Truck Size");
+      if (!form.packaging.pallet.noPalletNeeded) {
+        if (!form.packaging.pallet.palletType) req.push("Pallet Type");
+        if (!form.packaging.pallet.returnablePallet) req.push("Returnable Pallet");
+        if (!form.packaging.pallet.cartonsPerPallet) req.push("Cartons per Pallet");
+        if (!form.packaging.pallet.stretchWrapRequired) req.push("Stretch Wrap Required");
+      }
+
+      if (!form.delivery.desiredQtyPerTruck) req.push("Required Qty per Truck");
+      if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
+      if (!form.delivery.truckSize) req.push("Truck Size");
     }
 
     return req;
@@ -892,9 +902,9 @@ if (!form.delivery.truckSize) req.push("Truck Size");
   const nextStep = () => setCurrentStep((s) => Math.min(s + 1, steps.length - 1));
   const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 0));
 
-const estimatedSheetRollPalletLoadKg =
-  Number(form.packaging.sheet.rollsPerPallet || 0) *
-  Number(form.packaging.sheet.rollWeightKg || 0);
+  const estimatedSheetRollPalletLoadKg =
+    Number(form.packaging.sheet.rollsPerPallet || 0) *
+    Number(form.product.rollWeightKg || 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -927,17 +937,14 @@ const estimatedSheetRollPalletLoadKg =
               className={cn(
                 "rounded-full px-4 py-1 text-sm",
                 status === "Draft" && "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-                status === "Submitted" && "bg-blue-100 text-blue-800 hover:bg-blue-100",
-                status === "Engineering" &&
-                  "bg-purple-100 text-purple-800 hover:bg-purple-100",
-                status === "Approved" && "bg-green-100 text-green-800 hover:bg-green-100"
+                status === "Project Completed" && "bg-blue-100 text-blue-800 hover:bg-blue-100"
               )}
             >
               {status}
             </Badge>
 
             <Link
-              to="/"
+              to="/dashboard"
               className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-100"
             >
               ← Dashboard
@@ -969,7 +976,7 @@ const estimatedSheetRollPalletLoadKg =
                   description="Enter the name of the person creating this request."
                 >
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Requested By">
+                    <Field label="Requested By *">
                       <Input
                         value={form.metadata.createdBy}
                         onChange={(e) => update("metadata.createdBy", e.target.value)}
@@ -981,13 +988,13 @@ const estimatedSheetRollPalletLoadKg =
 
                 <SectionCard title="Customer Details">
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Customer Name">
+                    <Field label="Customer Name *">
                       <Input
                         value={form.customer.customerName}
                         onChange={(e) => update("customer.customerName", e.target.value)}
                       />
                     </Field>
-                    <Field label="Contact Person">
+                    <Field label="Contact Person *">
                       <Input
                         value={form.customer.contactPerson}
                         onChange={(e) => update("customer.contactPerson", e.target.value)}
@@ -1005,13 +1012,13 @@ const estimatedSheetRollPalletLoadKg =
                         onChange={(e) => update("customer.contactPhone", e.target.value)}
                       />
                     </Field>
-                    <Field label="Country / Market">
+                    <Field label="Country / Market *">
                       <Input
                         value={form.customer.countryMarket}
                         onChange={(e) => update("customer.countryMarket", e.target.value)}
                       />
                     </Field>
-                    <Field label="Delivery Location">
+                    <Field label="Delivery Location *">
                       <Input
                         value={form.customer.deliveryLocation}
                         onChange={(e) => update("customer.deliveryLocation", e.target.value)}
@@ -1022,34 +1029,20 @@ const estimatedSheetRollPalletLoadKg =
 
                 <SectionCard title="Project Details">
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Project Name">
+                    <Field label="Project Name *">
                       <Input
                         value={form.customer.projectName}
                         onChange={(e) => update("customer.projectName", e.target.value)}
                       />
                     </Field>
-                    <Field label="Product / SKU Reference">
+
+                    <Field label="Customer Product Code (if applicable)">
                       <Input
                         value={form.customer.customerSkuRef}
                         onChange={(e) => update("customer.customerSkuRef", e.target.value)}
                       />
                     </Field>
-                    <Field label="Project Type">
-                      <Select
-                        value={form.customer.projectType}
-                        onValueChange={(v) => update("customer.projectType", v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="New product">New product</SelectItem>
-                          <SelectItem value="Product modification">Product modification</SelectItem>
-                          <SelectItem value="Decoration change">Decoration change</SelectItem>
-                          <SelectItem value="Packaging change">Packaging change</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </Field>
+
                     <Field label="Target Launch Date">
                       <Input
                         type="date"
@@ -1057,24 +1050,21 @@ const estimatedSheetRollPalletLoadKg =
                         onChange={(e) => update("customer.targetLaunchDate", e.target.value)}
                       />
                     </Field>
-                   <Field label="Forecast Annual Volume *">
+
+                    <Field label="Forecast Annual Volume *">
                       <Input
                         value={form.customer.forecastAnnualVolume}
                         onChange={(e) => update("customer.forecastAnnualVolume", e.target.value)}
                       />
                     </Field>
-                    <Field label="MOQ">
-                      <Input
-                        value={form.customer.moq}
-                        onChange={(e) => update("customer.moq", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Target Selling Price">
+
+                    <Field label="Target Selling Price *">
                       <Input
                         value={form.customer.targetSellingPrice}
                         onChange={(e) => update("customer.targetSellingPrice", e.target.value)}
                       />
                     </Field>
+
                     <Field label="Currency">
                       <Select
                         value={form.customer.currency}
@@ -1092,6 +1082,7 @@ const estimatedSheetRollPalletLoadKg =
                       </Select>
                     </Field>
                   </div>
+
                   <Field label="Customer Notes">
                     <Textarea
                       value={form.customer.customerNotes}
@@ -1107,7 +1098,7 @@ const estimatedSheetRollPalletLoadKg =
               <div className="space-y-6">
                 <SectionCard title="Product Identity">
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Product Type">
+                    <Field label="Product Type *">
                       <Select
                         value={form.product.productType}
                         onValueChange={(v) => update("product.productType", v)}
@@ -1135,27 +1126,28 @@ const estimatedSheetRollPalletLoadKg =
                     )}
                   </div>
                 </SectionCard>
-<SectionCard title="Product Picture">
-  <div className="space-y-4">
-    <Input
-      type="file"
-      accept="image/*"
-      onChange={(e) => handleThumbnailChange(e.target.files?.[0])}
-    />
 
-    {form.product.productThumbnailPreview ? (
-      <img
-        src={form.product.productThumbnailPreview}
-        alt="Product preview"
-        className="w-32 h-32 object-cover rounded-xl border"
-      />
-    ) : (
-      <div className="text-sm text-muted-foreground">
-        No product picture uploaded yet.
-      </div>
-    )}
-  </div>
-</SectionCard>
+                <SectionCard title="Product Picture">
+                  <div className="space-y-4">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleThumbnailChange(e.target.files?.[0])}
+                    />
+
+                    {form.product.productThumbnailPreview ? (
+                      <img
+                        src={form.product.productThumbnailPreview}
+                        alt="Product preview"
+                        className="w-32 h-32 object-cover rounded-xl border"
+                      />
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        No product picture uploaded yet.
+                      </div>
+                    )}
+                  </div>
+                </SectionCard>
 
                 <SectionCard title="Sample Availability">
                   <div className="grid md:grid-cols-3 gap-4">
@@ -1179,9 +1171,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Field label="Internal Sample Code">
                         <Input
                           value={form.product.internalSampleCode}
-                          onChange={(e) =>
-                            update("product.internalSampleCode", e.target.value)
-                          }
+                          onChange={(e) => update("product.internalSampleCode", e.target.value)}
                         />
                       </Field>
                     )}
@@ -1201,7 +1191,7 @@ const estimatedSheetRollPalletLoadKg =
                   <>
                     <SectionCard title="Material & Dimensions">
                       <div className="grid md:grid-cols-2 gap-4">
-                        <Field label="Product Material">
+                        <Field label="Product Material *">
                           <Select
                             value={form.product.productMaterial}
                             onValueChange={(v) => update("product.productMaterial", v)}
@@ -1229,13 +1219,6 @@ const estimatedSheetRollPalletLoadKg =
                           </Field>
                         )}
 
-                        <Field label="Material Grade">
-                          <Input
-                            value={form.product.materialGrade}
-                            onChange={(e) => update("product.materialGrade", e.target.value)}
-                          />
-                        </Field>
-
                         <Field label="Product Weight (g)">
                           <Input
                             value={form.product.productWeightG}
@@ -1250,13 +1233,6 @@ const estimatedSheetRollPalletLoadKg =
                           />
                         </Field>
 
-                        <Field label="Bottom Diameter (mm)">
-                          <Input
-                            value={form.product.bottomDiameterMm}
-                            onChange={(e) => update("product.bottomDiameterMm", e.target.value)}
-                          />
-                        </Field>
-
                         <Field label="Height (mm)">
                           <Input
                             value={form.product.productHeightMm}
@@ -1268,15 +1244,6 @@ const estimatedSheetRollPalletLoadKg =
                           <Input
                             value={form.product.productColor}
                             onChange={(e) => update("product.productColor", e.target.value)}
-                          />
-                        </Field>
-
-                        <Field label="Masterbatch Details">
-                          <Input
-                            value={form.product.masterbatchDetails}
-                            onChange={(e) =>
-                              update("product.masterbatchDetails", e.target.value)
-                            }
                           />
                         </Field>
                       </div>
@@ -1326,7 +1293,7 @@ const estimatedSheetRollPalletLoadKg =
                 {form.product.productType === "Sheet Roll" && (
                   <SectionCard title="Sheet Roll Specifications">
                     <div className="grid md:grid-cols-2 gap-4">
-                      <Field label="Sheet Material">
+                      <Field label="Sheet Material *">
                         <Select
                           value={form.product.sheetMaterial}
                           onValueChange={(v) => update("product.sheetMaterial", v)}
@@ -1344,13 +1311,13 @@ const estimatedSheetRollPalletLoadKg =
 
                       {form.product.sheetMaterial === "PS" && (
                         <>
-                          <Field label="% HIPS">
+                          <Field label="% HIPS *">
                             <Input
                               value={form.product.hipsPct}
                               onChange={(e) => update("product.hipsPct", e.target.value)}
                             />
                           </Field>
-                          <Field label="% GPPS">
+                          <Field label="% GPPS *">
                             <Input
                               value={form.product.gppsPct}
                               onChange={(e) => update("product.gppsPct", e.target.value)}
@@ -1361,13 +1328,13 @@ const estimatedSheetRollPalletLoadKg =
 
                       {form.product.sheetMaterial === "PET" && (
                         <>
-                          <Field label="% rPET">
+                          <Field label="% rPET *">
                             <Input
                               value={form.product.rpetPct}
                               onChange={(e) => update("product.rpetPct", e.target.value)}
                             />
                           </Field>
-                          <Field label="% Virgin PET">
+                          <Field label="% Virgin PET *">
                             <Input
                               value={form.product.virginPetPct}
                               onChange={(e) => update("product.virginPetPct", e.target.value)}
@@ -1376,7 +1343,7 @@ const estimatedSheetRollPalletLoadKg =
                         </>
                       )}
 
-                      <Field label="Sheet Width (mm)">
+                      <Field label="Sheet Width (mm) *">
                         <Input
                           value={form.product.sheetWidthMm}
                           onChange={(e) => update("product.sheetWidthMm", e.target.value)}
@@ -1401,12 +1368,10 @@ const estimatedSheetRollPalletLoadKg =
                         />
                       </Field>
 
-                      <Field label="Sheet Thickness (micron)">
+                      <Field label="Sheet Thickness (micron) *">
                         <Input
                           value={form.product.sheetThicknessMicron}
-                          onChange={(e) =>
-                            update("product.sheetThicknessMicron", e.target.value)
-                          }
+                          onChange={(e) => update("product.sheetThicknessMicron", e.target.value)}
                         />
                       </Field>
 
@@ -1414,10 +1379,7 @@ const estimatedSheetRollPalletLoadKg =
                         <Input
                           value={form.product.sheetThicknessTolerancePlusMicron}
                           onChange={(e) =>
-                            update(
-                              "product.sheetThicknessTolerancePlusMicron",
-                              e.target.value
-                            )
+                            update("product.sheetThicknessTolerancePlusMicron", e.target.value)
                           }
                         />
                       </Field>
@@ -1426,43 +1388,40 @@ const estimatedSheetRollPalletLoadKg =
                         <Input
                           value={form.product.sheetThicknessToleranceMinusMicron}
                           onChange={(e) =>
-                            update(
-                              "product.sheetThicknessToleranceMinusMicron",
-                              e.target.value
-                            )
+                            update("product.sheetThicknessToleranceMinusMicron", e.target.value)
                           }
                         />
                       </Field>
 
-                      <Field label="Roll Weight (kg)">
+                      <Field label="Roll Weight (kg) *">
                         <Input
                           value={form.product.rollWeightKg}
                           onChange={(e) => update("product.rollWeightKg", e.target.value)}
                         />
                       </Field>
 
-                      <Field label="Roll Diameter (mm)">
+                      <Field label="Roll Diameter (mm) *">
                         <Input
                           value={form.product.rollDiameterMm}
                           onChange={(e) => update("product.rollDiameterMm", e.target.value)}
                         />
                       </Field>
 
-                      <Field label="Core Diameter (mm)">
+                      <Field label="Core Diameter (mm) *">
                         <Input
                           value={form.product.coreDiameterMm}
                           onChange={(e) => update("product.coreDiameterMm", e.target.value)}
                         />
                       </Field>
 
-                      <Field label="Core Material">
+                      <Field label="Core Material *">
                         <Input
                           value={form.product.coreMaterial}
                           onChange={(e) => update("product.coreMaterial", e.target.value)}
                         />
                       </Field>
 
-                      <Field label="Sheet Layer Colors">
+                      <Field label="Sheet Layer Colors *">
                         <Select
                           value={form.product.sheetLayerColors}
                           onValueChange={(v) => update("product.sheetLayerColors", v)}
@@ -1491,17 +1450,13 @@ const estimatedSheetRollPalletLoadKg =
                           <Field label="Layer A Color / Pantone">
                             <Input
                               value={form.product.layerAColor}
-                              onChange={(e) =>
-                                update("product.layerAColor", e.target.value)
-                              }
+                              onChange={(e) => update("product.layerAColor", e.target.value)}
                             />
                           </Field>
                           <Field label="Layer B Color / Pantone">
                             <Input
                               value={form.product.layerBColor}
-                              onChange={(e) =>
-                                update("product.layerBColor", e.target.value)
-                              }
+                              onChange={(e) => update("product.layerBColor", e.target.value)}
                             />
                           </Field>
                         </>
@@ -1574,10 +1529,7 @@ const estimatedSheetRollPalletLoadKg =
                         <Input
                           value={form.decoration.dryOffset.printCoveragePct}
                           onChange={(e) =>
-                            update(
-                              "decoration.dryOffset.printCoveragePct",
-                              e.target.value
-                            )
+                            update("decoration.dryOffset.printCoveragePct", e.target.value)
                           }
                         />
                       </Field>
@@ -1593,10 +1545,7 @@ const estimatedSheetRollPalletLoadKg =
                         <Input
                           value={form.decoration.dryOffset.printArtworkFormat}
                           onChange={(e) =>
-                            update(
-                              "decoration.dryOffset.printArtworkFormat",
-                              e.target.value
-                            )
+                            update("decoration.dryOffset.printArtworkFormat", e.target.value)
                           }
                         />
                       </Field>
@@ -1606,10 +1555,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Textarea
                         value={form.decoration.dryOffset.printAreaDescription}
                         onChange={(e) =>
-                          update(
-                            "decoration.dryOffset.printAreaDescription",
-                            e.target.value
-                          )
+                          update("decoration.dryOffset.printAreaDescription", e.target.value)
                         }
                         rows={4}
                       />
@@ -1618,10 +1564,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Textarea
                         value={form.decoration.dryOffset.printRegistrationNotes}
                         onChange={(e) =>
-                          update(
-                            "decoration.dryOffset.printRegistrationNotes",
-                            e.target.value
-                          )
+                          update("decoration.dryOffset.printRegistrationNotes", e.target.value)
                         }
                         rows={4}
                       />
@@ -1630,10 +1573,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Textarea
                         value={form.decoration.dryOffset.printMaterialNotes}
                         onChange={(e) =>
-                          update(
-                            "decoration.dryOffset.printMaterialNotes",
-                            e.target.value
-                          )
+                          update("decoration.dryOffset.printMaterialNotes", e.target.value)
                         }
                         rows={4}
                       />
@@ -1642,10 +1582,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Textarea
                         value={form.decoration.dryOffset.printAdditionalNotes}
                         onChange={(e) =>
-                          update(
-                            "decoration.dryOffset.printAdditionalNotes",
-                            e.target.value
-                          )
+                          update("decoration.dryOffset.printAdditionalNotes", e.target.value)
                         }
                         rows={4}
                       />
@@ -1666,10 +1603,7 @@ const estimatedSheetRollPalletLoadKg =
                         <Input
                           value={form.decoration.shrinkSleeve.sleeveMaterial}
                           onChange={(e) =>
-                            update(
-                              "decoration.shrinkSleeve.sleeveMaterial",
-                              e.target.value
-                            )
+                            update("decoration.shrinkSleeve.sleeveMaterial", e.target.value)
                           }
                         />
                       </Field>
@@ -1699,10 +1633,7 @@ const estimatedSheetRollPalletLoadKg =
                         <Input
                           value={form.decoration.shrinkSleeve.sleeveHeightMm}
                           onChange={(e) =>
-                            update(
-                              "decoration.shrinkSleeve.sleeveHeightMm",
-                              e.target.value
-                            )
+                            update("decoration.shrinkSleeve.sleeveHeightMm", e.target.value)
                           }
                         />
                       </Field>
@@ -1710,10 +1641,7 @@ const estimatedSheetRollPalletLoadKg =
                         <Input
                           value={form.decoration.shrinkSleeve.sleeveShrinkRatio}
                           onChange={(e) =>
-                            update(
-                              "decoration.shrinkSleeve.sleeveShrinkRatio",
-                              e.target.value
-                            )
+                            update("decoration.shrinkSleeve.sleeveShrinkRatio", e.target.value)
                           }
                         />
                       </Field>
@@ -1752,10 +1680,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Textarea
                         value={form.decoration.shrinkSleeve.sleeveSeamNotes}
                         onChange={(e) =>
-                          update(
-                            "decoration.shrinkSleeve.sleeveSeamNotes",
-                            e.target.value
-                          )
+                          update("decoration.shrinkSleeve.sleeveSeamNotes", e.target.value)
                         }
                         rows={4}
                       />
@@ -1827,9 +1752,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Field label="Blank Wrapped Around Plastic Cup?">
                         <YesNoSelect
                           value={form.decoration.hybridCup.blankWrapped}
-                          onChange={(v) =>
-                            update("decoration.hybridCup.blankWrapped", v)
-                          }
+                          onChange={(v) => update("decoration.hybridCup.blankWrapped", v)}
                         />
                       </Field>
 
@@ -1919,9 +1842,7 @@ const estimatedSheetRollPalletLoadKg =
                     <FileUploadBox
                       title="Wrap Artwork Upload"
                       files={form.attachments.hybridWrapArtworkFiles}
-                      onAdd={(files) =>
-                        handleAttachmentAdd("hybridWrapArtworkFiles", files)
-                      }
+                      onAdd={(files) => handleAttachmentAdd("hybridWrapArtworkFiles", files)}
                     />
 
                     {form.decoration.hybridCup.paperBottomRequired === "Yes" && (
@@ -1949,18 +1870,16 @@ const estimatedSheetRollPalletLoadKg =
                       </Field>
                       <Field label="Label Dimensions">
                         <Input
-                          value={form.decoration.label.labelDimensions}
+                          value={form.decoration.label.labelDimensionsMm}
                           onChange={(e) =>
-                            update("decoration.label.labelDimensions", e.target.value)
+                            update("decoration.label.labelDimensionsMm", e.target.value)
                           }
                         />
                       </Field>
                       <Field label="Label Type">
                         <Input
                           value={form.decoration.label.labelType}
-                          onChange={(e) =>
-                            update("decoration.label.labelType", e.target.value)
-                          }
+                          onChange={(e) => update("decoration.label.labelType", e.target.value)}
                         />
                       </Field>
                       <Field label="Label Artwork Available?">
@@ -1977,10 +1896,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Textarea
                         value={form.decoration.label.labelAdhesiveNotes}
                         onChange={(e) =>
-                          update(
-                            "decoration.label.labelAdhesiveNotes",
-                            e.target.value
-                          )
+                          update("decoration.label.labelAdhesiveNotes", e.target.value)
                         }
                         rows={4}
                       />
@@ -1998,10 +1914,7 @@ const estimatedSheetRollPalletLoadKg =
                       <Textarea
                         value={form.decoration.label.labelAdditionalNotes}
                         onChange={(e) =>
-                          update(
-                            "decoration.label.labelAdditionalNotes",
-                            e.target.value
-                          )
+                          update("decoration.label.labelAdditionalNotes", e.target.value)
                         }
                         rows={4}
                       />
@@ -2018,18 +1931,126 @@ const estimatedSheetRollPalletLoadKg =
             )}
 
             {currentStep === 3 && form.product.productType === "Sheet Roll" && (
-  <div className="space-y-6">
-    <SectionCard title="Sheet Roll Pallet Packaging">
-      ...
-    </SectionCard>
-  </div>
-)}
+              <div className="space-y-6">
+                <SectionCard title="Sheet Packaging">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <Field label="Core Size *">
+                      <Select
+                        value={form.packaging.sheet.coreSize}
+                        onValueChange={(v) => update("packaging.sheet.coreSize", v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select core size" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3 inch">3 inch</SelectItem>
+                          <SelectItem value="6 inch">6 inch</SelectItem>
+                          <SelectItem value="8 inch">8 inch</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field label="Roll Weight (kg)">
+                      <Input value={form.product.rollWeightKg} disabled />
+                    </Field>
+
+                    <Field label="Rolls per Pallet *">
+                      <Input
+                        value={form.packaging.sheet.rollsPerPallet}
+                        onChange={(e) => update("packaging.sheet.rollsPerPallet", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Pallet Type *">
+                      <Select
+                        value={form.packaging.sheet.palletType}
+                        onValueChange={(v) => update("packaging.sheet.palletType", v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select pallet type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="UK pallet">UK pallet</SelectItem>
+                          <SelectItem value="EURO pallet">EURO pallet</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field label="Strap Length per Pallet (m)">
+                      <Input
+                        value={form.packaging.sheet.strapLengthPerPalletM}
+                        onChange={(e) =>
+                          update("packaging.sheet.strapLengthPerPalletM", e.target.value)
+                        }
+                      />
+                    </Field>
+
+                    <Field label="Foam Length per Pallet (m)">
+                      <Input
+                        value={form.packaging.sheet.foamLengthPerPalletM}
+                        onChange={(e) =>
+                          update("packaging.sheet.foamLengthPerPalletM", e.target.value)
+                        }
+                      />
+                    </Field>
+
+                    <Field label="Labels per Roll">
+                      <Input
+                        value={form.packaging.sheet.labelsPerRoll}
+                        onChange={(e) => update("packaging.sheet.labelsPerRoll", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Labels per Pallet">
+                      <Input
+                        value={form.packaging.sheet.labelsPerPallet}
+                        onChange={(e) =>
+                          update("packaging.sheet.labelsPerPallet", e.target.value)
+                        }
+                      />
+                    </Field>
+
+                    <Field label="Stretch Weight per Pallet (kg)">
+                      <Input
+                        value={form.packaging.sheet.stretchWeightPerPalletKg}
+                        onChange={(e) =>
+                          update("packaging.sheet.stretchWeightPerPalletKg", e.target.value)
+                        }
+                      />
+                    </Field>
+
+                    <Field label="Operators per Pallet">
+                      <Input
+                        value={form.packaging.sheet.operatorsPerPallet}
+                        onChange={(e) =>
+                          update("packaging.sheet.operatorsPerPallet", e.target.value)
+                        }
+                      />
+                    </Field>
+                  </div>
+
+                  <div
+                    className={`rounded-xl border px-3 py-3 text-sm ${
+                      estimatedSheetRollPalletLoadKg > 1000
+                        ? "bg-red-50 border-red-200 text-red-700"
+                        : "bg-green-50 border-green-200 text-green-700"
+                    }`}
+                  >
+                    Estimated pallet load = {estimatedSheetRollPalletLoadKg.toFixed(2)} kg
+                    {estimatedSheetRollPalletLoadKg > 1000
+                      ? " — Above 1 ton"
+                      : " — Within 1 ton"}
+                  </div>
+                </SectionCard>
+              </div>
+            )}
 
             {currentStep === 3 && form.product.productType !== "Sheet Roll" && (
               <div className="space-y-6">
                 <SectionCard title="Primary Packaging">
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Pieces per Stack">
+                    <Field label="Pieces per Stack *">
                       <Input
                         value={form.packaging.primary.pcsPerStack}
                         onChange={(e) =>
@@ -2037,7 +2058,7 @@ const estimatedSheetRollPalletLoadKg =
                         }
                       />
                     </Field>
-                    <Field label="Stacks per Bag / Sleeve">
+                    <Field label="Stacks per Bag *">
                       <Input
                         value={form.packaging.primary.stacksPerBag}
                         onChange={(e) =>
@@ -2069,14 +2090,11 @@ const estimatedSheetRollPalletLoadKg =
                         }
                       />
                     </Field>
-                  <Field label="Bag / Sleeve Dimensions (mm)">
+                    <Field label="Bag / Sleeve Dimensions (mm)">
                       <Input
-                        value={form.packaging.primary.bagSleeveDimensions}
+                        value={form.packaging.primary.bagSleeveDimensionsMm}
                         onChange={(e) =>
-                          update(
-                            "packaging.primary.bagSleeveDimensions",
-                            e.target.value
-                          )
+                          update("packaging.primary.bagSleeveDimensionsMm", e.target.value)
                         }
                       />
                     </Field>
@@ -2105,10 +2123,7 @@ const estimatedSheetRollPalletLoadKg =
                     <Textarea
                       value={form.packaging.primary.primaryPackagingNotes}
                       onChange={(e) =>
-                        update(
-                          "packaging.primary.primaryPackagingNotes",
-                          e.target.value
-                        )
+                        update("packaging.primary.primaryPackagingNotes", e.target.value)
                       }
                       rows={4}
                     />
@@ -2125,7 +2140,7 @@ const estimatedSheetRollPalletLoadKg =
 
                 <SectionCard title="Secondary Packaging">
                   <div className="grid md:grid-cols-2 gap-4">
-                    <Field label="Bags / Sleeves per Carton">
+                    <Field label="Bags / Sleeves per Carton *">
                       <Input
                         value={form.packaging.secondary.bagsPerCarton}
                         onChange={(e) =>
@@ -2133,7 +2148,7 @@ const estimatedSheetRollPalletLoadKg =
                         }
                       />
                     </Field>
-                    <Field label="Carton Type">
+                    <Field label="Carton Type *">
                       <Select
                         value={form.packaging.secondary.cartonType}
                         onValueChange={(v) =>
@@ -2151,10 +2166,10 @@ const estimatedSheetRollPalletLoadKg =
                     </Field>
                     <Field label="Carton Internal Dimensions (mm)">
                       <Input
-                        value={form.packaging.secondary.cartonInternalDimensions}
+                        value={form.packaging.secondary.cartonInternalDimensionsMm}
                         onChange={(e) =>
                           update(
-                            "packaging.secondary.cartonInternalDimensions",
+                            "packaging.secondary.cartonInternalDimensionsMm",
                             e.target.value
                           )
                         }
@@ -2162,10 +2177,10 @@ const estimatedSheetRollPalletLoadKg =
                     </Field>
                     <Field label="Carton External Dimensions (mm)">
                       <Input
-                        value={form.packaging.secondary.cartonExternalDimensions}
+                        value={form.packaging.secondary.cartonExternalDimensionsMm}
                         onChange={(e) =>
                           update(
-                            "packaging.secondary.cartonExternalDimensions",
+                            "packaging.secondary.cartonExternalDimensionsMm",
                             e.target.value
                           )
                         }
@@ -2193,10 +2208,7 @@ const estimatedSheetRollPalletLoadKg =
                     <Textarea
                       value={form.packaging.secondary.cartonPackagingNotes}
                       onChange={(e) =>
-                        update(
-                          "packaging.secondary.cartonPackagingNotes",
-                          e.target.value
-                        )
+                        update("packaging.secondary.cartonPackagingNotes", e.target.value)
                       }
                       rows={4}
                     />
@@ -2217,237 +2229,242 @@ const estimatedSheetRollPalletLoadKg =
 
                   <TabsContent value="label">
                     <SectionCard title="Label Instructions">
-                        <div className="flex items-center gap-3 rounded-xl border p-3">
-  <Checkbox
-    checked={form.decoration.label.useStandardLabelSpecs}
-    onCheckedChange={(checked) =>
-      update("decoration.label.useStandardLabelSpecs", Boolean(checked))
-    }
-  />
-  <Label>Use standard labels specs</Label>
-</div>
-                      {!form.decoration.label.useStandardLabelSpecs && (
-  <>
-    <div className="grid md:grid-cols-2 gap-4">
-                        <Field label="Carton Label Required?">
-                          <YesNoSelect
-                            value={form.packaging.labelInstructions.cartonLabelRequired}
-                            onChange={(v) =>
-                              update(
-                                "packaging.labelInstructions.cartonLabelRequired",
-                                v
-                              )
-                            }
-                          />
-                        </Field>
-                        <Field label="Label Dimensions (mm)">
-                          <Input
-                            value={form.packaging.labelInstructions.cartonLabelDimensions}
-                            onChange={(e) =>
-                              update(
-                                "packaging.labelInstructions.cartonLabelDimensions",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </Field>
-                        <Field label="Barcode Required?">
-                          <YesNoSelect
-                            value={form.packaging.labelInstructions.barcodeRequired}
-                            onChange={(v) =>
-                              update("packaging.labelInstructions.barcodeRequired", v)
-                            }
-                          />
-                        </Field>
-                        <Field label="Barcode Type">
-                          <Input
-                            value={form.packaging.labelInstructions.barcodeType}
-                            onChange={(e) =>
-                              update(
-                                "packaging.labelInstructions.barcodeType",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </Field>
-                        <Field label="Label Artwork Provided?">
-                          <YesNoSelect
-                            value={
-                              form.packaging.labelInstructions.cartonLabelArtworkProvided
-                            }
-                            onChange={(v) =>
-                              update(
-                                "packaging.labelInstructions.cartonLabelArtworkProvided",
-                                v
-                              )
-                            }
-                          />
-                        </Field>
+                      <div className="flex items-center gap-3 rounded-xl border p-3">
+                        <Checkbox
+                          checked={form.decoration.label.useStandardLabelSpecs}
+                          onCheckedChange={(checked) =>
+                            update("decoration.label.useStandardLabelSpecs", Boolean(checked))
+                          }
+                        />
+                        <Label>Use standard labels specs</Label>
                       </div>
 
-                      <div className="space-y-3">
-                        <Label>Required Label Data</Label>
-                        <div className="grid md:grid-cols-2 gap-3">
-                          {[
-                            ["Product Code", "labelFieldProductCode"],
-                            ["Batch No.", "labelFieldBatchNo"],
-                            ["Production Date", "labelFieldProdDate"],
-                            ["Expiry Date", "labelFieldExpiryDate"],
-                            ["Quantity", "labelFieldQuantity"],
-                            ["Customer Code", "labelFieldCustomerCode"],
-                          ].map(([labelText, key]) => (
-                            <div key={key} className="flex items-center gap-3 rounded-xl border p-3">
-                              <Checkbox
-                                checked={form.packaging.labelInstructions[key]}
-                                onCheckedChange={(checked) =>
+                      {!form.decoration.label.useStandardLabelSpecs && (
+                        <>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <Field label="Carton Label Required?">
+                              <YesNoSelect
+                                value={form.packaging.labelInstructions.cartonLabelRequired}
+                                onChange={(v) =>
                                   update(
-                                    `packaging.labelInstructions.${key}`,
-                                    Boolean(checked)
+                                    "packaging.labelInstructions.cartonLabelRequired",
+                                    v
                                   )
                                 }
                               />
-                              <Label>{labelText}</Label>
-                            </div>
-                          ))}
-                        </div>
+                            </Field>
+                            <Field label="Label Dimensions (mm)">
+                              <Input
+                                value={form.packaging.labelInstructions.cartonLabelDimensionsMm}
+                                onChange={(e) =>
+                                  update(
+                                    "packaging.labelInstructions.cartonLabelDimensionsMm",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </Field>
+                            <Field label="Barcode Required?">
+                              <YesNoSelect
+                                value={form.packaging.labelInstructions.barcodeRequired}
+                                onChange={(v) =>
+                                  update("packaging.labelInstructions.barcodeRequired", v)
+                                }
+                              />
+                            </Field>
+                            <Field label="Barcode Type">
+                              <Input
+                                value={form.packaging.labelInstructions.barcodeType}
+                                onChange={(e) =>
+                                  update(
+                                    "packaging.labelInstructions.barcodeType",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </Field>
+                            <Field label="Label Artwork Provided?">
+                              <YesNoSelect
+                                value={
+                                  form.packaging.labelInstructions.cartonLabelArtworkProvided
+                                }
+                                onChange={(v) =>
+                                  update(
+                                    "packaging.labelInstructions.cartonLabelArtworkProvided",
+                                    v
+                                  )
+                                }
+                              />
+                            </Field>
+                          </div>
 
-                        <Field label="Other Label Data">
-                          <Input
-                            value={form.packaging.labelInstructions.labelFieldOther}
-                            onChange={(e) =>
-                              update(
-                                "packaging.labelInstructions.labelFieldOther",
-                                e.target.value
-                              )
+                          <div className="space-y-3">
+                            <Label>Required Label Data</Label>
+                            <div className="grid md:grid-cols-2 gap-3">
+                              {[
+                                ["Product Code", "labelFieldProductCode"],
+                                ["Batch No.", "labelFieldBatchNo"],
+                                ["Production Date", "labelFieldProdDate"],
+                                ["Expiry Date", "labelFieldExpiryDate"],
+                                ["Quantity", "labelFieldQuantity"],
+                                ["Customer Code", "labelFieldCustomerCode"],
+                              ].map(([labelText, key]) => (
+                                <div
+                                  key={key}
+                                  className="flex items-center gap-3 rounded-xl border p-3"
+                                >
+                                  <Checkbox
+                                    checked={form.packaging.labelInstructions[key]}
+                                    onCheckedChange={(checked) =>
+                                      update(
+                                        `packaging.labelInstructions.${key}`,
+                                        Boolean(checked)
+                                      )
+                                    }
+                                  />
+                                  <Label>{labelText}</Label>
+                                </div>
+                              ))}
+                            </div>
+
+                            <Field label="Other Label Data">
+                              <Input
+                                value={form.packaging.labelInstructions.labelFieldOther}
+                                onChange={(e) =>
+                                  update(
+                                    "packaging.labelInstructions.labelFieldOther",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </Field>
+                          </div>
+
+                          <Field label="Special Instructions">
+                            <Textarea
+                              value={form.packaging.labelInstructions.cartonLabelNotes}
+                              onChange={(e) =>
+                                update(
+                                  "packaging.labelInstructions.cartonLabelNotes",
+                                  e.target.value
+                                )
+                              }
+                              rows={4}
+                            />
+                          </Field>
+
+                          <FileUploadBox
+                            title="Carton Label Artwork Upload"
+                            files={form.attachments.cartonLabelArtworkFiles}
+                            onAdd={(files) =>
+                              handleAttachmentAdd("cartonLabelArtworkFiles", files)
                             }
                           />
-                        </Field>
-                      </div>
-
-                      <Field label="Special Instructions">
-                        <Textarea
-                          value={form.packaging.labelInstructions.cartonLabelNotes}
-                          onChange={(e) =>
-                            update(
-                              "packaging.labelInstructions.cartonLabelNotes",
-                              e.target.value
-                            )
-                          }
-                          rows={4}
-                        />
-                      </Field>
-
-                      <FileUploadBox
-                        title="Carton Label Artwork Upload"
-                        files={form.attachments.cartonLabelArtworkFiles}
-                        onAdd={(files) =>
-                          handleAttachmentAdd("cartonLabelArtworkFiles", files)
-                        }
-                      />
-                          </>
-)}
+                        </>
+                      )}
                     </SectionCard>
                   </TabsContent>
 
                   <TabsContent value="pallet">
                     <SectionCard title="Pallet Instructions">
-                        <div className="flex items-center gap-3 rounded-xl border p-3">
-  <Checkbox
-    checked={form.packaging.pallet.noPalletNeeded}
-    onCheckedChange={(checked) =>
-      update("packaging.pallet.noPalletNeeded", Boolean(checked))
-    }
-  />
-  <Label>No pallet needed</Label>
-</div>
-                      {!form.packaging.pallet.noPalletNeeded && (
-  <>
-    <div className="grid md:grid-cols-2 gap-4">
-                        <Field label="Pallet Type">
-                          <Input
-                            value={form.packaging.pallet.palletType}
-                            onChange={(e) =>
-                              update("packaging.pallet.palletType", e.target.value)
-                            }
-                          />
-                        </Field>
-                        <Field label="Pallet Dimensions (mm)">
-                          <Input
-                            value={form.packaging.pallet.palletDimensions}
-                            onChange={(e) =>
-                              update(
-                                "packaging.pallet.palletDimensions",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </Field>
-                        <Field label="Returnable Pallet?">
-                          <YesNoSelect
-                            value={form.packaging.pallet.returnablePallet}
-                            onChange={(v) =>
-                              update("packaging.pallet.returnablePallet", v)
-                            }
-                          />
-                        </Field>
-                        {form.packaging.pallet.returnablePallet === "Yes" && (
-                          <Field label="Number of Returns">
-                            <Input
-                              value={form.packaging.pallet.palletReturnCount}
-                              onChange={(e) =>
-                                update(
-                                  "packaging.pallet.palletReturnCount",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </Field>
-                        )}
-                        <Field label="Cartons per Pallet">
-                          <Input
-                            value={form.packaging.pallet.cartonsPerPallet}
-                            onChange={(e) =>
-                              update(
-                                "packaging.pallet.cartonsPerPallet",
-                                e.target.value
-                              )
-                            }
-                          />
-                        </Field>
-                        <Field label="Stretch Wrap Required?">
-                          <YesNoSelect
-                            value={form.packaging.pallet.stretchWrapRequired}
-                            onChange={(v) =>
-                              update("packaging.pallet.stretchWrapRequired", v)
-                            }
-                          />
-                        </Field>
-                        {form.packaging.pallet.stretchWrapRequired === "Yes" && (
-                          <Field label="Stretch Wrap kg per Pallet">
-                            <Input
-                              value={form.packaging.pallet.stretchWrapKgPerPallet}
-                              onChange={(e) =>
-                                update(
-                                  "packaging.pallet.stretchWrapKgPerPallet",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </Field>
-                        )}
+                      <div className="flex items-center gap-3 rounded-xl border p-3">
+                        <Checkbox
+                          checked={form.packaging.pallet.noPalletNeeded}
+                          onCheckedChange={(checked) =>
+                            update("packaging.pallet.noPalletNeeded", Boolean(checked))
+                          }
+                        />
+                        <Label>No pallet needed</Label>
                       </div>
 
-                      <Field label="Special Instructions">
-                        <Textarea
-                          value={form.packaging.pallet.palletNotes}
-                          onChange={(e) =>
-                            update("packaging.pallet.palletNotes", e.target.value)
-                          }
-                          rows={4}
-                        />
-                      </Field>
-                          </>
-)}
+                      {!form.packaging.pallet.noPalletNeeded && (
+                        <>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <Field label="Pallet Type *">
+                              <Input
+                                value={form.packaging.pallet.palletType}
+                                onChange={(e) =>
+                                  update("packaging.pallet.palletType", e.target.value)
+                                }
+                              />
+                            </Field>
+                            <Field label="Pallet Dimensions (mm)">
+                              <Input
+                                value={form.packaging.pallet.palletDimensionsMm}
+                                onChange={(e) =>
+                                  update(
+                                    "packaging.pallet.palletDimensionsMm",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </Field>
+                            <Field label="Returnable Pallet? *">
+                              <YesNoSelect
+                                value={form.packaging.pallet.returnablePallet}
+                                onChange={(v) =>
+                                  update("packaging.pallet.returnablePallet", v)
+                                }
+                              />
+                            </Field>
+                            {form.packaging.pallet.returnablePallet === "Yes" && (
+                              <Field label="Number of Returns">
+                                <Input
+                                  value={form.packaging.pallet.palletReturnCount}
+                                  onChange={(e) =>
+                                    update(
+                                      "packaging.pallet.palletReturnCount",
+                                      e.target.value
+                                    )
+                                  }
+                                />
+                              </Field>
+                            )}
+                            <Field label="Cartons per Pallet *">
+                              <Input
+                                value={form.packaging.pallet.cartonsPerPallet}
+                                onChange={(e) =>
+                                  update(
+                                    "packaging.pallet.cartonsPerPallet",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </Field>
+                            <Field label="Stretch Wrap Required? *">
+                              <YesNoSelect
+                                value={form.packaging.pallet.stretchWrapRequired}
+                                onChange={(v) =>
+                                  update("packaging.pallet.stretchWrapRequired", v)
+                                }
+                              />
+                            </Field>
+                            {form.packaging.pallet.stretchWrapRequired === "Yes" && (
+                              <Field label="Stretch Wrap kg per Pallet">
+                                <Input
+                                  value={form.packaging.pallet.stretchWrapKgPerPallet}
+                                  onChange={(e) =>
+                                    update(
+                                      "packaging.pallet.stretchWrapKgPerPallet",
+                                      e.target.value
+                                    )
+                                  }
+                                />
+                              </Field>
+                            )}
+                          </div>
+
+                          <Field label="Special Instructions">
+                            <Textarea
+                              value={form.packaging.pallet.palletNotes}
+                              onChange={(e) =>
+                                update("packaging.pallet.palletNotes", e.target.value)
+                              }
+                              rows={4}
+                            />
+                          </Field>
+                        </>
+                      )}
                     </SectionCard>
                   </TabsContent>
                 </Tabs>
@@ -2455,171 +2472,171 @@ const estimatedSheetRollPalletLoadKg =
             )}
 
             {currentStep === 4 && form.product.productType === "Sheet Roll" && (
-  <SectionCard title="Sheet Roll Delivery Instructions">
-    <div className="grid md:grid-cols-2 gap-4">
-      <Field label="Delivery Location">
-        <Input
-          value={form.delivery.deliveryLocationConfirm}
-          onChange={(e) =>
-            update("delivery.deliveryLocationConfirm", e.target.value)
-          }
-          placeholder={form.customer.deliveryLocation || "Enter delivery location"}
-        />
-      </Field>
+              <SectionCard title="Sheet Roll Delivery Instructions">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <Field label="Delivery Location *">
+                    <Input
+                      value={form.delivery.deliveryLocationConfirm}
+                      onChange={(e) =>
+                        update("delivery.deliveryLocationConfirm", e.target.value)
+                      }
+                      placeholder={form.customer.deliveryLocation || "Enter delivery location"}
+                    />
+                  </Field>
 
-      <Field label="Required Qty per Truck">
-        <Input
-          value={form.delivery.desiredQtyPerTruck}
-          onChange={(e) => update("delivery.desiredQtyPerTruck", e.target.value)}
-        />
-      </Field>
+                  <Field label="Required Qty per Truck *">
+                    <Input
+                      value={form.delivery.desiredQtyPerTruck}
+                      onChange={(e) => update("delivery.desiredQtyPerTruck", e.target.value)}
+                    />
+                  </Field>
 
-      <Field label="Required Qty Unit">
-        <Select
-          value={form.delivery.desiredQtyPerTruckUnit}
-          onValueChange={(v) => update("delivery.desiredQtyPerTruckUnit", v)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select unit" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Tons">Tons</SelectItem>
-            <SelectItem value="Kg">Kg</SelectItem>
-            <SelectItem value="Pcs">Pcs</SelectItem>
-            <SelectItem value="Cartons">Cartons</SelectItem>
-            <SelectItem value="Rolls">Rolls</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
+                  <Field label="Required Qty Unit *">
+                    <Select
+                      value={form.delivery.desiredQtyPerTruckUnit}
+                      onValueChange={(v) => update("delivery.desiredQtyPerTruckUnit", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Tons">Tons</SelectItem>
+                        <SelectItem value="Kg">Kg</SelectItem>
+                        <SelectItem value="Pcs">Pcs</SelectItem>
+                        <SelectItem value="Cartons">Cartons</SelectItem>
+                        <SelectItem value="Rolls">Rolls</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
 
-      <Field label="Truck Size">
-        <Input
-          value={form.delivery.truckSize}
-          onChange={(e) => update("delivery.truckSize", e.target.value)}
-        />
-      </Field>
+                  <Field label="Truck Size *">
+                    <Input
+                      value={form.delivery.truckSize}
+                      onChange={(e) => update("delivery.truckSize", e.target.value)}
+                    />
+                  </Field>
 
-      <Field label="Delivery Term">
-        <Input
-          value={form.delivery.deliveryTerm}
-          onChange={(e) => update("delivery.deliveryTerm", e.target.value)}
-          placeholder="EXW / FCA / Delivered / Other"
-        />
-      </Field>
-    </div>
+                  <Field label="Delivery Term">
+                    <Input
+                      value={form.delivery.deliveryTerm}
+                      onChange={(e) => update("delivery.deliveryTerm", e.target.value)}
+                      placeholder="EXW / FCA / Delivered / Other"
+                    />
+                  </Field>
+                </div>
 
-    <Field label="Additional Logistics Comments">
-      <Textarea
-        value={form.delivery.logisticsComments}
-        onChange={(e) => update("delivery.logisticsComments", e.target.value)}
-        rows={4}
-      />
-    </Field>
-  </SectionCard>
-)}
+                <Field label="Additional Logistics Comments">
+                  <Textarea
+                    value={form.delivery.logisticsComments}
+                    onChange={(e) => update("delivery.logisticsComments", e.target.value)}
+                    rows={4}
+                  />
+                </Field>
+              </SectionCard>
+            )}
 
             {currentStep === 4 && form.product.productType !== "Sheet Roll" && (
-  <SectionCard title="Thermoformed Product Delivery Instructions">
-    <div className="grid md:grid-cols-2 gap-4">
-      <Field label="Delivery Location">
-        <Input
-          value={form.delivery.deliveryLocationConfirm}
-          onChange={(e) =>
-            update("delivery.deliveryLocationConfirm", e.target.value)
-          }
-          placeholder={form.customer.deliveryLocation || "Enter delivery location"}
-        />
-      </Field>
+              <SectionCard title="Thermoformed Product Delivery Instructions">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <Field label="Delivery Location *">
+                    <Input
+                      value={form.delivery.deliveryLocationConfirm}
+                      onChange={(e) =>
+                        update("delivery.deliveryLocationConfirm", e.target.value)
+                      }
+                      placeholder={form.customer.deliveryLocation || "Enter delivery location"}
+                    />
+                  </Field>
 
-      <Field label="Delivery Term">
-        <Input
-          value={form.delivery.deliveryTerm}
-          onChange={(e) => update("delivery.deliveryTerm", e.target.value)}
-          placeholder="EXW / FCA / Delivered / Other"
-        />
-      </Field>
+                  <Field label="Delivery Term">
+                    <Input
+                      value={form.delivery.deliveryTerm}
+                      onChange={(e) => update("delivery.deliveryTerm", e.target.value)}
+                      placeholder="EXW / FCA / Delivered / Other"
+                    />
+                  </Field>
 
-      <Field label="Delivery Frequency">
-        <Input
-          value={form.delivery.deliveryFrequency}
-          onChange={(e) => update("delivery.deliveryFrequency", e.target.value)}
-        />
-      </Field>
+                  <Field label="Delivery Frequency">
+                    <Input
+                      value={form.delivery.deliveryFrequency}
+                      onChange={(e) => update("delivery.deliveryFrequency", e.target.value)}
+                    />
+                  </Field>
 
-      <Field label="Estimated First Delivery Date">
-        <Input
-          type="date"
-          value={form.delivery.firstDeliveryDate}
-          onChange={(e) => update("delivery.firstDeliveryDate", e.target.value)}
-        />
-      </Field>
+                  <Field label="Estimated First Delivery Date">
+                    <Input
+                      type="date"
+                      value={form.delivery.firstDeliveryDate}
+                      onChange={(e) => update("delivery.firstDeliveryDate", e.target.value)}
+                    />
+                  </Field>
 
-      <Field label="Required Qty per Truck">
-        <Input
-          value={form.delivery.desiredQtyPerTruck}
-          onChange={(e) => update("delivery.desiredQtyPerTruck", e.target.value)}
-        />
-      </Field>
+                  <Field label="Required Qty per Truck *">
+                    <Input
+                      value={form.delivery.desiredQtyPerTruck}
+                      onChange={(e) => update("delivery.desiredQtyPerTruck", e.target.value)}
+                    />
+                  </Field>
 
-      <Field label="Required Qty Unit">
-        <Select
-          value={form.delivery.desiredQtyPerTruckUnit}
-          onValueChange={(v) => update("delivery.desiredQtyPerTruckUnit", v)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select unit" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Tons">Tons</SelectItem>
-            <SelectItem value="Kg">Kg</SelectItem>
-            <SelectItem value="Pcs">Pcs</SelectItem>
-            <SelectItem value="Cartons">Cartons</SelectItem>
-            <SelectItem value="Rolls">Rolls</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
+                  <Field label="Required Qty Unit *">
+                    <Select
+                      value={form.delivery.desiredQtyPerTruckUnit}
+                      onValueChange={(v) => update("delivery.desiredQtyPerTruckUnit", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Tons">Tons</SelectItem>
+                        <SelectItem value="Kg">Kg</SelectItem>
+                        <SelectItem value="Pcs">Pcs</SelectItem>
+                        <SelectItem value="Cartons">Cartons</SelectItem>
+                        <SelectItem value="Rolls">Rolls</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
 
-      <Field label="Truck Size">
-        <Input
-          value={form.delivery.truckSize}
-          onChange={(e) => update("delivery.truckSize", e.target.value)}
-        />
-      </Field>
-    </div>
+                  <Field label="Truck Size *">
+                    <Input
+                      value={form.delivery.truckSize}
+                      onChange={(e) => update("delivery.truckSize", e.target.value)}
+                    />
+                  </Field>
+                </div>
 
-    <Field label="Customer Receiving Notes">
-      <Textarea
-        value={form.delivery.receivingNotes}
-        onChange={(e) => update("delivery.receivingNotes", e.target.value)}
-        rows={4}
-      />
-    </Field>
+                <Field label="Customer Receiving Notes">
+                  <Textarea
+                    value={form.delivery.receivingNotes}
+                    onChange={(e) => update("delivery.receivingNotes", e.target.value)}
+                    rows={4}
+                  />
+                </Field>
 
-    <Field label="Loading Restrictions">
-      <Textarea
-        value={form.delivery.loadingRestrictions}
-        onChange={(e) => update("delivery.loadingRestrictions", e.target.value)}
-        rows={4}
-      />
-    </Field>
+                <Field label="Loading Restrictions">
+                  <Textarea
+                    value={form.delivery.loadingRestrictions}
+                    onChange={(e) => update("delivery.loadingRestrictions", e.target.value)}
+                    rows={4}
+                  />
+                </Field>
 
-    <Field label="Required Delivery Documents">
-      <Textarea
-        value={form.delivery.requiredDeliveryDocs}
-        onChange={(e) => update("delivery.requiredDeliveryDocs", e.target.value)}
-        rows={4}
-      />
-    </Field>
+                <Field label="Required Delivery Documents">
+                  <Textarea
+                    value={form.delivery.requiredDeliveryDocs}
+                    onChange={(e) => update("delivery.requiredDeliveryDocs", e.target.value)}
+                    rows={4}
+                  />
+                </Field>
 
-    <Field label="Additional Logistics Comments">
-      <Textarea
-        value={form.delivery.logisticsComments}
-        onChange={(e) => update("delivery.logisticsComments", e.target.value)}
-        rows={4}
-      />
-    </Field>
-  </SectionCard>
-)}
+                <Field label="Additional Logistics Comments">
+                  <Textarea
+                    value={form.delivery.logisticsComments}
+                    onChange={(e) => update("delivery.logisticsComments", e.target.value)}
+                    rows={4}
+                  />
+                </Field>
+              </SectionCard>
+            )}
 
             {currentStep === 5 && (
               <div className="space-y-6">
@@ -2784,11 +2801,11 @@ const estimatedSheetRollPalletLoadKg =
                           <>
                             <div>
                               <span className="text-muted-foreground">Rolls per Pallet:</span>{" "}
-                              {form.packaging.pallet.rollsPerPallet || "—"}
+                              {form.packaging.sheet.rollsPerPallet || "—"}
                             </div>
                             <div>
                               <span className="text-muted-foreground">Pallet Type:</span>{" "}
-                              {form.packaging.pallet.palletType || "—"}
+                              {form.packaging.sheet.palletType || "—"}
                             </div>
                             <div>
                               <span className="text-muted-foreground">Pallet Load:</span>{" "}
@@ -2798,8 +2815,8 @@ const estimatedSheetRollPalletLoadKg =
                         ) : (
                           <>
                             <div>{`${form.packaging.primary.pcsPerStack || "—"} pcs/stack`}</div>
-                            <div>{`${form.packaging.primary.stacksPerBag || "—"} stacks/sleeve`}</div>
-                            <div>{`${form.packaging.secondary.bagsPerCarton || "—"} sleeves/carton`}</div>
+                            <div>{`${form.packaging.primary.stacksPerBag || "—"} stacks/bag`}</div>
+                            <div>{`${form.packaging.secondary.bagsPerCarton || "—"} bags/carton`}</div>
                             <div>{`${form.packaging.pallet.cartonsPerPallet || "—"} cartons/pallet`}</div>
                           </>
                         )}
@@ -2830,44 +2847,42 @@ const estimatedSheetRollPalletLoadKg =
                     Next <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
-                 <Button
-  disabled={missingRequired.length > 0}
-  onClick={async () => {
-    try {
-      const updatedForm = {
-        ...form,
-        metadata: {
-          ...form.metadata,
-          status: "Project Completed",
-        },
-      };
+                  <Button
+                    disabled={missingRequired.length > 0}
+                    onClick={async () => {
+                      try {
+                        const updatedForm = {
+                          ...form,
+                          metadata: {
+                            ...form.metadata,
+                            status: "Project Completed",
+                          },
+                        };
 
-      const response = await fetch("/.netlify/functions/save-draft", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedForm),
-      });
+                        const response = await fetch("/.netlify/functions/save-draft", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify(updatedForm),
+                        });
 
-      const data = await response.json();
+                        const data = await response.json();
 
-      if (data.success) {
-        alert("✅ Sent to Engineering");
-
-        // redirect to engineering dashboard
-        window.location.href = "/engineering";
-      } else {
-        alert("❌ Failed to send");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("❌ Error sending");
-    }
-  }}
->
-  Submit to Engineering
-</Button>
+                        if (data.success) {
+                          alert("✅ Sent to Engineering");
+                          window.location.href = "/engineering-dashboard";
+                        } else {
+                          alert("❌ Failed to send");
+                        }
+                      } catch (error) {
+                        console.error(error);
+                        alert("❌ Error sending");
+                      }
+                    }}
+                  >
+                    Submit to Engineering
+                  </Button>
                 )}
               </div>
             </div>

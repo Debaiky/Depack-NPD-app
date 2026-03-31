@@ -61,7 +61,7 @@ const handler = async (event) => {
       ScenarioCurrency: scenarioCurrency || "",
       UsdEgp: usdEgp || "",
       EurUsd: eurUsd || "",
-      WorkspacePassword: workspacePassword || "",
+      WorkspacePassword: workspacePassword || existing?.WorkspacePassword || "",
     });
 
     return {
