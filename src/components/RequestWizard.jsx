@@ -1023,12 +1023,22 @@ const saveDraft = async () => {
       }),
     });
 
-    const folderData = await folderRes.json();
+   let folderData = {};
+try {
+  folderData = await folderRes.json();
+} catch (e) {
+  console.error("Failed to parse ensure-request-folder response:", e);
+  setSaveMessage("Draft saved but folder creation failed: invalid server response");
+  return;
+}
 
-    if (!folderData.success) {
-      setSaveMessage("Folder creation failed");
-      return;
-    }
+if (!folderRes.ok || !folderData.success) {
+  console.error("ensure-request-folder failed:", folderData);
+  setSaveMessage(
+    `Draft saved but folder creation failed: ${folderData?.error || "Unknown error"}`
+  );
+  return;
+}
 
     workingForm = {
       ...workingForm,
