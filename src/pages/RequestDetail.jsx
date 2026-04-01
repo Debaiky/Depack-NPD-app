@@ -91,12 +91,14 @@ export default function RequestDetail() {
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!request || !payload) return <div className="p-6">Loading...</div>;
 
-  const customer = payload.customer || {};
-  const product = payload.product || {};
-  const decoration = payload.decoration || {};
-  const packaging = payload.packaging || {};
-  const delivery = payload.delivery || {};
-  const status = payload?.metadata?.status || request.Status || "Draft";
+const customerBlock = payload.customer || {};
+const primaryCustomer = customerBlock?.customers?.[0] || {};
+const project = payload.project || {};
+const product = payload.product || {};
+const decoration = payload.decoration || {};
+const packaging = payload.packaging || {};
+const delivery = payload.delivery || {};
+const status = payload?.metadata?.status || request.Status || "Draft";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -148,6 +150,16 @@ export default function RequestDetail() {
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        {request?.Thumbnail ? (
+  <div className="rounded-2xl border bg-white shadow-sm p-5">
+    <div className="text-sm font-medium mb-3">Product Image</div>
+    <img
+      src={request.Thumbnail}
+      alt={request.ProjectName || "Product"}
+      className="w-40 h-40 object-cover rounded-xl border"
+    />
+  </div>
+) : null}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <DetailCard title="Request Summary">
             <DetailItem label="Request ID" value={request.RequestID} />
@@ -161,23 +173,24 @@ export default function RequestDetail() {
             <DetailItem label="Decoration Type" value={request.DecorationType} />
           </DetailCard>
 
-          <DetailCard title="Customer Information">
-            <DetailItem label="Customer Name" value={customer.customerName} />
-            <DetailItem label="Contact Person" value={customer.contactPerson} />
-            <DetailItem label="Contact Email" value={customer.contactEmail} />
-            <DetailItem label="Contact Phone" value={customer.contactPhone} />
-            <DetailItem label="Country / Market" value={customer.countryMarket} />
-            <DetailItem label="Delivery Location" value={customer.deliveryLocation} />
-            <DetailItem label="Project Name" value={project.projectName} />
-            <DetailItem label="Customer SKU Ref" value={project.customerSkuRef} />
-            <DetailItem label="Project Type" value={customer.projectType} />
-            <DetailItem label="Target Launch Date" value={project.targetLaunchDate} />
-            <DetailItem label="Forecast Annual Volume" value={project.forecastAnnualVolume} />
-            <DetailItem label="MOQ" value={customer.moq} />
-            <DetailItem label="Target Selling Price" value={project.targetSellingPrice} />
-            <DetailItem label="Currency" value={project.currency} />
-            <DetailItem label="Customer Notes" value={project.customerNotes} />
-          </DetailCard>
+       <DetailCard title="Customer Information">
+  <DetailItem label="Customer Name" value={primaryCustomer.customerName} />
+  <DetailItem label="Contact Person" value={primaryCustomer.contactPerson} />
+  <DetailItem label="Contact Email" value={primaryCustomer.contactEmail} />
+  <DetailItem label="Contact Phone" value={primaryCustomer.contactPhone} />
+  <DetailItem label="Country / Market" value={primaryCustomer.countryMarket} />
+  <DetailItem label="Delivery Location" value={primaryCustomer.deliveryLocation} />
+  <DetailItem label="Project Name" value={project.projectName} />
+  <DetailItem
+  label="Customer Product Code"
+  value={project.customerProductCode || project.customerSkuRef}
+/>
+  <DetailItem label="Target Launch Date" value={project.targetLaunchDate} />
+  <DetailItem label="Forecast Annual Volume" value={project.forecastAnnualVolume} />
+  <DetailItem label="Target Selling Price" value={project.targetSellingPrice} />
+  <DetailItem label="Currency" value={project.currency} />
+  <DetailItem label="Customer Notes" value={project.customerNotes} />
+</DetailCard>
 
           <DetailCard title="Product Technical Specifications">
             <DetailItem label="Product Type" value={product.productType} />
@@ -267,7 +280,7 @@ export default function RequestDetail() {
             {decoration.decorationType === "Label" && (
               <>
                 <DetailItem label="Label Material" value={decoration.label?.labelMaterial} />
-                <DetailItem label="Label Dimensions" value={decoration.label?.labelDimensions} />
+                <DetailItem label="Label Dimensions" value={decoration.label?.labelDimensionsMm} />
                 <DetailItem label="Label Type" value={decoration.label?.labelType} />
                 <DetailItem label="Adhesive Notes" value={decoration.label?.labelAdhesiveNotes} />
                 <DetailItem label="Artwork Available" value={decoration.label?.labelArtworkAvailable} />
@@ -284,36 +297,41 @@ export default function RequestDetail() {
             <DetailItem label="Sleeve Artwork Provided" value={packaging.primary?.sleeveArtworkProvided} />
             <DetailItem label="Primary Packaging Notes" value={packaging.primary?.primaryPackagingNotes} />
             <DetailItem label="Bag / Sleeve Material" value={packaging.primary?.bagSleeveMaterial} />
-            <DetailItem label="Bag / Sleeve Dimensions" value={packaging.primary?.bagSleeveDimensions} />
+            <DetailItem label="Bag / Sleeve Dimensions" value={packaging.primary?.bagSleeveDimensionsMm} />
             <DetailItem label="Bag Thickness" value={packaging.primary?.bagSleeveThicknessMicron} />
             <DetailItem label="Bag Weight" value={packaging.primary?.bagSleeveWeight} />
             <DetailItem label="Bags per Carton" value={packaging.secondary?.bagsPerCarton} />
             <DetailItem label="Carton Type" value={packaging.secondary?.cartonType} />
-            <DetailItem label="Carton Internal Dimensions" value={packaging.secondary?.cartonInternalDimensions} />
-            <DetailItem label="Carton External Dimensions" value={packaging.secondary?.cartonExternalDimensions} />
+            <DetailItem label="Carton Internal Dimensions" value={packaging.secondary?.cartonInternalDimensionsMm} />
+            <DetailItem label="Carton External Dimensions" value={packaging.secondary?.cartonExternalDimensionsMm} />
             <DetailItem label="Carton Artwork Needed" value={packaging.secondary?.cartonArtworkNeeded} />
             <DetailItem label="Carton Artwork Provided" value={packaging.secondary?.cartonArtworkProvided} />
             <DetailItem label="Carton Packaging Notes" value={packaging.secondary?.cartonPackagingNotes} />
             <DetailItem label="Carton Label Required" value={packaging.labelInstructions?.cartonLabelRequired} />
-            <DetailItem label="Label Dimensions" value={packaging.labelInstructions?.cartonLabelDimensions} />
+            <DetailItem label="Label Dimensions" value={packaging.labelInstructions?.cartonLabelDimensionsMm} />
             <DetailItem label="Barcode Required" value={packaging.labelInstructions?.barcodeRequired} />
             <DetailItem label="Barcode Type" value={packaging.labelInstructions?.barcodeType} />
             <DetailItem label="Other Label Data" value={packaging.labelInstructions?.labelFieldOther} />
             <DetailItem label="Carton Label Artwork Provided" value={packaging.labelInstructions?.cartonLabelArtworkProvided} />
             <DetailItem label="Carton Label Notes" value={packaging.labelInstructions?.cartonLabelNotes} />
             <DetailItem label="Pallet Type" value={packaging.pallet?.palletType} />
-            <DetailItem label="Pallet Dimensions" value={packaging.pallet?.palletDimensions} />
+            <DetailItem label="Pallet Dimensions" value={packaging.pallet?.palletDimensionsMm} />
             <DetailItem label="Returnable Pallet" value={packaging.pallet?.returnablePallet} />
             <DetailItem label="Pallet Return Count" value={packaging.pallet?.palletReturnCount} />
             <DetailItem label="Cartons per Pallet" value={packaging.pallet?.cartonsPerPallet} />
             <DetailItem label="Stretch Wrap Required" value={packaging.pallet?.stretchWrapRequired} />
             <DetailItem label="Stretch Wrap Kg per Pallet" value={packaging.pallet?.stretchWrapKgPerPallet} />
             <DetailItem label="Pallet Notes" value={packaging.pallet?.palletNotes} />
-            <DetailItem label="Rolls per Pallet" value={packaging.pallet?.rollsPerPallet} />
-            <DetailItem label="Number of Separators" value={packaging.pallet?.separatorCount} />
-            <DetailItem label="Strap Length (m)" value={packaging.pallet?.strapLengthM} />
-            <DetailItem label="Labels per Roll" value={packaging.pallet?.labelsPerRoll} />
-            <DetailItem label="Foam Wrapping (m)" value={packaging.pallet?.foamWrappingM} />
+           <DetailItem label="Core Size" value={packaging.sheet?.coreSize} />
+<DetailItem label="Pallet Required" value={packaging.sheet?.palletRequired} />
+<DetailItem label="Rolls per Pallet" value={packaging.sheet?.rollsPerPallet} />
+<DetailItem label="Pallet Type" value={packaging.sheet?.palletType} />
+<DetailItem label="Labels per Roll" value={packaging.sheet?.labelsPerRoll} />
+<DetailItem label="Labels per Pallet" value={packaging.sheet?.labelsPerPallet} />
+<DetailItem label="Strap Length per Pallet (m)" value={packaging.sheet?.strapLengthPerPalletM} />
+<DetailItem label="Foam Length per Pallet (m)" value={packaging.sheet?.foamLengthPerPalletM} />
+<DetailItem label="Stretch Film Weight per Pallet (kg)" value={packaging.sheet?.stretchWeightPerPalletKg} />
+<DetailItem label="Operators per Pallet" value={packaging.sheet?.operatorsPerPallet} />
           </DetailCard>
 
           <DetailCard title="Delivery Details">
@@ -327,6 +345,7 @@ export default function RequestDetail() {
             <DetailItem label="Logistics Comments" value={delivery.logisticsComments} />
             <DetailItem label="Desired Qty per Truck" value={delivery.desiredQtyPerTruck} />
             <DetailItem label="Desired Qty Unit" value={delivery.desiredQtyPerTruckUnit} />
+            <DetailItem label="Truck Size" value={delivery.truckSize} />
           </DetailCard>
 
           <DetailCard title="Attachments">
