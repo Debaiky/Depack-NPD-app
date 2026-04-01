@@ -1,14 +1,15 @@
-/* eslint-env node */
 const { getOrCreateFolder } = require("./_drive");
 const { getRequestRowById, updateRequestRow } = require("./_sheet");
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
-    const requestId = body?.requestId;
+    const requestId = body?.requestId || "";
 
-    console.log("ensure-request-folder body:", body);
-    console.log("ensure-request-folder requestId:", requestId);
+    console.log("ENSURE REQUEST FOLDER BODY:", body);
+    console.log("ENSURE REQUEST FOLDER requestId:", requestId);
 
     if (!requestId) {
       return {
@@ -20,21 +21,28 @@ const handler = async (event) => {
       };
     }
 
-    const existingRequest = await getRequestRowById(requestId);
-    console.log("ensure-request-folder existingRequest:", existingRequest);
+    let existingRequest = null;
+
+    for (let i = 0; i < 4; i += 1) {
+      existingRequest = await getRequestRowById(requestId);
+      console.log(`ENSURE REQUEST FOLDER lookup attempt ${i + 1}:`, existingRequest);
+
+      if (existingRequest) break;
+
+      await sleep(1200);
+    }
 
     if (!existingRequest) {
       return {
         statusCode: 404,
         body: JSON.stringify({
           success: false,
-          error: "Request not found",
+          error: `Request not found for requestId: ${requestId}`,
         }),
       };
     }
 
     const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
-    console.log("ensure-request-folder rootFolderId exists:", Boolean(rootFolderId));
 
     if (!rootFolderId) {
       return {
@@ -56,7 +64,10 @@ const handler = async (event) => {
       };
     } else {
       requestFolder = await getOrCreateFolder(requestId, rootFolderId);
-      console.log("ensure-request-folder requestFolder created:", requestFolder);
+
+      if (!requestFolder?.id) {
+        throw new Error("Failed to create or fetch request folder");
+      }
 
       await updateRequestRow(requestId, {
         DriveFolderID: requestFolder.id,
@@ -69,7 +80,10 @@ const handler = async (event) => {
     const packagingArtwork = await getOrCreateFolder("04 Packaging Artwork", requestFolder.id);
     const customerBriefs = await getOrCreateFolder("05 Customer Briefs", requestFolder.id);
 
-    console.log("ensure-request-folder success");
+    console.log("ENSURE REQUEST FOLDER SUCCESS:", {
+      requestId,
+      requestFolderId: requestFolder.id,
+    });
 
     return {
       statusCode: 200,

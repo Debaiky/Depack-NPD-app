@@ -3,9 +3,12 @@ const { googleJsonFetch } = require("./_google-rest");
 
 const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
 
+/* ================= HELPERS ================= */
+
 const trimPayloadForSheet = (body) => {
   const clean = structuredClone(body || {});
 
+  // ❌ remove heavy base64 image to avoid 50k cell limit
   if (clean.product) {
     clean.product.productThumbnailBase64 = "";
     clean.product.productThumbnailPreview = "";
@@ -20,12 +23,16 @@ const toNumber = (value) => {
 };
 
 const getPrimaryCustomer = (body) => {
-  if (Array.isArray(body?.customer?.customers) && body.customer.customers.length > 0) {
+  if (
+    Array.isArray(body?.customer?.customers) &&
+    body.customer.customers.length > 0
+  ) {
     return body.customer.customers[0];
   }
-
   return {};
 };
+
+/* ================= HANDLER ================= */
 
 const handler = async (event) => {
   try {
@@ -35,18 +42,39 @@ const handler = async (event) => {
     const primaryCustomer = getPrimaryCustomer(body);
 
     const requestId = body?.metadata?.requestId || "";
-    const createdAt = body?.metadata?.createdAt || new Date().toISOString();
+
+    if (!requestId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          success: false,
+          error: "Missing requestId",
+        }),
+      };
+    }
+
+    const createdAt =
+      body?.metadata?.createdAt || new Date().toISOString();
     const createdBy = body?.metadata?.createdBy || "";
     const status = body?.metadata?.status || "Draft";
     const driveFolderId = body?.metadata?.driveFolderId || "";
 
     const targetSellingPrice = body?.project?.targetSellingPrice || "";
-    const forecastAnnualVolume = body?.project?.forecastAnnualVolume || "";
+    const forecastAnnualVolume =
+      body?.project?.forecastAnnualVolume || "";
+
     const annualTurnover =
-      toNumber(targetSellingPrice) * toNumber(forecastAnnualVolume);
+      toNumber(targetSellingPrice) *
+      toNumber(forecastAnnualVolume);
 
     const payloadForSheet = trimPayloadForSheet(body);
-    const payloadJson = JSON.stringify(payloadForSheet);
+    let payloadJson = JSON.stringify(payloadForSheet);
+
+    // 🚨 Safety: prevent >50k characters
+    if (payloadJson.length > 45000) {
+      console.warn("Payload too large, truncating...");
+      payloadJson = payloadJson.slice(0, 45000);
+    }
 
     const row = [
       requestId, // A
@@ -69,10 +97,15 @@ const handler = async (event) => {
       targetSellingPrice, // P
       forecastAnnualVolume, // Q
       annualTurnover || "", // R
-      body?.product?.productThumbnailUrl || "", // S
+      body?.product?.productThumbnailUrl || "", // S ✅ keep URL only
     ];
 
+    console.log("SAVE DRAFT requestId:", requestId);
+
+    /* ================= CHECK EXISTING ================= */
+
     const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:A`;
+
     const existing = await googleJsonFetch(getUrl, {
       scopes: SHEETS_SCOPE,
     });
@@ -87,8 +120,13 @@ const handler = async (event) => {
       }
     }
 
+    /* ================= UPSERT ================= */
+
     if (rowIndex === -1) {
+      console.log("Creating new draft row");
+
       const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A:S:append?valueInputOption=USER_ENTERED`;
+
       await googleJsonFetch(appendUrl, {
         method: "POST",
         scopes: SHEETS_SCOPE,
@@ -97,7 +135,10 @@ const handler = async (event) => {
         },
       });
     } else {
+      console.log("Updating existing draft row:", rowIndex);
+
       const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Requests_Master!A${rowIndex}:S${rowIndex}?valueInputOption=USER_ENTERED`;
+
       await googleJsonFetch(updateUrl, {
         method: "PUT",
         scopes: SHEETS_SCOPE,
@@ -107,11 +148,16 @@ const handler = async (event) => {
       });
     }
 
+    console.log("SAVE DRAFT SUCCESS:", requestId);
+
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        message: rowIndex === -1 ? "Draft created successfully" : "Draft updated successfully",
+        message:
+          rowIndex === -1
+            ? "Draft created successfully"
+            : "Draft updated successfully",
         requestId,
       }),
     };
