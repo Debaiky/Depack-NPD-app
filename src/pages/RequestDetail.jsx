@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
-function Section({ title, children }) {
+/* ===== UI COMPONENTS ===== */
+
+function Card({ title, children }) {
   const validChildren = children.filter(Boolean);
   if (validChildren.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <h2 className="text-sm font-bold text-gray-700 border-b pb-1">
+    <div className="bg-white border rounded-2xl shadow-sm p-5 space-y-3">
+      <h2 className="text-sm font-semibold text-gray-700 border-b pb-2">
         {title}
       </h2>
       <div className="space-y-1">{validChildren}</div>
@@ -19,11 +21,11 @@ function Row({ label, value }) {
   if (!value && value !== 0) return null;
 
   return (
-    <div className="flex gap-2 text-sm leading-6">
-      <span className="font-semibold text-gray-600 min-w-[240px]">
+    <div className="flex gap-3 text-sm leading-6">
+      <span className="font-medium text-gray-500 min-w-[240px]">
         {label}:
       </span>
-      <span className="text-blue-700 font-medium break-words">
+      <span className="text-blue-700 font-semibold break-words">
         {value}
       </span>
     </div>
@@ -34,8 +36,8 @@ function Attachment({ file }) {
   if (!file?.driveLink) return null;
 
   return (
-    <div className="flex gap-2 text-sm">
-      <span className="font-semibold text-gray-600 min-w-[240px]">
+    <div className="flex gap-3 text-sm">
+      <span className="font-medium text-gray-500 min-w-[240px]">
         {file.category || "File"}:
       </span>
       <a
@@ -49,6 +51,8 @@ function Attachment({ file }) {
     </div>
   );
 }
+
+/* ===== MAIN ===== */
 
 export default function RequestDetail() {
   const { requestId } = useParams();
@@ -95,19 +99,19 @@ export default function RequestDetail() {
     : "";
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6 bg-white">
+    <div className="max-w-6xl mx-auto p-6 space-y-6 bg-gray-50">
 
-      {/* ===== TOP SUMMARY ===== */}
-      <div className="flex gap-6 items-start border-b pb-4">
-
+      {/* ===== TOP SUMMARY CARD ===== */}
+      <div className="bg-white border rounded-2xl shadow-sm p-5 flex gap-6 flex-wrap items-start">
+        
         {image && (
           <img
             src={image}
-            className="w-28 h-28 object-cover border rounded-lg"
+            className="w-28 h-28 object-cover rounded-xl border"
           />
         )}
 
-        <div className="space-y-1 flex-1">
+        <div className="flex-1 min-w-[250px] space-y-1">
           <Row label="Request ID" value={requestId} />
           <Row label="Status" value={request.Status} />
           <Row label="Customer" value={request.CustomerName} />
@@ -119,8 +123,8 @@ export default function RequestDetail() {
           <Row label="Target Price" value={project.targetSellingPrice} />
 
           {driveLink && (
-            <div className="text-sm">
-              <span className="font-semibold text-gray-600">Drive Folder: </span>
+            <div className="text-sm pt-2">
+              <span className="font-medium text-gray-500">Drive Folder: </span>
               <a href={driveLink} target="_blank" className="text-blue-600 underline">
                 Open Folder
               </a>
@@ -130,31 +134,31 @@ export default function RequestDetail() {
       </div>
 
       {/* ===== CUSTOMER ===== */}
-      <Section title="Customer Information">
+      <Card title="Customer Information">
         <Row label="Customer Name" value={customer.customerName} />
         <Row label="Contact Person" value={customer.contactPerson} />
         <Row label="Email" value={customer.contactEmail} />
         <Row label="Phone" value={customer.contactPhone} />
         <Row label="Country" value={customer.countryMarket} />
         <Row label="Delivery Location" value={customer.deliveryLocation} />
-      </Section>
+      </Card>
 
       {/* ===== PRODUCT ===== */}
-      <Section title="Product Technical Details">
+      <Card title="Product Technical Details">
         {Object.entries(product).map(([k, v]) => (
           <Row key={k} label={k} value={v} />
         ))}
-      </Section>
+      </Card>
 
       {/* ===== DECORATION ===== */}
-      <Section title="Decoration Details">
-        {Object.entries(decoration).map(([k, v]) => (
+      <Card title="Decoration Details">
+        {Object.entries(decoration).map(([k, v]) =>
           typeof v !== "object" ? <Row key={k} label={k} value={v} /> : null
-        ))}
-      </Section>
+        )}
+      </Card>
 
       {/* ===== PACKAGING ===== */}
-      <Section title="Packaging Details">
+      <Card title="Packaging Details">
         {Object.entries(packaging.primary || {}).map(([k, v]) => (
           <Row key={k} label={k} value={v} />
         ))}
@@ -170,21 +174,22 @@ export default function RequestDetail() {
         {Object.entries(packaging.sheet || {}).map(([k, v]) => (
           <Row key={k} label={k} value={v} />
         ))}
-      </Section>
+      </Card>
 
       {/* ===== DELIVERY ===== */}
-      <Section title="Delivery Details">
+      <Card title="Delivery Details">
         {Object.entries(delivery).map(([k, v]) => (
           <Row key={k} label={k} value={v} />
         ))}
-      </Section>
+      </Card>
 
       {/* ===== ATTACHMENTS ===== */}
-      <Section title="Attachments">
+      <Card title="Attachments">
         {files.map((f) => (
           <Attachment key={f.driveFileId} file={f} />
         ))}
-      </Section>
+      </Card>
+
     </div>
   );
 }
