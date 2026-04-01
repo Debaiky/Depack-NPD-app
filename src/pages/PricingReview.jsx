@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-
+const project = request?.project || {};
 function Section({ title, children }) {
   return (
     <div className="rounded-2xl border bg-white p-5 shadow-sm space-y-4">

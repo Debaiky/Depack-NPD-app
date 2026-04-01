@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Chart from "chart.js/auto";
-
+const project = request?.project || {};
 const toNum = (v) => {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""));
   return Number.isNaN(n) ? 0 : n;
@@ -832,7 +832,50 @@ export default function PricingPage() {
       alert("Failed to save scenario");
     }
   };
+const markAsCompleted = async () => {
+  try {
+    // 1. Load current request
+    const reqRes = await fetch(
+      `/.netlify/functions/get-request?requestId=${requestId}`
+    );
+    const reqJson = await reqRes.json();
 
+    if (!reqJson.success) {
+      alert("Failed to load request");
+      return;
+    }
+
+    const payload = reqJson.payload || {};
+
+    // 2. Update status
+    const saveRes = await fetch("/.netlify/functions/save-draft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...payload,
+        metadata: {
+          ...(payload.metadata || {}),
+          status: "Completed",
+        },
+      }),
+    });
+
+    const saveJson = await saveRes.json();
+
+    if (!saveJson.success) {
+      alert("Failed to update project status");
+      return;
+    }
+
+    alert("✅ Project marked as Completed");
+
+  } catch (err) {
+    console.error(err);
+    alert("Error completing project");
+  }
+};
   const goToThermo = async () => {
     if (missingRequired) {
       alert("Please complete all required scenario fields before moving to thermo pricing.");
@@ -966,6 +1009,15 @@ export default function PricingPage() {
           >
             ➜ Thermoformed Product
           </button>
+          <button
+  onClick={markAsCompleted}
+  disabled={missingRequired}
+  className={`px-4 py-2 rounded-md text-white ${
+    missingRequired ? "bg-gray-400" : "bg-green-600 hover:bg-green-500"
+  }`}
+>
+  ✔ Complete Project
+</button>
         </div>
       </div>
 
