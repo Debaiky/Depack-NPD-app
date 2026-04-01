@@ -8,14 +8,13 @@ const SHEETS_SCOPE = ["https://www.googleapis.com/auth/spreadsheets"];
 const trimPayloadForSheet = (body) => {
   const clean = structuredClone(body || {});
 
-  // ❌ remove heavy base64 image to avoid 50k cell limit
-if (clean.product) {
-  clean.product.productThumbnailBase64 = "";
-}
+  if (clean.product) {
+    clean.product.productThumbnailBase64 = "";
+    clean.product.productThumbnailPreview = "";
+  }
 
   return clean;
 };
-
 const toNumber = (value) => {
   const n = parseFloat(String(value ?? "").replace(/,/g, ""));
   return Number.isNaN(n) ? 0 : n;
@@ -92,7 +91,7 @@ const handler = async (event) => {
       targetSellingPrice, // P
       forecastAnnualVolume, // Q
       annualTurnover || "", // R
-      body?.product?.productThumbnailPreview || "", // S
+      body?.product?.productThumbnailUrl || "", // S
     ];
 
     console.log("SAVE DRAFT requestId:", requestId);
