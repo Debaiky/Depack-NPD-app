@@ -1011,7 +1011,26 @@ if (!form.product.productThumbnailName) req.push("Product Picture");
   }, [form]);
 const saveDraft = async () => {
   try {
-    let workingForm = { ...form };
+    const firstSaveRes = await fetch("/.netlify/functions/save-draft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(form),
+    });
+
+    const firstSaveData = await firstSaveRes.json();
+
+    if (!firstSaveRes.ok || !firstSaveData.success) {
+      console.error("save-draft failed:", firstSaveData);
+      setSaveMessage(`Save failed: ${firstSaveData?.error || "Unknown error"}`);
+      return;
+    }
+
+    const savedRequestId =
+      firstSaveData?.requestId || form?.metadata?.requestId;
+
+    console.log("SENDING ensure-request-folder with requestId:", savedRequestId);
 
     const folderRes = await fetch("/.netlify/functions/ensure-request-folder", {
       method: "POST",
@@ -1019,51 +1038,53 @@ const saveDraft = async () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        requestId: workingForm?.metadata?.requestId,
+        requestId: savedRequestId,
       }),
     });
 
-   let folderData = {};
-try {
-  folderData = await folderRes.json();
-} catch (e) {
-  console.error("Failed to parse ensure-request-folder response:", e);
-  setSaveMessage("Draft saved but folder creation failed: invalid server response");
-  return;
-}
+    let folderData = {};
+    try {
+      folderData = await folderRes.json();
+    } catch (e) {
+      console.error("Failed to parse ensure-request-folder response:", e);
+      setSaveMessage("Draft saved but folder creation failed: invalid server response");
+      return;
+    }
 
-if (!folderRes.ok || !folderData.success) {
-  console.error("ensure-request-folder failed:", folderData);
-  setSaveMessage(
-    `Draft saved but folder creation failed: ${folderData?.error || "Unknown error"}`
-  );
-  return;
-}
+    if (!folderRes.ok || !folderData.success) {
+      console.error("ensure-request-folder failed:", folderData);
+      setSaveMessage(
+        `Draft saved but folder creation failed: ${folderData?.error || "Unknown error"}`
+      );
+      return;
+    }
 
-    workingForm = {
-      ...workingForm,
+    const updatedForm = {
+      ...form,
       metadata: {
-        ...workingForm.metadata,
+        ...form.metadata,
+        requestId: savedRequestId,
         driveFolderId: folderData.requestFolder?.id || "",
       },
     };
 
-    workingForm = await uploadThumbnailIfNeeded(folderData, workingForm);
+    setForm(updatedForm);
 
-    setForm(workingForm);
-
-    const saveRes = await fetch("/.netlify/functions/save-draft", {
+    const secondSaveRes = await fetch("/.netlify/functions/save-draft", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(workingForm),
+      body: JSON.stringify(updatedForm),
     });
 
-    const saveData = await saveRes.json();
+    const secondSaveData = await secondSaveRes.json();
 
-    if (!saveData.success) {
-      setSaveMessage("Save failed");
+    if (!secondSaveRes.ok || !secondSaveData.success) {
+      console.error("second save-draft failed:", secondSaveData);
+      setSaveMessage(
+        `Draft saved but updating folder ID failed: ${secondSaveData?.error || "Unknown error"}`
+      );
       return;
     }
 
@@ -1072,7 +1093,7 @@ if (!folderRes.ok || !folderData.success) {
     setSaveMessage(`Saved successfully at ${new Date().toLocaleTimeString()}`);
   } catch (error) {
     console.error("Save draft failed:", error);
-    setSaveMessage("Save failed");
+    setSaveMessage(`Save failed: ${error.message || "Unknown error"}`);
   }
 };
 
