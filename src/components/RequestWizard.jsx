@@ -613,6 +613,8 @@ useEffect(() => {
       const res = await fetch("/.netlify/functions/list-customers");
       const json = await res.json();
 
+      console.log("LIST CUSTOMERS RESPONSE:", json);
+
       if (json?.success) {
         setSavedCustomers(Array.isArray(json.customers) ? json.customers : []);
       }
@@ -1061,6 +1063,7 @@ const saveDraft = async () => {
     let thumbnailUrl = workingForm?.product?.productThumbnailUrl || "";
 
     if (workingForm?.product?.productThumbnailBase64) {
+      console.log("Uploading thumbnail into folder:", folderData.requestFolder?.id);
       const uploadRes = await fetch("/.netlify/functions/upload-thumbnail", {
         method: "POST",
         headers: {
