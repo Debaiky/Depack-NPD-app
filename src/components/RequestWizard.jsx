@@ -743,19 +743,19 @@ const addNewCustomerToRequest = async () => {
 const addExistingCustomerToRequest = () => {
   if (!selectedCustomerId) return;
 
-  const selected = savedCustomers.find((c) => c.CustomerID === selectedCustomerId);
+  const selected = savedCustomers.find((c) => c.customerId === selectedCustomerId);
   if (!selected) return;
 
   const customerToAdd = {
-    customerId: selected.CustomerID || "",
-    customerName: selected.CustomerName || "",
-    contactPerson: selected.ContactPerson || "",
-    contactEmail: selected.ContactEmail || "",
-    contactPhone: selected.ContactPhone || "",
-    countryMarket: selected.CountryMarket || "",
-    deliveryLocation: selected.DeliveryLocation || "",
-    customerNotes: selected.Notes || "",
-  };
+  customerId: selected.customerId || "",
+  customerName: selected.customerName || "",
+  contactPerson: selected.contactPerson || "",
+  contactEmail: selected.contactEmail || "",
+  contactPhone: selected.contactPhone || "",
+  countryMarket: selected.countryMarket || "",
+  deliveryLocation: selected.deliveryLocation || "",
+  customerNotes: selected.notes || "",
+};
 
   const alreadyExists = (form.customer?.customers || []).some(
     (c) =>
@@ -1238,8 +1238,8 @@ const saveDraft = async () => {
               </SelectItem>
             ) : (
              savedCustomers.map((cust) => (
-  <SelectItem key={cust.CustomerID} value={cust.CustomerID}>
-    {cust.CustomerName} {cust.CountryMarket ? `- ${cust.CountryMarket}` : ""}
+  <SelectItem key={cust.customerId} value={cust.customerId}>
+    {cust.customerName} {cust.countryMarket ? `- ${cust.countryMarket}` : ""}
   </SelectItem>
 ))
             )}
