@@ -56,7 +56,7 @@ const handler = async (event) => {
       };
     } else {
       requestFolder = await getOrCreateFolder(requestId, rootFolderId);
-      console.log("ensure-request-folder created request folder:", requestFolder);
+      console.log("ensure-request-folder requestFolder created:", requestFolder);
 
       await updateRequestRow(requestId, {
         DriveFolderID: requestFolder.id,
@@ -68,6 +68,8 @@ const handler = async (event) => {
     const gluePatterns = await getOrCreateFolder("03 Glue Pattern Diagrams", requestFolder.id);
     const packagingArtwork = await getOrCreateFolder("04 Packaging Artwork", requestFolder.id);
     const customerBriefs = await getOrCreateFolder("05 Customer Briefs", requestFolder.id);
+
+    console.log("ensure-request-folder success");
 
     return {
       statusCode: 200,
