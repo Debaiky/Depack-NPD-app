@@ -27,7 +27,10 @@ const handler = async (event) => {
 
     const base64 = body?.base64 || "";
     const fileName = body?.fileName || `thumbnail-${Date.now()}.png`;
-    const parentFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID || "";
+    const parentFolderId =
+  body?.folderId ||
+  process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID ||
+  "";
 
     console.log("UPLOAD THUMBNAIL start");
     console.log("UPLOAD THUMBNAIL fileName:", fileName);
@@ -92,7 +95,7 @@ const handler = async (event) => {
       supportsAllDrives: true,
     });
 
-    const fileUrl = `https://drive.google.com/uc?id=${file.data.id}`;
+    const fileUrl = `https://drive.google.com/thumbnail?id=${file.data.id}&sz=w1000`;
 
     console.log("UPLOAD THUMBNAIL success URL:", fileUrl);
 
