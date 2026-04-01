@@ -1011,14 +1011,38 @@ if (!form.product.productThumbnailName) req.push("Product Picture");
   }, [form]);
 const saveDraft = async () => {
   try {
-    const firstSaveRes = await fetch("/.netlify/functions/save-draft", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
+    let workingForm = structuredClone(form);
+    let thumbnailUrl = workingForm?.product?.productThumbnailUrl || "";
 
+if (workingForm?.product?.productThumbnailBase64) {
+  const uploadRes = await fetch("/.netlify/functions/upload-thumbnail", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      base64: workingForm.product.productThumbnailBase64,
+      fileName: `${workingForm.metadata.requestId || Date.now()}.png`,
+    }),
+  });
+
+  const uploadData = await uploadRes.json();
+
+  if (uploadData.success) {
+    thumbnailUrl = uploadData.url;
+  } else {
+    console.error("Thumbnail upload failed:", uploadData);
+  }
+}
+
+workingForm.product.productThumbnailUrl = thumbnailUrl;
+   const firstSaveRes = await fetch("/.netlify/functions/save-draft", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(workingForm),
+});
     const firstSaveData = await firstSaveRes.json();
 
     if (!firstSaveRes.ok || !firstSaveData.success) {
@@ -1060,13 +1084,12 @@ const saveDraft = async () => {
     }
 
     const updatedForm = {
-      ...form,
-      metadata: {
-        ...form.metadata,
-        requestId: savedRequestId,
-        driveFolderId: folderData.requestFolder?.id || "",
-      },
-    };
+  ...workingForm,
+  metadata: {
+    ...workingForm.metadata,
+    driveFolderId: folderData.requestFolder?.id || "",
+  },
+};
 
     setForm(updatedForm);
 
