@@ -19,7 +19,6 @@ function Section({ title, children }) {
       <div className="border-b pb-2">
         <h2 className="text-base font-semibold text-gray-800">{title}</h2>
       </div>
-
       <div className="space-y-1">{items}</div>
     </div>
   );
@@ -125,12 +124,9 @@ export default function RequestDetail() {
   const status =
     payload?.metadata?.status || request.Status || "Draft";
 
-  /* =========================
-     UI
-  ========================= */
-
   return (
     <div className="min-h-screen bg-gray-50">
+
       {/* ===== HEADER ===== */}
       <div className="sticky top-0 z-50 border-b bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center flex-wrap gap-4">
@@ -169,13 +165,27 @@ export default function RequestDetail() {
       {/* ===== CONTENT ===== */}
       <div className="max-w-5xl mx-auto p-6 space-y-6">
 
-        {/* ===== TOP SUMMARY ===== */}
+        {/* ===== REQUEST SUMMARY WITH THUMBNAIL ===== */}
         <Section title="Request Summary">
-          <InfoRow label="Created Date" value={request.CreatedDate} />
-          <InfoRow label="Created By" value={request.CreatedBy} />
-          <InfoRow label="Customer" value={request.CustomerName} />
-          <InfoRow label="Product Type" value={request.ProductType} />
-          <InfoRow label="Material" value={request.ProductMaterial} />
+          <div className="flex items-start gap-6 flex-wrap">
+
+            {request?.Thumbnail && (
+              <img
+                src={request.Thumbnail}
+                alt="Product"
+                className="w-24 h-24 object-cover rounded-xl border shadow-sm bg-white"
+              />
+            )}
+
+            <div className="flex-1 space-y-1">
+              <InfoRow label="Created Date" value={request.CreatedDate} />
+              <InfoRow label="Created By" value={request.CreatedBy} />
+              <InfoRow label="Customer" value={request.CustomerName} />
+              <InfoRow label="Product Type" value={request.ProductType} />
+              <InfoRow label="Material" value={request.ProductMaterial} />
+            </div>
+
+          </div>
         </Section>
 
         {/* ===== CUSTOMER ===== */}
