@@ -1,5 +1,6 @@
 /* eslint-env node */
 const { google } = require("googleapis");
+const { Readable } = require("stream");
 
 const DRIVE_SCOPE = ["https://www.googleapis.com/auth/drive"];
 
@@ -24,9 +25,14 @@ const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
 
-    const base64 = body?.base64;
+    const base64 = body?.base64 || "";
     const fileName = body?.fileName || `thumbnail-${Date.now()}.png`;
-    const parentFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+    const parentFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID || "";
+
+    console.log("UPLOAD THUMBNAIL start");
+    console.log("UPLOAD THUMBNAIL fileName:", fileName);
+    console.log("UPLOAD THUMBNAIL parentFolderId:", parentFolderId);
+    console.log("UPLOAD THUMBNAIL hasBase64:", Boolean(base64));
 
     if (!base64) {
       return {
@@ -38,12 +44,29 @@ const handler = async (event) => {
       };
     }
 
+    if (!parentFolderId) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          success: false,
+          error: "Missing GOOGLE_DRIVE_ROOT_FOLDER_ID",
+        }),
+      };
+    }
+
     const drive = await getDriveClient();
 
-    const buffer = Buffer.from(
-      base64.replace(/^data:image\/\w+;base64,/, ""),
-      "base64"
-    );
+    // Verify parent folder is accessible
+    const parentMeta = await drive.files.get({
+      fileId: parentFolderId,
+      fields: "id,name,driveId,parents",
+      supportsAllDrives: true,
+    });
+
+    console.log("UPLOAD THUMBNAIL parent folder found:", parentMeta.data);
+
+    const cleanBase64 = base64.replace(/^data:image\/[a-zA-Z0-9+.-]+;base64,/, "");
+    const buffer = Buffer.from(cleanBase64, "base64");
 
     const file = await drive.files.create({
       requestBody: {
@@ -52,20 +75,26 @@ const handler = async (event) => {
       },
       media: {
         mimeType: "image/png",
-        body: require("stream").Readable.from(buffer),
+        body: Readable.from(buffer),
       },
+      fields: "id,name,webViewLink,webContentLink",
+      supportsAllDrives: true,
     });
 
-    // Make file public
+    console.log("UPLOAD THUMBNAIL created file:", file.data);
+
     await drive.permissions.create({
       fileId: file.data.id,
       requestBody: {
         role: "reader",
         type: "anyone",
       },
+      supportsAllDrives: true,
     });
 
     const fileUrl = `https://drive.google.com/uc?id=${file.data.id}`;
+
+    console.log("UPLOAD THUMBNAIL success URL:", fileUrl);
 
     return {
       statusCode: 200,
@@ -76,13 +105,13 @@ const handler = async (event) => {
       }),
     };
   } catch (error) {
-    console.error("UPLOAD THUMBNAIL ERROR:", error);
+    console.error("UPLOAD THUMBNAIL ERROR:", error?.response?.data || error);
 
     return {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        error: error.message,
+        error: error?.response?.data?.error?.message || error.message,
       }),
     };
   }
