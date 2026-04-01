@@ -508,17 +508,20 @@ export default function EngineeringReview() {
 
 
 
-const customer = payload?.customer || {};
+const customerBlock = payload?.customer || {};
+const primaryCustomer = customerBlock?.customers?.[0] || {};
+const project = payload?.project || {};
 const product = payload?.product || {};
 const packagingReq = payload?.packaging || {};
 const deliveryReq = payload?.delivery || {};
-  const isSheet = product.productType === "Sheet Roll";
+const isSheet = product.productType === "Sheet Roll";
 
   const thumb =
-    product?.productThumbnailPreview ||
-    (product?.productThumbnailBase64
-      ? `data:image/*;base64,${product.productThumbnailBase64}`
-      : "");
+  product?.productThumbnailUrl ||
+  product?.productThumbnailPreview ||
+  (product?.productThumbnailBase64
+    ? `data:image/*;base64,${product.productThumbnailBase64}`
+    : "");
 
   const requestedBaseMaterial = product.sheetMaterial || product.productMaterial || "";
   const baseMaterial = engineering.materialSheet.baseMaterial || requestedBaseMaterial;
@@ -1964,7 +1967,7 @@ if (!payload) {
         title="4. Thermoformed Product Packaging Data"
         left={
           <>
-            <RefRow label="Requested Delivery Location" value={deliveryReq?.deliveryLocationConfirm || customer.deliveryLocation} />
+            <RefRow label="Requested Delivery Location" value={deliveryReq?.deliveryLocationConfirm || primaryCustomer.deliveryLocation} />
             <RefRow label="Requested Primary Packaging" value={packagingReq?.primary?.bagSleeveMaterial || "—"} />
             <RefRow label="Requested Carton Type" value={packagingReq?.secondary?.cartonType || "—"} />
           </>
@@ -2190,7 +2193,7 @@ if (!payload) {
         title="5. Freight / Logistics"
         left={
           <>
-            <RefRow label="Requested Delivery Location" value={deliveryReq?.deliveryLocationConfirm || customer.deliveryLocation} />
+            <RefRow label="Requested Delivery Location" value={deliveryReq?.deliveryLocationConfirm || primaryCustomer.deliveryLocation} />
             <RefRow label="Requested Qty / Truck" value={`${deliveryReq?.desiredQtyPerTruck || "—"} ${deliveryReq?.desiredQtyPerTruckUnit || ""}`} />
             <RefRow label="Truck Size" value={deliveryReq?.truckSize} />
           </>
@@ -2267,7 +2270,7 @@ if (!payload) {
 
       <Section
         title="6. Notes"
-        left={<RefRow label="Customer Notes" value={customer.customerNotes} />}
+        left={<RefRow label="Customer Notes" value={project.customerNotes || primaryCustomer.customerNotes} />}
         right={
           <Field label="Engineering Logistics Notes">
             <TextArea
