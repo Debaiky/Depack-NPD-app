@@ -1012,37 +1012,17 @@ if (!form.product.productThumbnailName) req.push("Product Picture");
 const saveDraft = async () => {
   try {
     let workingForm = structuredClone(form);
-    let thumbnailUrl = workingForm?.product?.productThumbnailUrl || "";
 
-if (workingForm?.product?.productThumbnailBase64) {
-  const uploadRes = await fetch("/.netlify/functions/upload-thumbnail", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      base64: workingForm.product.productThumbnailBase64,
-      fileName: `${workingForm.metadata.requestId || Date.now()}.png`,
-    }),
-  });
+    /* ================= FIRST SAVE ================= */
 
-  const uploadData = await uploadRes.json();
+    const firstSaveRes = await fetch("/.netlify/functions/save-draft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(workingForm),
+    });
 
-  if (uploadData.success) {
-    thumbnailUrl = uploadData.url;
-  } else {
-    console.error("Thumbnail upload failed:", uploadData);
-  }
-}
-
-workingForm.product.productThumbnailUrl = thumbnailUrl;
-   const firstSaveRes = await fetch("/.netlify/functions/save-draft", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify(workingForm),
-});
     const firstSaveData = await firstSaveRes.json();
 
     if (!firstSaveRes.ok || !firstSaveData.success) {
@@ -1052,9 +1032,9 @@ workingForm.product.productThumbnailUrl = thumbnailUrl;
     }
 
     const savedRequestId =
-      firstSaveData?.requestId || form?.metadata?.requestId;
+      firstSaveData?.requestId || workingForm?.metadata?.requestId;
 
-    console.log("SENDING ensure-request-folder with requestId:", savedRequestId);
+    /* ================= ENSURE FOLDER ================= */
 
     const folderRes = await fetch("/.netlify/functions/ensure-request-folder", {
       method: "POST",
@@ -1066,14 +1046,7 @@ workingForm.product.productThumbnailUrl = thumbnailUrl;
       }),
     });
 
-    let folderData = {};
-    try {
-      folderData = await folderRes.json();
-    } catch (e) {
-      console.error("Failed to parse ensure-request-folder response:", e);
-      setSaveMessage("Draft saved but folder creation failed: invalid server response");
-      return;
-    }
+    const folderData = await folderRes.json();
 
     if (!folderRes.ok || !folderData.success) {
       console.error("ensure-request-folder failed:", folderData);
@@ -1083,15 +1056,50 @@ workingForm.product.productThumbnailUrl = thumbnailUrl;
       return;
     }
 
+    /* ================= UPLOAD THUMBNAIL (NOW CORRECT) ================= */
+
+    let thumbnailUrl = workingForm?.product?.productThumbnailUrl || "";
+
+    if (workingForm?.product?.productThumbnailBase64) {
+      const uploadRes = await fetch("/.netlify/functions/upload-thumbnail", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          base64: workingForm.product.productThumbnailBase64,
+          fileName: `${savedRequestId}.png`,
+          folderId: folderData.requestFolder?.id, // ✅ THIS IS THE KEY FIX
+        }),
+      });
+
+      const uploadData = await uploadRes.json();
+
+      if (uploadData.success) {
+        thumbnailUrl = uploadData.url;
+      } else {
+        console.error("Thumbnail upload failed:", uploadData);
+      }
+    }
+
+    /* ================= UPDATE FORM ================= */
+
     const updatedForm = {
-  ...workingForm,
-  metadata: {
-    ...workingForm.metadata,
-    driveFolderId: folderData.requestFolder?.id || "",
-  },
-};
+      ...workingForm,
+      metadata: {
+        ...workingForm.metadata,
+        requestId: savedRequestId,
+        driveFolderId: folderData.requestFolder?.id || "",
+      },
+      product: {
+        ...workingForm.product,
+        productThumbnailUrl: thumbnailUrl, // ✅ now correct
+      },
+    };
 
     setForm(updatedForm);
+
+    /* ================= SECOND SAVE ================= */
 
     const secondSaveRes = await fetch("/.netlify/functions/save-draft", {
       method: "POST",
@@ -1106,10 +1114,12 @@ workingForm.product.productThumbnailUrl = thumbnailUrl;
     if (!secondSaveRes.ok || !secondSaveData.success) {
       console.error("second save-draft failed:", secondSaveData);
       setSaveMessage(
-        `Draft saved but updating folder ID failed: ${secondSaveData?.error || "Unknown error"}`
+        `Draft saved but updating data failed: ${secondSaveData?.error || "Unknown error"}`
       );
       return;
     }
+
+    /* ================= FILES ================= */
 
     await uploadPendingFiles(folderData.subfolders);
 
