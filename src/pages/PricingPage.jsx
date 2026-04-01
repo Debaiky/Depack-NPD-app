@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Chart from "chart.js/auto";
-const project = requestData?.project || {};
+
 const toNum = (v) => {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""));
   return Number.isNaN(n) ? 0 : n;
@@ -128,6 +128,7 @@ function convertAmount(amount, fromCurrency, targetCurrency, usdEgp, eurUsd) {
 function buildInitialScenarioFromEngineering(requestData, engineeringData) {
   const product = requestData?.product || {};
   const customer = requestData?.customer || {};
+  const project = requestData?.project || {};
   const ms = engineeringData?.materialSheet || {};
   const ss = engineeringData?.sheetSpecs || {};
   const ex = engineeringData?.extrusion || {};
@@ -409,6 +410,7 @@ export default function PricingPage() {
 
   const customer = requestData?.customer || {};
   const product = requestData?.product || {};
+  const project = requestData?.project || {};
   const ms = engineeringData?.materialSheet || {};
   const ss = engineeringData?.sheetSpecs || {};
   const ex = engineeringData?.extrusion || {};
