@@ -9,10 +9,9 @@ const trimPayloadForSheet = (body) => {
   const clean = structuredClone(body || {});
 
   // ❌ remove heavy base64 image to avoid 50k cell limit
-  if (clean.product) {
-    clean.product.productThumbnailBase64 = "";
-    clean.product.productThumbnailPreview = "";
-  }
+if (clean.product) {
+  clean.product.productThumbnailBase64 = "";
+}
 
   return clean;
 };
@@ -70,11 +69,7 @@ const handler = async (event) => {
     const payloadForSheet = trimPayloadForSheet(body);
     let payloadJson = JSON.stringify(payloadForSheet);
 
-    // 🚨 Safety: prevent >50k characters
-    if (payloadJson.length > 45000) {
-      console.warn("Payload too large, truncating...");
-      payloadJson = payloadJson.slice(0, 45000);
-    }
+
 
     const row = [
       requestId, // A
@@ -86,7 +81,7 @@ const handler = async (event) => {
       primaryCustomer?.countryMarket || "", // G
       primaryCustomer?.deliveryLocation || "", // H
       body?.project?.projectName || "", // I
-      "New product", // J
+      body?.project?.projectType || body?.customer?.projectType || "New product", // J
       body?.product?.productType || "", // K
       body?.product?.productType === "Sheet Roll"
         ? body?.product?.sheetMaterial || ""
@@ -97,7 +92,7 @@ const handler = async (event) => {
       targetSellingPrice, // P
       forecastAnnualVolume, // Q
       annualTurnover || "", // R
-      body?.product?.productThumbnailUrl || "", // S ✅ keep URL only
+      body?.product?.productThumbnailPreview || "", // S
     ];
 
     console.log("SAVE DRAFT requestId:", requestId);
