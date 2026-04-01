@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Chart from "chart.js/auto";
-const project = request?.project || {};
+const project = requestData?.project || {};
 const toNum = (v) => {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""));
   return Number.isNaN(n) ? 0 : n;
