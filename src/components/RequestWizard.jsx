@@ -3257,9 +3257,9 @@ onChange={(e) => update("project.customerNotes", e.target.value)}
                         const data = await response.json();
 
                         if (data.success) {
-                          alert("✅ Sent to Engineering");
-                          window.location.href = "/engineering-dashboard";
-                        } else {
+  alert("✅ Sent to Engineering");
+  window.location.href = `/engineering/${form.metadata.requestId}`;
+} else {
                           alert("❌ Failed to send");
                         }
                       } catch (error) {
