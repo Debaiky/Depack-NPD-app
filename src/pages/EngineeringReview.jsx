@@ -1407,12 +1407,16 @@ if (!payload) {
               <div className="font-medium">Sheet Specification</div>
 
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                <Field label="Net Width (mm)">
-                  <Input
-                    value={engineering.sheetSpecs.netWidth_mm}
-                    onChange={(v) => updateSection("sheetSpecs", { netWidth_mm: v })}
-                  />
-                </Field>
+                <Field
+  label="Net Width (mm)"
+  requestValue={requestValueOrBlank(product.sheetWidthMm)}
+  currentValue={engineering.sheetSpecs.netWidth_mm}
+>
+  <Input
+    value={engineering.sheetSpecs.netWidth_mm}
+    onChange={(v) => updateSection("sheetSpecs", { netWidth_mm: v })}
+  />
+</Field>
 
                 <Field label="Edge Trim / Side (mm)">
                   <Input
@@ -1459,7 +1463,11 @@ if (!payload) {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Field label="Thickness (micron)">
+              <Field
+                  label="Thickness (micron)"
+                  requestValue={requestValueOrBlank(product.sheetThicknessMicron)}
+                  currentValue={engineering.sheetSpecs.thickness_mic}
+                >
                   <Input
                     value={engineering.sheetSpecs.thickness_mic}
                     onChange={(v) => updateSection("sheetSpecs", { thickness_mic: v })}
@@ -1511,7 +1519,11 @@ if (!payload) {
                   />
                 </Field>
 
-                <Field label="Roll Weight (kg)">
+                <Field
+                  label="Roll Weight (kg)"
+                  requestValue={requestValueOrBlank(product.rollWeightKg)}
+                  currentValue={engineering.sheetSpecs.rollTargetWeight_kg}
+                >
                   <Input
                     value={engineering.sheetSpecs.rollTargetWeight_kg}
                     onChange={(v) => updateSection("sheetSpecs", { rollTargetWeight_kg: v })}
@@ -1554,85 +1566,7 @@ if (!payload) {
                 />
               </div>
 
-              <div className="rounded-xl border p-4 space-y-4">
-                <div className="font-medium">Small Sheet Thickness Calculator</div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <Field label="Surface Mode">
-                    <SelectField
-                      value={engineering.sheetSpecs.surfaceMode}
-                      onChange={(v) => updateSection("sheetSpecs", { surfaceMode: v })}
-                      options={["Round", "Manual"]}
-                    />
-                  </Field>
-
-                  {engineering.sheetSpecs.surfaceMode === "Round" ? (
-                    <Field label="Product Diameter (mm)">
-                      <Input
-                        value={engineering.sheetSpecs.productDiameter_mm || product.topDiameterMm}
-                        onChange={(v) => updateSection("sheetSpecs", { productDiameter_mm: v })}
-                      />
-                    </Field>
-                  ) : (
-                    <Field label="Surface Area (cm²)">
-                      <Input
-                        value={engineering.sheetSpecs.manualSurfaceArea_cm2}
-                        onChange={(v) => updateSection("sheetSpecs", { manualSurfaceArea_cm2: v })}
-                      />
-                    </Field>
-                  )}
-
-                  <Field label="Material Density (g/cm³)">
-                    <Input value={fmt(density, 3)} onChange={() => {}} disabled />
-                  </Field>
-
-                  <Field label="Calculator Mode">
-                    <SelectField
-                      value={engineering.sheetSpecs.thicknessCalcMode}
-                      onChange={(v) => updateSection("sheetSpecs", { thicknessCalcMode: v })}
-                      options={["Calculate Thickness", "Calculate Weight"]}
-                    />
-                  </Field>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <RefRow
-                    label="Surface Area (cm²)"
-                    value={sheetDerived.surfaceArea_cm2 ? fmt(sheetDerived.surfaceArea_cm2, 3) : "—"}
-                  />
-
-                  <Field label="Sheet Thickness (micron)">
-                    <Input
-                      value={engineering.sheetSpecs.thicknessCalc_mic}
-                      onChange={(v) => updateSection("sheetSpecs", { thicknessCalc_mic: v })}
-                      disabled={engineering.sheetSpecs.thicknessCalcMode === "Calculate Thickness"}
-                    />
-                  </Field>
-
-                  <Field label="Product Target Weight (g)">
-                    <Input
-                      value={engineering.sheetSpecs.weightCalc_g || product.productWeightG}
-                      onChange={(v) => updateSection("sheetSpecs", { weightCalc_g: v })}
-                      disabled={engineering.sheetSpecs.thicknessCalcMode === "Calculate Weight"}
-                    />
-                  </Field>
-
-                  <RefRow
-                    label="Auto Result"
-                    value={
-                      engineering.sheetSpecs.thicknessCalcMode === "Calculate Thickness"
-                        ? `${fmt(sheetDerived.calcThicknessFromWeight, 2)} micron`
-                        : `${fmt(sheetDerived.calcWeightFromThickness, 2)} g`
-                    }
-                  />
-                </div>
-
-                {requestedWeight > 0 && Math.abs(weightDiffPct) > 5 && (
-                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 p-3 text-sm">
-                    Calculated/requested weight differs by {fmt(Math.abs(weightDiffPct), 2)}%.
-                  </div>
-                )}
-              </div>
+              
 
               <div className="rounded-xl border p-4 space-y-4">
                 <div className="font-medium">Material Consumption per Ton</div>
