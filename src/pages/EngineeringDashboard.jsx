@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 
 function StatusBadge({ status }) {
   const colors = {
-    "Project Completed": "bg-blue-100 text-blue-700",
-    "Under Engineering Review": "bg-yellow-100 text-yellow-700",
-    "Engineering Completed": "bg-green-100 text-green-700",
-    "Under Pricing": "bg-purple-100 text-purple-700",
-    "Pricing Completed": "bg-gray-200 text-gray-700",
+    Draft: "bg-gray-100 text-gray-700",
+    "Waiting for Engineering": "bg-yellow-100 text-yellow-800",
+    "Under Engineering Review": "bg-blue-100 text-blue-800",
+    "Sent to Pricing": "bg-purple-100 text-purple-800",
+    Completed: "bg-green-100 text-green-800",
   };
 
   return (
@@ -21,6 +21,24 @@ function StatusBadge({ status }) {
   );
 }
 
+function ThumbnailCell({ src, alt }) {
+  if (!src) {
+    return (
+      <div className="w-14 h-14 rounded-lg border bg-gray-100 flex items-center justify-center text-[10px] text-gray-500 text-center px-1">
+        No image
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt || "Product"}
+      className="w-14 h-14 rounded-lg border object-cover bg-white"
+    />
+  );
+}
+
 function SectionTable({ title, rows }) {
   return (
     <div className="space-y-3">
@@ -30,6 +48,7 @@ function SectionTable({ title, rows }) {
         <table className="w-full text-sm">
           <thead className="bg-gray-100 text-left">
             <tr>
+              <th className="p-3 w-[90px]">Image</th>
               <th className="p-3">Request ID</th>
               <th className="p-3">Customer</th>
               <th className="p-3">Project</th>
@@ -42,13 +61,19 @@ function SectionTable({ title, rows }) {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan="7" className="p-6 text-center text-gray-500">
+                <td colSpan="8" className="p-6 text-center text-gray-500">
                   No items.
                 </td>
               </tr>
             ) : (
               rows.map((req) => (
-                <tr key={req.RequestID} className="border-t">
+                <tr key={req.RequestID} className="border-t align-middle">
+                  <td className="p-3">
+                    <ThumbnailCell
+                      src={req.Thumbnail}
+                      alt={req.ProjectName || req.ProductType || "Product"}
+                    />
+                  </td>
                   <td className="p-3 font-medium">{req.RequestID}</td>
                   <td className="p-3">{req.CustomerName || "—"}</td>
                   <td className="p-3">{req.ProjectName || "—"}</td>
@@ -113,11 +138,10 @@ export default function EngineeringDashboard() {
     return requests
       .filter((r) =>
         [
-          "Project Completed",
+          "Waiting for Engineering",
           "Under Engineering Review",
-          "Engineering Completed",
-          "Under Pricing",
-          "Pricing Completed",
+          "Sent to Pricing",
+          "Completed",
         ].includes(r?.Status)
       )
       .filter((r) => {
@@ -126,15 +150,16 @@ export default function EngineeringDashboard() {
         return (
           (r?.RequestID || "").toLowerCase().includes(q) ||
           (r?.ProjectName || "").toLowerCase().includes(q) ||
-          (r?.CustomerName || "").toLowerCase().includes(q)
+          (r?.CustomerName || "").toLowerCase().includes(q) ||
+          (r?.ProductType || "").toLowerCase().includes(q)
         );
       });
   }, [requests, search]);
 
-  const waiting = visibleRows.filter((r) => r.Status === "Project Completed");
+  const waiting = visibleRows.filter((r) => r.Status === "Waiting for Engineering");
   const inReview = visibleRows.filter((r) => r.Status === "Under Engineering Review");
   const closed = visibleRows.filter((r) =>
-    ["Engineering Completed", "Under Pricing", "Pricing Completed"].includes(r.Status)
+    ["Sent to Pricing", "Completed"].includes(r.Status)
   );
 
   if (loading) return <div className="p-6">Loading engineering dashboard...</div>;
@@ -163,7 +188,7 @@ export default function EngineeringDashboard() {
         </div>
 
         <input
-          placeholder="Search request, project, or customer..."
+          placeholder="Search request, project, product, or customer..."
           className="border px-3 py-2 rounded w-80 bg-white"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
