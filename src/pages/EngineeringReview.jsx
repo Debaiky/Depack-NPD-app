@@ -1750,33 +1750,101 @@ if (!payload) {
                    </div>
 </Section>
 
-      <Section
-        title="2. Extrusion Process Data"
-        left={
-          <>
-            <RefRow label="Requested Product" value={product.productType} />
-            <RefRow label="Material" value={baseMaterial} />
-            <RefRow
-              label="Requested Width / Thickness"
-              value={`${product.sheetWidthMm || "—"} mm / ${product.sheetThicknessMicron || "—"} micron`}
-            />
-          </>
-        }
-        right={
-          <div className="space-y-4">
+   <Section title="2. Extrusion Process Data">
+  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="rounded-xl border bg-gray-50 p-4 space-y-4 xl:col-span-1">
+      <div className="font-medium">Calculated Summary</div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <RefRow
+          label="Base Material"
+          value={baseMaterial || "—"}
+        />
+        <RefRow
+          label="Requested Width / Thickness"
+          value={`${product.sheetWidthMm || "—"} mm / ${product.sheetThicknessMicron || "—"} micron`}
+        />
+        <RefRow
+          label="Total Gross Speed"
+          value={
+            extrusionDerived.totalGross
+              ? `${fmt(extrusionDerived.totalGross, 2)} kg/hr`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Gross / Optimum"
+          value={
+            extrusionDerived.grossVsOptimalPct
+              ? `${fmt(extrusionDerived.grossVsOptimalPct, 2)}%`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Net Speed"
+          value={
+            extrusionDerived.netSpeed
+              ? `${fmt(extrusionDerived.netSpeed, 2)} kg/hr`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Net / Optimum"
+          value={
+            extrusionDerived.netVsOptimalPct
+              ? `${fmt(extrusionDerived.netVsOptimalPct, 2)}%`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Tons / Hour"
+          value={
+            extrusionDerived.tph
+              ? `${fmt(extrusionDerived.tph, 3)} t/hr`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Tons / Day"
+          value={
+            extrusionDerived.tonsPerDay24h
+              ? `${fmt(extrusionDerived.tonsPerDay24h, 3)} t/day`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Tons / Year"
+          value={
+            extrusionDerived.tonsPerYear330d
+              ? `${fmt(extrusionDerived.tonsPerYear330d, 3)} t/year`
+              : "—"
+          }
+        />
+      </div>
+    </div>
+
+    <div className="space-y-4 xl:col-span-2"></div>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field label="Line Name">
-                <Input
-                  value={engineering.extrusion.lineName}
-                  onChange={(v) => updateSection("extrusion", { lineName: v })}
-                />
-              </Field>
-              <Field label="Scrap Rate %">
-                <Input
-                  value={engineering.extrusion.scrapRatePct}
-                  onChange={(v) => updateSection("extrusion", { scrapRatePct: v })}
-                />
-              </Field>
+              <Field
+  label="Line Name"
+  requestValue="Breyer"
+  currentValue={engineering.extrusion.lineName}
+>
+  <Input
+    value={engineering.extrusion.lineName}
+    onChange={(v) => updateSection("extrusion", { lineName: v })}
+  />
+</Field>
+              <Field
+  label="Scrap Rate %"
+  requestValue=""
+  currentValue={engineering.extrusion.scrapRatePct}
+>
+  <Input
+    value={engineering.extrusion.scrapRatePct}
+    onChange={(v) => updateSection("extrusion", { scrapRatePct: v })}
+  />
+</Field>
               <Field label="Non Recoverable Changeover Waste (kg)">
                 <Input
                   value={engineering.extrusion.changeoverWasteKg}
@@ -1789,28 +1857,40 @@ if (!payload) {
                   onChange={(v) => updateSection("extrusion", { startupWastePct: v })}
                 />
               </Field>
-              <Field label="Efficiency %">
-                <Input
-                  value={engineering.extrusion.efficiencyPct}
-                  onChange={(v) => updateSection("extrusion", { efficiencyPct: v })}
-                />
-              </Field>
+              <Field
+  label="Efficiency %"
+  requestValue=""
+  currentValue={engineering.extrusion.efficiencyPct}
+>
+  <Input
+    value={engineering.extrusion.efficiencyPct}
+    onChange={(v) => updateSection("extrusion", { efficiencyPct: v })}
+  />
+</Field>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field label={`Gross Speed Extruder A (optimum ${OPT_SPEED_MAP[baseMaterial]?.A || 0} kg/hr)`}>
-                <Input
-                  value={engineering.extrusion.grossSpeedA_kg_hr}
-                  onChange={(v) => updateSection("extrusion", { grossSpeedA_kg_hr: v })}
-                />
-              </Field>
+              <Field
+  label={`Gross Speed Extruder A (optimum ${OPT_SPEED_MAP[baseMaterial]?.A || 0} kg/hr)`}
+  requestValue={requestValueOrBlank(OPT_SPEED_MAP[baseMaterial]?.A || "")}
+  currentValue={engineering.extrusion.grossSpeedA_kg_hr}
+>
+  <Input
+    value={engineering.extrusion.grossSpeedA_kg_hr}
+    onChange={(v) => updateSection("extrusion", { grossSpeedA_kg_hr: v })}
+  />
+</Field>
 
-              <Field label={`Gross Speed Extruder B (optimum ${OPT_SPEED_MAP[baseMaterial]?.B || 0} kg/hr)`}>
-                <Input
-                  value={engineering.extrusion.grossSpeedB_kg_hr}
-                  onChange={(v) => updateSection("extrusion", { grossSpeedB_kg_hr: v })}
-                />
-              </Field>
+              <Field
+  label={`Gross Speed Extruder B (optimum ${OPT_SPEED_MAP[baseMaterial]?.B || 0} kg/hr)`}
+  requestValue={requestValueOrBlank(OPT_SPEED_MAP[baseMaterial]?.B || "")}
+  currentValue={engineering.extrusion.grossSpeedB_kg_hr}
+>
+  <Input
+    value={engineering.extrusion.grossSpeedB_kg_hr}
+    onChange={(v) => updateSection("extrusion", { grossSpeedB_kg_hr: v })}
+  />
+</Field>
 
               <Field label="Total Gross Speed (kg/hr)">
                 <Input value={engineering.extrusion.totalGrossSpeed_kg_hr} onChange={() => {}} disabled />
@@ -1866,9 +1946,8 @@ if (!payload) {
                 <Input value={engineering.extrusion.tonsPerYear330d} onChange={() => {}} disabled />
               </Field>
             </div>
-          </div>
-        }
-      />
+                  </div>
+</Section>
 
       <Section
         title="3. Thermoforming Data"
