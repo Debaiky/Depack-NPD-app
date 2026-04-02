@@ -1283,125 +1283,199 @@ if (!payload) {
               </div>
             )}
 
-            <div className="rounded-xl border p-4 space-y-4">
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="font-medium">Layer Material Mix</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
-  <div
-    className={`rounded-lg border p-3 text-sm ${
-      layerAIsValid
-        ? "border-green-200 bg-green-50 text-green-700"
-        : "border-red-200 bg-red-50 text-red-700"
-    }`}
-  >
-    Layer A total = {fmt(layerATotalPct, 2)}%
-    {!layerAIsValid && " — must equal 100%"}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+  <div className="rounded-xl border bg-gray-50 p-4 space-y-4 xl:col-span-1">
+    <div className="font-medium">Material Consumption per Ton</div>
+
+    <div className="grid grid-cols-1 gap-3">
+      <RefRow
+        label="Plastic Share"
+        value={
+          sheetDerived.plasticShare
+            ? `${fmt(sheetDerived.plasticShare * 100, 2)}%`
+            : "—"
+        }
+      />
+      <RefRow
+        label="Coating Share"
+        value={
+          engineering.materialSheet.coatingUsed === "Yes"
+            ? `${fmt(sheetDerived.coatingShare * 100, 2)}%`
+            : "0%"
+        }
+      />
+      <RefRow
+        label="Coating Kg / Ton"
+        value={
+          engineering.materialSheet.coatingUsed === "Yes"
+            ? `${fmt(sheetDerived.coatingKgPerTon, 3)} kg`
+            : "0 kg"
+        }
+      />
+      <RefRow
+        label="Total Weight / m²"
+        value={
+          sheetDerived.totalWeightPerM2_g
+            ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
+            : "—"
+        }
+      />
+    </div>
+
+    <div className="overflow-auto rounded-xl border bg-white">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="text-left p-3">Material</th>
+            <th className="text-left p-3">Final %</th>
+            <th className="text-left p-3">Kg / Ton</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sheetDerived.materialPerTonRows.map((row) => (
+            <tr key={row.name} className="border-t">
+              <td className="p-3">{row.name}</td>
+              <td className="p-3">{fmt(row.totalPct, 2)}%</td>
+              <td className="p-3">{fmt(row.kgPerTon, 3)} kg</td>
+            </tr>
+          ))}
+
+          {engineering.materialSheet.coatingUsed === "Yes" && (
+            <tr className="border-t bg-yellow-50">
+              <td className="p-3">
+                {engineering.materialSheet.coatingName || "Coating"}
+              </td>
+              <td className="p-3">{fmt(sheetDerived.coatingShare * 100, 2)}%</td>
+              <td className="p-3">{fmt(sheetDerived.coatingKgPerTon, 3)} kg</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <div
-    className={`rounded-lg border p-3 text-sm ${
-      layerBIsValid
-        ? "border-green-200 bg-green-50 text-green-700"
-        : "border-red-200 bg-red-50 text-red-700"
-    }`}
-  >
-    Layer B total = {fmt(layerBTotalPct, 2)}%
-    {!layerBIsValid && " — must equal 100%"}
+  <div className="rounded-xl border p-4 space-y-4 xl:col-span-2">
+    <div className="flex items-center justify-between gap-4 flex-wrap">
+      <div className="font-medium">Layer Material Mix</div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+        <div
+          className={`rounded-lg border p-3 text-sm ${
+            layerAIsValid
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          Layer A total = {fmt(layerATotalPct, 2)}%
+          {!layerAIsValid && " — must equal 100%"}
+        </div>
+
+        <div
+          className={`rounded-lg border p-3 text-sm ${
+            layerBIsValid
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          Layer B total = {fmt(layerBTotalPct, 2)}%
+          {!layerBIsValid && " — must equal 100%"}
+        </div>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={engineering.materialSheet.syncLayerBWithA}
+          onChange={(e) =>
+            updateSection("materialSheet", {
+              syncLayerBWithA: e.target.checked,
+            })
+          }
+        />
+        Add Layer A rows automatically to Layer B
+      </label>
+    </div>
+
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <div className="font-medium text-sm">Layer A</div>
+        {(engineering.materialSheet.layerA || []).map((row) => (
+          <div key={row.id} className="grid grid-cols-12 gap-2">
+            <div className="col-span-7">
+              <Input
+                value={row.name}
+                onChange={(v) => updateMaterialRow("layerA", row.id, { name: v })}
+                placeholder="Material name"
+              />
+            </div>
+            <div className="col-span-4">
+              <Input
+                value={row.pct}
+                onChange={(v) => updateMaterialRow("layerA", row.id, { pct: v })}
+                placeholder="% in layer"
+              />
+            </div>
+            <div className="col-span-1">
+              <button
+                className="w-full border rounded-lg p-2"
+                onClick={() => removeMaterialRow("layerA", row.id)}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+        <button
+          className="border rounded-lg px-3 py-2 text-sm"
+          onClick={() => addMaterialRow("layerA")}
+        >
+          + Add Layer A Material
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        <div className="font-medium text-sm">Layer B</div>
+        {(engineering.materialSheet.layerB || []).map((row) => (
+          <div key={row.id} className="grid grid-cols-12 gap-2">
+            <div className="col-span-7">
+              <Input
+                value={row.name}
+                onChange={(v) => updateMaterialRow("layerB", row.id, { name: v })}
+                placeholder="Material name"
+                disabled={engineering.materialSheet.syncLayerBWithA}
+              />
+            </div>
+            <div className="col-span-4">
+              <Input
+                value={row.pct}
+                onChange={(v) => updateMaterialRow("layerB", row.id, { pct: v })}
+                placeholder="% in layer"
+                disabled={engineering.materialSheet.syncLayerBWithA}
+              />
+            </div>
+            <div className="col-span-1">
+              <button
+                className="w-full border rounded-lg p-2"
+                onClick={() => removeMaterialRow("layerB", row.id)}
+                disabled={engineering.materialSheet.syncLayerBWithA}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+        {!engineering.materialSheet.syncLayerBWithA && (
+          <button
+            className="border rounded-lg px-3 py-2 text-sm"
+            onClick={() => addMaterialRow("layerB")}
+          >
+            + Add Layer B Material
+          </button>
+        )}
+      </div>
+    </div>
   </div>
 </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={engineering.materialSheet.syncLayerBWithA}
-                    onChange={(e) =>
-                      updateSection("materialSheet", {
-                        syncLayerBWithA: e.target.checked,
-                      })
-                    }
-                  />
-                  Add Layer A rows automatically to Layer B
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="font-medium text-sm">Layer A</div>
-                  {(engineering.materialSheet.layerA || []).map((row) => (
-                    <div key={row.id} className="grid grid-cols-12 gap-2">
-                      <div className="col-span-7">
-                        <Input
-                          value={row.name}
-                          onChange={(v) => updateMaterialRow("layerA", row.id, { name: v })}
-                          placeholder="Material name"
-                        />
-                      </div>
-                      <div className="col-span-4">
-                        <Input
-                          value={row.pct}
-                          onChange={(v) => updateMaterialRow("layerA", row.id, { pct: v })}
-                          placeholder="% in layer"
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <button
-                          className="w-full border rounded-lg p-2"
-                          onClick={() => removeMaterialRow("layerA", row.id)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  <button
-                    className="border rounded-lg px-3 py-2 text-sm"
-                    onClick={() => addMaterialRow("layerA")}
-                  >
-                    + Add Layer A Material
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="font-medium text-sm">Layer B</div>
-                  {(engineering.materialSheet.layerB || []).map((row) => (
-                    <div key={row.id} className="grid grid-cols-12 gap-2">
-                      <div className="col-span-7">
-                        <Input
-                          value={row.name}
-                          onChange={(v) => updateMaterialRow("layerB", row.id, { name: v })}
-                          placeholder="Material name"
-                          disabled={engineering.materialSheet.syncLayerBWithA}
-                        />
-                      </div>
-                      <div className="col-span-4">
-                        <Input
-                          value={row.pct}
-                          onChange={(v) => updateMaterialRow("layerB", row.id, { pct: v })}
-                          placeholder="% in layer"
-                          disabled={engineering.materialSheet.syncLayerBWithA}
-                        />
-                      </div>
-                      <div className="col-span-1">
-                        <button
-                          className="w-full border rounded-lg p-2"
-                          onClick={() => removeMaterialRow("layerB", row.id)}
-                          disabled={engineering.materialSheet.syncLayerBWithA}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {!engineering.materialSheet.syncLayerBWithA && (
-                    <button
-                      className="border rounded-lg px-3 py-2 text-sm"
-                      onClick={() => addMaterialRow("layerB")}
-                    >
-                      + Add Layer B Material
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
 
             <div className="rounded-xl border p-4 space-y-4">
               <div className="font-medium">Sheet Specification</div>
@@ -1568,59 +1642,7 @@ if (!payload) {
 
               
 
-              <div className="rounded-xl border p-4 space-y-4">
-                <div className="font-medium">Material Consumption per Ton</div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <RefRow
-                    label="Plastic Share"
-                    value={sheetDerived.plasticShare ? `${fmt(sheetDerived.plasticShare * 100, 2)}%` : "—"}
-                  />
-                  <RefRow
-                    label="Coating Share"
-                    value={engineering.materialSheet.coatingUsed === "Yes" ? `${fmt(sheetDerived.coatingShare * 100, 2)}%` : "0%"}
-                  />
-                  <RefRow
-                    label="Coating Kg / Ton"
-                    value={engineering.materialSheet.coatingUsed === "Yes" ? `${fmt(sheetDerived.coatingKgPerTon, 3)} kg` : "0 kg"}
-                  />
-                  <RefRow
-                    label="Total Weight / m²"
-                    value={sheetDerived.totalWeightPerM2_g ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²` : "—"}
-                  />
-                </div>
-
-                <div className="overflow-auto rounded-xl border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                    <tr>
-  <th className="text-left p-3">Material</th>
-  <th className="text-left p-3">Layer A %</th>
-  <th className="text-left p-3">Layer B %</th>
-  <th className="text-left p-3">Final %</th>
-  <th className="text-left p-3">Kg / Ton</th>
-</tr>
-                    </thead>
-                    <tbody>
-                      {sheetDerived.materialPerTonRows.map((row) => (
-                       <tr key={row.name} className="border-t">
-  <td className="p-3">{row.name}</td>
-  <td className="p-3">{fmt(row.pctLayerA, 2)}%</td>
-  <td className="p-3">{fmt(row.pctLayerB, 2)}%</td>
-  <td className="p-3">{fmt(row.totalPct, 2)}%</td>
-  <td className="p-3">{fmt(row.kgPerTon, 3)} kg</td>
-</tr>
-                      ))}
-                      {engineering.materialSheet.coatingUsed === "Yes" && (
-                        <tr className="border-t bg-yellow-50">
-                          <td className="p-3">{engineering.materialSheet.coatingName || "Coating"}</td>
-                          <td className="p-3">{fmt(sheetDerived.coatingShare * 100, 2)}%</td>
-                          <td className="p-3">{fmt(sheetDerived.coatingKgPerTon, 3)} kg</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+             
 
               <div className="rounded-xl border p-4 space-y-4">
                 <div className="font-medium">Sheet Roll Packaging Data</div>
