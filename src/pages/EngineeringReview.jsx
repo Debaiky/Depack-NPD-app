@@ -186,21 +186,23 @@ export default function EngineeringReview() {
       thicknessCalcMode: "Calculate Thickness",
     },
 
-    sheetPackaging: {
-      coreMaterial: "",
-      coreSize: "",
-      rollWeight_kg: "",
-      labelsPerRoll: "",
-      labelsPerPallet: "",
-      palletType: "",
-      rollsPerPallet: "",
-      strapLength_m: "",
-      separatorsPerPallet: "",
-      foamLength_m: "",
-      stretchKgPerPallet: "",
-      operatorsPerPallet: "",
-      instructionText: "",
-    },
+   sheetPackaging: {
+  coreMaterial: "",
+  coreSize: "",
+  coreUses: "",
+  rollWeight_kg: "",
+  labelsPerRoll: "",
+  labelsPerPallet: "",
+  palletType: "",
+  palletUses: "",
+  rollsPerPallet: "",
+  strapLength_m: "",
+  separatorsPerPallet: "",
+  foamLength_m: "",
+  stretchKgPerPallet: "",
+  operatorsPerPallet: "",
+  instructionText: "",
+},
 
     extrusion: {
       lineName: "Breyer",
@@ -1180,117 +1182,142 @@ if (!payload) {
 
      <Section title="1. Material Structure and Sheet Roll">
           <div className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-  <Field
-    label="Base Material"
-    requestValue={requestValueOrBlank(requestedBaseMaterial)}
-    currentValue={engineering.materialSheet.baseMaterial}
-  >
-    <SelectField
-      value={engineering.materialSheet.baseMaterial}
-      onChange={(v) => {
-        const opt = OPT_SPEED_MAP[v] || { A: "", B: "" };
-        updateSection("materialSheet", {
-          baseMaterial: v,
-          density: DENSITY_MAP[v] ? String(DENSITY_MAP[v]) : engineering.materialSheet.density,
-        });
-        updateSection("extrusion", {
-          grossSpeedA_kg_hr: opt.A ? String(opt.A) : engineering.extrusion.grossSpeedA_kg_hr,
-          grossSpeedB_kg_hr: opt.B ? String(opt.B) : engineering.extrusion.grossSpeedB_kg_hr,
-        });
-      }}
-      options={["PET", "PP", "PS", "Other"]}
-    />
-  </Field>
+          <div className="rounded-xl border p-4 space-y-4">
+  <div className="font-medium">Base Material</div>
 
-  <Field
-    label="Density (g/cm³)"
-    requestValue={requestValueOrBlank(DENSITY_MAP[requestedBaseMaterial] || "")}
-    currentValue={engineering.materialSheet.density}
-  >
-    <Input
-      value={engineering.materialSheet.density}
-      onChange={(v) => updateSection("materialSheet", { density: v })}
-    />
-  </Field>
+  <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+    <Field
+      label="Base Material"
+      requestValue={requestValueOrBlank(requestedBaseMaterial)}
+      currentValue={engineering.materialSheet.baseMaterial}
+    >
+      <SelectField
+        value={engineering.materialSheet.baseMaterial}
+        onChange={(v) => {
+          const opt = OPT_SPEED_MAP[v] || { A: "", B: "" };
+          updateSection("materialSheet", {
+            baseMaterial: v,
+            density: DENSITY_MAP[v]
+              ? String(DENSITY_MAP[v])
+              : engineering.materialSheet.density,
+          });
+          updateSection("extrusion", {
+            grossSpeedA_kg_hr: opt.A
+              ? String(opt.A)
+              : engineering.extrusion.grossSpeedA_kg_hr,
+            grossSpeedB_kg_hr: opt.B
+              ? String(opt.B)
+              : engineering.extrusion.grossSpeedB_kg_hr,
+          });
+        }}
+        options={["PET", "PP", "PS", "Other"]}
+      />
+    </Field>
 
-  <Field
-    label="Structure"
-    requestValue="AB"
-    currentValue={engineering.materialSheet.structure}
-  >
-    <SelectField
-      value={engineering.materialSheet.structure}
-      onChange={(v) => updateSection("materialSheet", { structure: v })}
-      options={["AB", "ABA"]}
-    />
-  </Field>
+    <Field
+      label="Density (g/cm³)"
+      requestValue={requestValueOrBlank(DENSITY_MAP[requestedBaseMaterial] || "")}
+      currentValue={engineering.materialSheet.density}
+    >
+      <Input
+        value={engineering.materialSheet.density}
+        onChange={(v) => updateSection("materialSheet", { density: v })}
+      />
+    </Field>
 
-  <Field
-    label="Layer A %"
-    requestValue=""
-    currentValue={engineering.materialSheet.layerAPct}
-  >
-    <Input
-      value={engineering.materialSheet.layerAPct}
-      onChange={(v) => updateSection("materialSheet", { layerAPct: v })}
-    />
-                {(n(engineering.materialSheet.layerAPct) < 0 ||
-  n(engineering.materialSheet.layerAPct) > 100) && (
-  <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
-    Layer A % must be between 0 and 100.
+    <Field
+      label="Structure"
+      requestValue="AB"
+      currentValue={engineering.materialSheet.structure}
+    >
+      <SelectField
+        value={engineering.materialSheet.structure}
+        onChange={(v) => updateSection("materialSheet", { structure: v })}
+        options={["AB", "ABA"]}
+      />
+    </Field>
+
+    <Field
+      label="Layer A %"
+      requestValue=""
+      currentValue={engineering.materialSheet.layerAPct}
+    >
+      <Input
+        value={engineering.materialSheet.layerAPct}
+        onChange={(v) => updateSection("materialSheet", { layerAPct: v })}
+      />
+      {(n(engineering.materialSheet.layerAPct) < 0 ||
+        n(engineering.materialSheet.layerAPct) > 100) && (
+        <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm mt-2">
+          Layer A % must be between 0 and 100.
+        </div>
+      )}
+    </Field>
+
+    <Field
+      label="Process Waste %"
+      requestValue=""
+      currentValue={engineering.materialSheet.processWastePct}
+    >
+      <Input
+        value={engineering.materialSheet.processWastePct}
+        onChange={(v) => updateSection("materialSheet", { processWastePct: v })}
+      />
+    </Field>
+
+    <Field
+      label="Coating Layer Used"
+      requestValue="No"
+      currentValue={engineering.materialSheet.coatingUsed}
+    >
+      <SelectField
+        value={engineering.materialSheet.coatingUsed}
+        onChange={(v) => updateSection("materialSheet", { coatingUsed: v })}
+        options={["Yes", "No"]}
+      />
+    </Field>
+  </div>
+</div>
+            {engineering.materialSheet.coatingUsed === "Yes" && (
+  <div className="rounded-xl border p-4 space-y-4">
+    <div className="font-medium">Coating</div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <Field
+        label="Coating Name"
+        requestValue=""
+        currentValue={engineering.materialSheet.coatingName}
+      >
+        <Input
+          value={engineering.materialSheet.coatingName}
+          onChange={(v) => updateSection("materialSheet", { coatingName: v })}
+        />
+      </Field>
+
+      <Field
+        label="Coating Weight (g/m²)"
+        requestValue=""
+        currentValue={engineering.materialSheet.coatingWeight_g_m2}
+      >
+        <Input
+          value={engineering.materialSheet.coatingWeight_g_m2}
+          onChange={(v) =>
+            updateSection("materialSheet", { coatingWeight_g_m2: v })
+          }
+        />
+      </Field>
+
+      <RefRow
+        label="Coating Kg / Ton"
+        value={
+          sheetDerived.coatingKgPerTon
+            ? `${fmt(sheetDerived.coatingKgPerTon, 3)} kg`
+            : "—"
+        }
+      />
+    </div>
   </div>
 )}
-              </Field>
-
-             <Field
-  label="Process Waste %"
-  requestValue=""
-  currentValue={engineering.materialSheet.processWastePct}
->
-  <Input
-    value={engineering.materialSheet.processWastePct}
-    onChange={(v) => updateSection("materialSheet", { processWastePct: v })}
-  />
-</Field>
-
-<Field
-  label="Coating Layer Used"
-  requestValue="No"
-  currentValue={engineering.materialSheet.coatingUsed}
->
-  <SelectField
-    value={engineering.materialSheet.coatingUsed}
-    onChange={(v) => updateSection("materialSheet", { coatingUsed: v })}
-    options={["Yes", "No"]}
-  />
-</Field>
-            </div>
-
-            {engineering.materialSheet.coatingUsed === "Yes" && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Field label="Coating Name">
-                  <Input
-                    value={engineering.materialSheet.coatingName}
-                    onChange={(v) => updateSection("materialSheet", { coatingName: v })}
-                  />
-                </Field>
-                <Field label="Coating Weight (g/m²)">
-                  <Input
-                    value={engineering.materialSheet.coatingWeight_g_m2}
-                    onChange={(v) => updateSection("materialSheet", { coatingWeight_g_m2: v })}
-                  />
-                </Field>
-                <RefRow
-                  label="Coating Kg / Ton"
-                  value={
-                    sheetDerived.coatingKgPerTon
-                      ? `${fmt(sheetDerived.coatingKgPerTon, 3)} kg`
-                      : "—"
-                  }
-                />
-              </div>
-            )}
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
   <div className="rounded-xl border bg-gray-50 p-4 space-y-4 xl:col-span-1">
@@ -1487,7 +1514,7 @@ if (!payload) {
 </div>
 
             <div className="rounded-xl border p-4 space-y-4">
-              <div className="font-medium">Sheet Specification</div>
+             <div className="font-medium">Sheet Specifications</div>
 
               <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                 <Field
@@ -1654,9 +1681,11 @@ if (!payload) {
              
 
               <div className="rounded-xl border p-4 space-y-4">
-                <div className="font-medium">Sheet Roll Packaging Data</div>
+               <div className="font-medium">
+  {isSheet ? "Sheet Roll Packaging Data" : "Internal Sheet Roll Packaging"}
+</div>
 
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                   <Field label="Core Material">
                     <Input
                       value={engineering.sheetPackaging.coreMaterial}
@@ -1671,6 +1700,16 @@ if (!payload) {
                       options={["3 inch", "6 inch", "8 inch"]}
                     />
                   </Field>
+                  <Field
+  label="Core Uses"
+  requestValue=""
+  currentValue={engineering.sheetPackaging.coreUses}
+>
+  <Input
+    value={engineering.sheetPackaging.coreUses}
+    onChange={(v) => updateSection("sheetPackaging", { coreUses: v })}
+  />
+</Field>
 
                   <Field label="Roll Weight (kg)">
                     <Input
@@ -1694,13 +1733,23 @@ if (!payload) {
                   </Field>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
                   <Field label="Pallet Type">
                     <Input
                       value={engineering.sheetPackaging.palletType}
                       onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
                     />
                   </Field>
+                  <Field
+  label="Pallet Uses"
+  requestValue=""
+  currentValue={engineering.sheetPackaging.palletUses}
+>
+  <Input
+    value={engineering.sheetPackaging.palletUses}
+    onChange={(v) => updateSection("sheetPackaging", { palletUses: v })}
+  />
+</Field>
 
                   <Field label="Rolls per Pallet">
                     <Input
