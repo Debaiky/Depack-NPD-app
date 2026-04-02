@@ -17,18 +17,16 @@ function fmt(v, d = 2) {
     minimumFractionDigits: 0,
   });
 }
-
-function Section({ title, children, right }) {
+function Section({ title, children }) {
   return (
     <div className="rounded-2xl border bg-white shadow-sm p-5 space-y-4">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="font-semibold text-lg">{title}</h2>
-        {right || null}
-      </div>
+      <h2 className="font-semibold text-lg">{title}</h2>
       {children}
     </div>
   );
 }
+
+
 
 function Field({ label, requestValue, currentValue, children }) {
   const hasRequestValue =
@@ -1881,8 +1879,8 @@ if (!payload) {
       </div>
     </div>
 
-    <div className="space-y-4 xl:col-span-2"></div>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+    <div className="space-y-4 xl:col-span-2">
+  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <Field
   label="Line Name"
   requestValue="Breyer"
@@ -2004,444 +2002,152 @@ if (!payload) {
                 <Input value={engineering.extrusion.tonsPerYear330d} onChange={() => {}} disabled />
               </Field>
             </div>
+             </div>
                   </div>
 </Section>
 
-      {!isSheet && (
-  <Section
-    title="3. Thermoforming Data"
-        left={
-          <>
-            <RefRow label="Requested Weight (g)" value={product.productWeightG} />
-            <RefRow label="Requested Type" value={product.productType} />
-            <RefRow
-              label="Requested Pieces / Stack"
-              value={packagingReq?.primary?.pcsPerStack}
-            />
-          </>
-        }
-        right={
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Applicable">
-                <SelectField
-                  value={engineering.thermo.applicable}
-                  onChange={(v) => updateSection("thermo", { applicable: v })}
-                  options={["Yes", "No"]}
-                />
-              </Field>
+{!isSheet && (
+  <Section title="3. Thermoforming Data">
+    <div className="space-y-4">
 
-              <Field label="Machine">
-                <SelectField
-                  value={engineering.thermo.machineName}
-                  onChange={(v) => updateSection("thermo", { machineName: v })}
-                  options={["RDM73K", "RDK80"]}
-                />
-              </Field>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Field label="Machine">
+          <SelectField
+            value={engineering.thermo.machineName}
+            onChange={(v) => updateSection("thermo", { machineName: v })}
+            options={["RDM73K", "RDK80"]}
+          />
+        </Field>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Mold Base Name">
-                <Input value={engineering.thermo.moldBaseName} onChange={(v) => updateSection("thermo", { moldBaseName: v })} />
-              </Field>
-              <Field label="Mold Base Code">
-                <Input value={engineering.thermo.moldBaseCode} onChange={(v) => updateSection("thermo", { moldBaseCode: v })} />
-              </Field>
-              <Field label="Insert Name">
-                <Input value={engineering.thermo.insertName} onChange={(v) => updateSection("thermo", { insertName: v })} />
-              </Field>
-              <Field label="Insert Code">
-                <Input value={engineering.thermo.insertCode} onChange={(v) => updateSection("thermo", { insertCode: v })} />
-              </Field>
-            </div>
+        <Field label="Cavities">
+          <Input
+            value={engineering.thermo.cavities}
+            onChange={(v) => updateSection("thermo", { cavities: v })}
+          />
+        </Field>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Bottom Name">
-                <Input value={engineering.thermo.bottomName} onChange={(v) => updateSection("thermo", { bottomName: v })} />
-              </Field>
-              <Field label="Bottom Code">
-                <Input value={engineering.thermo.bottomCode} onChange={(v) => updateSection("thermo", { bottomCode: v })} />
-              </Field>
-              <Field label="Plug Assist Name">
-                <Input value={engineering.thermo.plugAssistName} onChange={(v) => updateSection("thermo", { plugAssistName: v })} />
-              </Field>
-              <Field label="Plug Assist Code">
-                <Input value={engineering.thermo.plugAssistCode} onChange={(v) => updateSection("thermo", { plugAssistCode: v })} />
-              </Field>
-            </div>
+        <Field label="CPM">
+          <Input
+            value={engineering.thermo.cpm}
+            onChange={(v) => updateSection("thermo", { cpm: v })}
+          />
+        </Field>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Cutting Plate Name">
-                <Input value={engineering.thermo.cuttingPlateName} onChange={(v) => updateSection("thermo", { cuttingPlateName: v })} />
-              </Field>
-              <Field label="Cutting Plate Code">
-                <Input value={engineering.thermo.cuttingPlateCode} onChange={(v) => updateSection("thermo", { cuttingPlateCode: v })} />
-              </Field>
-              <Field label="Stacking Plate Name">
-                <Input value={engineering.thermo.stackingPlateName} onChange={(v) => updateSection("thermo", { stackingPlateName: v })} />
-              </Field>
-              <Field label="Stacking Plate Code">
-                <Input value={engineering.thermo.stackingPlateCode} onChange={(v) => updateSection("thermo", { stackingPlateCode: v })} />
-              </Field>
-            </div>
+        <Field label="Efficiency %">
+          <Input
+            value={engineering.thermo.efficiencyPct}
+            onChange={(v) => updateSection("thermo", { efficiencyPct: v })}
+          />
+        </Field>
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field label="No. of Cavities">
-                <Input value={engineering.thermo.cavities} onChange={(v) => updateSection("thermo", { cavities: v })} />
-              </Field>
-              <Field label="CPM">
-                <Input value={engineering.thermo.cpm} onChange={(v) => updateSection("thermo", { cpm: v })} />
-              </Field>
-              <Field label="Efficiency %">
-                <Input value={engineering.thermo.efficiencyPct} onChange={(v) => updateSection("thermo", { efficiencyPct: v })} />
-              </Field>
-              <Field label="Sheet Utilization %">
-                <Input value={engineering.thermo.sheetUtilizationPct} onChange={(v) => updateSection("thermo", { sheetUtilizationPct: v })} />
-              </Field>
-              <Field label="Confirmed Unit Weight (g)">
-                <Input value={engineering.thermo.unitWeight_g} onChange={(v) => updateSection("thermo", { unitWeight_g: v })} />
-              </Field>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <RefRow label="Pcs / Hr" value={engineering.thermo.pcsPerHour} />
+        <RefRow label="Pcs / Day" value={engineering.thermo.pcsPerDay24h} />
+        <RefRow label="Pcs / Year" value={engineering.thermo.pcsPerYear330d} />
+      </div>
 
-            {requestedWeight > 0 &&
-              n(engineering.thermo.unitWeight_g) > 0 &&
-              Math.abs((n(engineering.thermo.unitWeight_g) - requestedWeight) / requestedWeight) > 0.05 && (
-                <div className="rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 p-3 text-sm">
-                  Confirmed unit weight is different from request weight.
-                </div>
-              )}
-
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-              <RefRow label="Pcs / Hr" value={engineering.thermo.pcsPerHour ? fmt(engineering.thermo.pcsPerHour, 0) : "—"} />
-              <RefRow label="Pcs / Shift (12h)" value={engineering.thermo.pcsPerShift12h ? fmt(engineering.thermo.pcsPerShift12h, 0) : "—"} />
-              <RefRow label="Pcs / Day (24h)" value={engineering.thermo.pcsPerDay24h ? fmt(engineering.thermo.pcsPerDay24h, 0) : "—"} />
-              <RefRow label="Pcs / Week" value={engineering.thermo.pcsPerWeek ? fmt(engineering.thermo.pcsPerWeek, 0) : "—"} />
-              <RefRow label="Pcs / Month" value={engineering.thermo.pcsPerMonth ? fmt(engineering.thermo.pcsPerMonth, 0) : "—"} />
-              <RefRow label="Pcs / Year (330d)" value={engineering.thermo.pcsPerYear330d ? fmt(engineering.thermo.pcsPerYear330d, 0) : "—"} />
-            </div>
-          </div>
-        }
-      />
-      )}
+    </div>
+  </Section>
+)}
 
       {!isSheet && (
-  <Section
-    title="4. Thermoformed Product Packaging Data"
-        left={
-          <>
-            <RefRow label="Requested Delivery Location" value={deliveryReq?.deliveryLocationConfirm || primaryCustomer.deliveryLocation} />
-            <RefRow label="Requested Primary Packaging" value={packagingReq?.primary?.bagSleeveMaterial || "—"} />
-            <RefRow label="Requested Carton Type" value={packagingReq?.secondary?.cartonType || "—"} />
-          </>
-        }
-        right={
-          <div className="space-y-5">
-            <div className="rounded-xl border p-4 space-y-4">
-              <div className="font-medium">Primary Packaging</div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <Field label="Pieces / Stack">
-                  <Input
-                    value={engineering.packaging.primary.pcsPerStack}
-                    onChange={(v) => updateNested("packaging", "primary", { pcsPerStack: v })}
-                  />
-                </Field>
-                <Field label="Stacks / Primary Pack">
-                  <Input
-                    value={engineering.packaging.primary.stacksPerPrimary}
-                    onChange={(v) => updateNested("packaging", "primary", { stacksPerPrimary: v })}
-                  />
-                </Field>
-                <Field label="Primary Pack Name">
-                  <Input
-                    value={engineering.packaging.primary.primaryName}
-                    onChange={(v) => updateNested("packaging", "primary", { primaryName: v })}
-                  />
-                </Field>
-                <Field label="Primary Pack Material">
-                  <Input
-                    value={engineering.packaging.primary.primaryMaterial}
-                    onChange={(v) => updateNested("packaging", "primary", { primaryMaterial: v })}
-                  />
-                </Field>
-              </div>
+  <Section title="4. Thermoformed Product Packaging Data">
+    <div className="space-y-4">
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <Field label="Primary Pack Length (mm)">
-                  <Input
-                    value={engineering.packaging.primary.primaryLength_mm}
-                    onChange={(v) => updateNested("packaging", "primary", { primaryLength_mm: v })}
-                  />
-                </Field>
-                <Field label="Primary Pack Width (mm)">
-                  <Input
-                    value={engineering.packaging.primary.primaryWidth_mm}
-                    onChange={(v) => updateNested("packaging", "primary", { primaryWidth_mm: v })}
-                  />
-                </Field>
-                <Field label="Primary Pack Height (mm)">
-                  <Input
-                    value={engineering.packaging.primary.primaryHeight_mm}
-                    onChange={(v) => updateNested("packaging", "primary", { primaryHeight_mm: v })}
-                  />
-                </Field>
-                <Field label="Primary Artwork Code">
-                  <Input
-                    value={engineering.packaging.primary.primaryArtworkCode}
-                    onChange={(v) => updateNested("packaging", "primary", { primaryArtworkCode: v })}
-                  />
-                </Field>
-              </div>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Field label="Pieces / Stack">
+          <Input
+            value={engineering.packaging.primary.pcsPerStack}
+            onChange={(v) =>
+              updateNested("packaging", "primary", { pcsPerStack: v })
+            }
+          />
+        </Field>
 
-            <div className="rounded-xl border p-4 space-y-4">
-              <div className="font-medium">Secondary Packaging</div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <Field label="Primary Packs / Secondary">
-                  <Input
-                    value={engineering.packaging.secondary.primariesPerSecondary}
-                    onChange={(v) => updateNested("packaging", "secondary", { primariesPerSecondary: v })}
-                  />
-                </Field>
-                <Field label="Secondary Pack Name">
-                  <Input
-                    value={engineering.packaging.secondary.secondaryName}
-                    onChange={(v) => updateNested("packaging", "secondary", { secondaryName: v })}
-                  />
-                </Field>
-                <Field label="Secondary Type">
-                  <SelectField
-                    value={engineering.packaging.secondary.secondaryType}
-                    onChange={(v) => updateNested("packaging", "secondary", { secondaryType: v })}
-                    options={[
-                      { value: "Single wall", label: "Single wall" },
-                      { value: "Double wall", label: "Double wall" },
-                    ]}
-                  />
-                </Field>
-                <Field label="Labels / Box">
-                  <Input
-                    value={engineering.packaging.secondary.labelsPerBox}
-                    onChange={(v) => updateNested("packaging", "secondary", { labelsPerBox: v })}
-                  />
-                </Field>
-              </div>
+        <Field label="Stacks / Primary">
+          <Input
+            value={engineering.packaging.primary.stacksPerPrimary}
+            onChange={(v) =>
+              updateNested("packaging", "primary", { stacksPerPrimary: v })
+            }
+          />
+        </Field>
 
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                <Field label="Secondary Length (mm)">
-                  <Input
-                    value={engineering.packaging.secondary.secondaryLength_mm}
-                    onChange={(v) => updateNested("packaging", "secondary", { secondaryLength_mm: v })}
-                  />
-                </Field>
-                <Field label="Secondary Width (mm)">
-                  <Input
-                    value={engineering.packaging.secondary.secondaryWidth_mm}
-                    onChange={(v) => updateNested("packaging", "secondary", { secondaryWidth_mm: v })}
-                  />
-                </Field>
-                <Field label="Secondary Height (mm)">
-                  <Input
-                    value={engineering.packaging.secondary.secondaryHeight_mm}
-                    onChange={(v) => updateNested("packaging", "secondary", { secondaryHeight_mm: v })}
-                  />
-                </Field>
-                <Field label="Label Length (mm)">
-                  <Input
-                    value={engineering.packaging.secondary.labelLength_mm}
-                    onChange={(v) => updateNested("packaging", "secondary", { labelLength_mm: v })}
-                  />
-                </Field>
-                <Field label="Label Width (mm)">
-                  <Input
-                    value={engineering.packaging.secondary.labelWidth_mm}
-                    onChange={(v) => updateNested("packaging", "secondary", { labelWidth_mm: v })}
-                  />
-                </Field>
-              </div>
-            </div>
+        <Field label="Primary Name">
+          <Input
+            value={engineering.packaging.primary.primaryName}
+            onChange={(v) =>
+              updateNested("packaging", "primary", { primaryName: v })
+            }
+          />
+        </Field>
+      </div>
 
-            <div className="rounded-xl border p-4 space-y-4">
-              <div className="font-medium">Pallet</div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Field label="Cartons / Pallet">
+          <Input
+            value={engineering.packaging.pallet.boxesPerPallet}
+            onChange={(v) =>
+              updateNested("packaging", "pallet", { boxesPerPallet: v })
+            }
+          />
+        </Field>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <Field label="Use Pallet">
-                  <SelectField
-                    value={engineering.packaging.pallet.palletSelected}
-                    onChange={(v) => updateNested("packaging", "pallet", { palletSelected: v })}
-                    options={["Yes", "No"]}
-                  />
-                </Field>
+        <RefRow label="Pcs / Carton" value={thermoPackagingDerived.pcsPerCarton} />
+        <RefRow label="Pcs / Pallet" value={thermoPackagingDerived.pcsPerPallet} />
+      </div>
 
-                {engineering.packaging.pallet.palletSelected === "Yes" && (
-                  <>
-                    <Field label="Pallet Width (mm)">
-                      <Input
-                        value={engineering.packaging.pallet.palletWidth_mm}
-                        onChange={(v) => updateNested("packaging", "pallet", { palletWidth_mm: v })}
-                      />
-                    </Field>
-                    <Field label="Pallet Height (mm)">
-                      <Input
-                        value={engineering.packaging.pallet.palletHeight_mm}
-                        onChange={(v) => updateNested("packaging", "pallet", { palletHeight_mm: v })}
-                      />
-                    </Field>
-                    <Field label="Pallet Length (mm)">
-                      <Input
-                        value={engineering.packaging.pallet.palletLength_mm}
-                        onChange={(v) => updateNested("packaging", "pallet", { palletLength_mm: v })}
-                      />
-                    </Field>
-                    <Field label="Pallet Type">
-                      <Input
-                        value={engineering.packaging.pallet.palletType}
-                        onChange={(v) => updateNested("packaging", "pallet", { palletType: v })}
-                      />
-                    </Field>
-                    <Field label="Boxes / Pallet">
-                      <Input
-                        value={engineering.packaging.pallet.boxesPerPallet}
-                        onChange={(v) => updateNested("packaging", "pallet", { boxesPerPallet: v })}
-                      />
-                    </Field>
-                    <Field label="Stretch / Pallet (kg)">
-                      <Input
-                        value={engineering.packaging.pallet.stretchWeightPerPallet_kg}
-                        onChange={(v) =>
-                          updateNested("packaging", "pallet", { stretchWeightPerPallet_kg: v })
-                        }
-                      />
-                    </Field>
-                    <Field label="Labels / Pallet">
-                      <Input
-                        value={engineering.packaging.pallet.labelsPerPallet}
-                        onChange={(v) => updateNested("packaging", "pallet", { labelsPerPallet: v })}
-                      />
-                    </Field>
-                  </>
-                )}
-              </div>
+    </div>
+  </Section>
+)}
 
-              <Field label="Packaging Notes / Special Instructions">
-                <TextArea
-                  value={engineering.packaging.notes}
-                  onChange={(v) => updateSection("packaging", { notes: v })}
-                  rows={3}
-                />
-              </Field>
+      <Section title={isSheet ? "3. Freight / Logistics" : "5. Freight / Logistics"}>
+  <div className="space-y-4">
 
-              <Field label="Auto Packaging Instruction">
-                <TextArea
-                  value={engineering.packaging.instructionText}
-                  onChange={(v) => updateSection("packaging", { instructionText: v })}
-                  rows={3}
-                />
-              </Field>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <Field label="Delivery Mode">
+        <Input
+          value={engineering.freight.deliveryMode}
+          onChange={(v) => updateSection("freight", { deliveryMode: v })}
+        />
+      </Field>
 
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                <RefRow label="pcs / stack" value={engineering.packaging.primary.pcsPerStack || "—"} />
-                <RefRow label="stacks / primary" value={engineering.packaging.primary.stacksPerPrimary || "—"} />
-                <RefRow label="pcs / primary" value={thermoPackagingDerived.pcsPerPrimary ? fmt(thermoPackagingDerived.pcsPerPrimary, 0) : "—"} />
-                <RefRow label="primary / carton" value={engineering.packaging.secondary.primariesPerSecondary || "—"} />
-                <RefRow label="pcs / carton" value={thermoPackagingDerived.pcsPerCarton ? fmt(thermoPackagingDerived.pcsPerCarton, 0) : "—"} />
-                <RefRow label="pcs / pallet" value={thermoPackagingDerived.pcsPerPallet ? fmt(thermoPackagingDerived.pcsPerPallet, 0) : "—"} />
-              </div>
-            </div>
-          </div>
-        }
-      /> )}
+      <Field label="Pallets / Truck">
+        <Input
+          value={engineering.freight.palletsPerTruck}
+          onChange={(v) => updateSection("freight", { palletsPerTruck: v })}
+        />
+      </Field>
+    </div>
 
-      <Section
-        title={isSheet ? "3. Freight / Logistics" : "5. Freight / Logistics"}
-        left={
-          <>
-            <RefRow label="Requested Delivery Location" value={deliveryReq?.deliveryLocationConfirm || primaryCustomer.deliveryLocation} />
-            <RefRow label="Requested Qty / Truck" value={`${deliveryReq?.desiredQtyPerTruck || "—"} ${deliveryReq?.desiredQtyPerTruckUnit || ""}`} />
-            <RefRow label="Truck Size" value={deliveryReq?.truckSize} />
-          </>
-        }
-        right={
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Delivery Mode">
-                <Input
-                  value={engineering.freight.deliveryMode}
-                  onChange={(v) => updateSection("freight", { deliveryMode: v })}
-                />
-              </Field>
-
-              <Field label="Freight Basis">
-                <SelectField
-                  value={engineering.freight.freightBasis}
-                  onChange={(v) => updateSection("freight", { freightBasis: v })}
-                  options={["Per Truck", "Per Ton", "Per Pallet", "Per 1000 pcs"]}
-                />
-              </Field>
-
-              {isSheet || engineering.packaging.pallet.palletSelected === "Yes" ? (
-                <Field label="Pallets / Truck">
-                  <Input
-                    value={engineering.freight.palletsPerTruck}
-                    onChange={(v) => updateSection("freight", { palletsPerTruck: v })}
-                  />
-                </Field>
-              ) : (
-                <Field label="Cartons / Truck">
-                  <Input
-                    value={engineering.freight.cartonsPerTruck}
-                    onChange={(v) => updateSection("freight", { cartonsPerTruck: v })}
-                  />
-                </Field>
-              )}
-
-              <Field label="Notes">
-                <Input
-                  value={engineering.freight.notes}
-                  onChange={(v) => updateSection("freight", { notes: v })}
-                />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              {!isSheet && (
-                <RefRow
-                  label="Cartons / Truck"
-                  value={freightDerived.cartonsPerTruck ? fmt(freightDerived.cartonsPerTruck, 0) : "—"}
-                />
-              )}
-              {!isSheet && (
-                <RefRow
-                  label="pcs / Truck"
-                  value={freightDerived.pcsPerTruck ? fmt(freightDerived.pcsPerTruck, 0) : "—"}
-                />
-              )}
-              {(isSheet || engineering.packaging.pallet.palletSelected === "Yes") && (
-                <RefRow
-                  label="Pallets / Truck"
-                  value={engineering.freight.palletsPerTruck || "—"}
-                />
-              )}
-              <RefRow
-                label="Net Product Weight / Truck (kg)"
-                value={freightDerived.netProductWeightPerTruck_kg ? fmt(freightDerived.netProductWeightPerTruck_kg, 2) : "—"}
-              />
-            </div>
-          </div>
-        }
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <RefRow
+        label="Net Weight / Truck"
+        value={freightDerived.netProductWeightPerTruck_kg}
       />
+    </div>
 
-      <Section
-        title={isSheet ? "4. Notes" : "6. Notes"}
-        left={<RefRow label="Customer Notes" value={project.customerNotes || primaryCustomer.customerNotes} />}
-        right={
-          <Field label="Engineering Logistics Notes">
-            <TextArea
-              value={engineering.freight.notes}
-              onChange={(v) => updateSection("freight", { notes: v })}
-            />
-          </Field>
-        }
+  </div>
+</Section>
+
+      <Section title={isSheet ? "4. Notes" : "6. Notes"}>
+  <div className="space-y-4">
+
+    <RefRow
+      label="Customer Notes"
+      value={project.customerNotes || primaryCustomer.customerNotes}
+    />
+
+    <Field label="Engineering Notes">
+      <TextArea
+        value={engineering.freight.notes}
+        onChange={(v) => updateSection("freight", { notes: v })}
       />
+    </Field>
+
+  </div>
+</Section>
     </div>
   );
 }
