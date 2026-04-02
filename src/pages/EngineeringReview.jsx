@@ -1131,12 +1131,21 @@ if (!payload) {
           )}
 
           <div className="flex-1 min-w-[220px]">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Project</div>
-            <div className="text-xl font-semibold">{project.projectName || "—"}</div>
-            <div className="text-sm text-gray-500">
-              {product.productType || "—"} • {requestedBaseMaterial || "—"}
-            </div>
-          </div>
+  <div className="text-xs uppercase tracking-wide text-gray-500">Project</div>
+
+  <div className="text-xl font-semibold">
+    {project.projectName || "—"}
+  </div>
+
+  {/* 👇 ADD THIS LINE HERE */}
+  <div className="text-sm text-blue-600 font-medium">
+    {isSheet ? "Sheet Product Flow" : "Thermoformed Product Flow"}
+  </div>
+
+  <div className="text-sm text-gray-500">
+    {product.productType || "—"} • {requestedBaseMaterial || "—"}
+  </div>
+</div>
 
       <div className="min-w-[220px]">
   <Field
@@ -1949,8 +1958,9 @@ if (!payload) {
                   </div>
 </Section>
 
-      <Section
-        title="3. Thermoforming Data"
+      {!isSheet && (
+  <Section
+    title="3. Thermoforming Data"
         left={
           <>
             <RefRow label="Requested Weight (g)" value={product.productWeightG} />
@@ -2063,9 +2073,11 @@ if (!payload) {
           </div>
         }
       />
+      )}
 
-      <Section
-        title="4. Thermoformed Product Packaging Data"
+      {!isSheet && (
+  <Section
+    title="4. Thermoformed Product Packaging Data"
         left={
           <>
             <RefRow label="Requested Delivery Location" value={deliveryReq?.deliveryLocationConfirm || primaryCustomer.deliveryLocation} />
@@ -2288,10 +2300,10 @@ if (!payload) {
             </div>
           </div>
         }
-      />
+      /> )}
 
       <Section
-        title="5. Freight / Logistics"
+        title={isSheet ? "3. Freight / Logistics" : "5. Freight / Logistics"}
         left={
           <>
             <RefRow label="Requested Delivery Location" value={deliveryReq?.deliveryLocationConfirm || primaryCustomer.deliveryLocation} />
@@ -2370,7 +2382,7 @@ if (!payload) {
       />
 
       <Section
-        title="6. Notes"
+        title={isSheet ? "4. Notes" : "6. Notes"}
         left={<RefRow label="Customer Notes" value={project.customerNotes || primaryCustomer.customerNotes} />}
         right={
           <Field label="Engineering Logistics Notes">
