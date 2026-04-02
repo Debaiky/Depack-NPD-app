@@ -18,28 +18,42 @@ function fmt(v, d = 2) {
   });
 }
 
-function Section({ title, left, right }) {
+function Section({ title, children, right }) {
   return (
     <div className="rounded-2xl border bg-white shadow-sm p-5 space-y-4">
-      <h2 className="font-semibold text-lg">{title}</h2>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="bg-gray-50 border rounded-xl p-4 space-y-3">
-          <div className="text-xs uppercase tracking-wide text-gray-500">
-            Request Data
-          </div>
-          {left}
-        </div>
-        <div className="space-y-3">{right}</div>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h2 className="font-semibold text-lg">{title}</h2>
+        {right || null}
       </div>
+      {children}
     </div>
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, requestValue, currentValue, children }) {
+  const hasRequestValue =
+    requestValue !== undefined &&
+    requestValue !== null &&
+    String(requestValue).trim() !== "";
+
+  const isChanged =
+    hasRequestValue &&
+    String(currentValue ?? "").trim() !== String(requestValue ?? "").trim();
+
   return (
     <label className="block">
       <div className="text-xs text-gray-500 mb-1">{label}</div>
       {children}
+
+      {hasRequestValue ? (
+        <div
+          className={`mt-1 text-xs ${
+            isChanged ? "text-red-600 font-medium" : "text-gray-400"
+          }`}
+        >
+          Request value: {String(requestValue)}
+        </div>
+      ) : null}
     </label>
   );
 }
@@ -98,7 +112,10 @@ function RefRow({ label, value }) {
     </div>
   );
 }
-
+function requestValueOrBlank(value) {
+  if (value === undefined || value === null) return "";
+  return String(value);
+}
 const DENSITY_MAP = {
   PP: 0.92,
   PET: 1.38,
@@ -297,8 +314,11 @@ export default function EngineeringReview() {
     const load = async () => {
       try {
         const r1 = await fetch(`/.netlify/functions/get-request?requestId=${requestId}`);
-        const j1 = await r1.json();
-        if (j1.success) setPayload(j1.payload);
+const j1 = await r1.json();
+if (j1.success) {
+  setPayload(j1.payload);
+  await moveToUnderEngineeringIfNeeded(j1.payload);
+}
 
         const r2 = await fetch(`/.netlify/functions/get-engineering-data?requestId=${requestId}`);
         const j2 = await r2.json();
@@ -445,6 +465,37 @@ export default function EngineeringReview() {
 
     return await reqRes.json();
   };
+  const moveToUnderEngineeringIfNeeded = async (loadedPayload) => {
+  const currentStatus = loadedPayload?.metadata?.status || "";
+
+  if (currentStatus !== "Waiting for Engineering") return;
+
+  try {
+    await fetch("/.netlify/functions/save-draft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...loadedPayload,
+        metadata: {
+          ...(loadedPayload.metadata || {}),
+          status: "Under Engineering Review",
+        },
+      }),
+    });
+
+    setPayload((prev) => ({
+      ...prev,
+      metadata: {
+        ...(prev?.metadata || {}),
+        status: "Under Engineering Review",
+      },
+    }));
+  } catch (err) {
+    console.error("Failed to auto-update engineering status:", err);
+  }
+};
 
   const saveEngineeringOnly = async (statusValue) => {
     const res = await fetch("/.netlify/functions/save-engineering-data", {
@@ -486,13 +537,13 @@ export default function EngineeringReview() {
 
   const sendToPricing = async () => {
     try {
-      const engJson = await saveEngineeringOnly("Engineering Completed");
+      const engJson = await saveEngineeringOnly("Sent to Pricing");
       if (!engJson.success) {
         alert("Failed to save engineering data");
         return;
       }
 
-      const reqJson = await saveMasterStatus("Engineering Completed");
+      const reqJson = await saveMasterStatus("Sent to Pricing");
       if (!reqJson.success) {
         alert("Engineering saved, but failed to update project status");
         return;
@@ -1087,12 +1138,15 @@ if (!payload) {
             </div>
           </div>
 
-          <div className="min-w-[220px]">
-            <Field label="Engineer Name">
-              <Input value={engineerName} onChange={setEngineerName} />
-            </Field>
-          </div>
-
+      <div className="min-w-[220px]">
+  <Field
+    label="Engineer Name"
+    requestValue=""
+    currentValue={engineerName}
+  >
+    <Input value={engineerName} onChange={setEngineerName} />
+  </Field>
+</div>
           <div className="flex items-end">
             <button
               onClick={saveEngineering}
@@ -1115,58 +1169,63 @@ if (!payload) {
         <div className="text-sm text-green-600">{saveMessage}</div>
       </div>
 
-      <Section
-        title="1. Material Structure and Sheet Roll"
-        left={
-          <>
-            <RefRow label="Requested Material" value={requestedBaseMaterial} />
-            <RefRow label="Requested Width (mm)" value={product.sheetWidthMm} />
-            <RefRow label="Requested Thickness (micron)" value={product.sheetThicknessMicron} />
-            <RefRow label="Requested Roll Weight (kg)" value={product.rollWeightKg} />
-            <RefRow label="Requested Product Weight (g)" value={product.productWeightG} />
-          </>
-        }
-        right={
+     <Section title="1. Material Structure and Sheet Roll">
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-              <Field label="Base Material">
-                <SelectField
-                  value={engineering.materialSheet.baseMaterial}
-                  onChange={(v) => {
-                    const opt = OPT_SPEED_MAP[v] || { A: "", B: "" };
-                    updateSection("materialSheet", {
-                      baseMaterial: v,
-                      density: DENSITY_MAP[v] ? String(DENSITY_MAP[v]) : engineering.materialSheet.density,
-                    });
-                    updateSection("extrusion", {
-                      grossSpeedA_kg_hr: opt.A ? String(opt.A) : engineering.extrusion.grossSpeedA_kg_hr,
-                      grossSpeedB_kg_hr: opt.B ? String(opt.B) : engineering.extrusion.grossSpeedB_kg_hr,
-                    });
-                  }}
-                  options={["PET", "PP", "PS", "Other"]}
-                />
-              </Field>
+  <Field
+    label="Base Material"
+    requestValue={requestValueOrBlank(requestedBaseMaterial)}
+    currentValue={engineering.materialSheet.baseMaterial}
+  >
+    <SelectField
+      value={engineering.materialSheet.baseMaterial}
+      onChange={(v) => {
+        const opt = OPT_SPEED_MAP[v] || { A: "", B: "" };
+        updateSection("materialSheet", {
+          baseMaterial: v,
+          density: DENSITY_MAP[v] ? String(DENSITY_MAP[v]) : engineering.materialSheet.density,
+        });
+        updateSection("extrusion", {
+          grossSpeedA_kg_hr: opt.A ? String(opt.A) : engineering.extrusion.grossSpeedA_kg_hr,
+          grossSpeedB_kg_hr: opt.B ? String(opt.B) : engineering.extrusion.grossSpeedB_kg_hr,
+        });
+      }}
+      options={["PET", "PP", "PS", "Other"]}
+    />
+  </Field>
 
-              <Field label="Density (g/cm³)">
-                <Input
-                  value={engineering.materialSheet.density}
-                  onChange={(v) => updateSection("materialSheet", { density: v })}
-                />
-              </Field>
+  <Field
+    label="Density (g/cm³)"
+    requestValue={requestValueOrBlank(DENSITY_MAP[requestedBaseMaterial] || "")}
+    currentValue={engineering.materialSheet.density}
+  >
+    <Input
+      value={engineering.materialSheet.density}
+      onChange={(v) => updateSection("materialSheet", { density: v })}
+    />
+  </Field>
 
-              <Field label="Structure">
-                <SelectField
-                  value={engineering.materialSheet.structure}
-                  onChange={(v) => updateSection("materialSheet", { structure: v })}
-                  options={["AB", "ABA"]}
-                />
-              </Field>
+  <Field
+    label="Structure"
+    requestValue="AB"
+    currentValue={engineering.materialSheet.structure}
+  >
+    <SelectField
+      value={engineering.materialSheet.structure}
+      onChange={(v) => updateSection("materialSheet", { structure: v })}
+      options={["AB", "ABA"]}
+    />
+  </Field>
 
-              <Field label="Layer A %">
-                <Input
-                  value={engineering.materialSheet.layerAPct}
-                  onChange={(v) => updateSection("materialSheet", { layerAPct: v })}
-                />
+  <Field
+    label="Layer A %"
+    requestValue=""
+    currentValue={engineering.materialSheet.layerAPct}
+  >
+    <Input
+      value={engineering.materialSheet.layerAPct}
+      onChange={(v) => updateSection("materialSheet", { layerAPct: v })}
+    />
                 {(n(engineering.materialSheet.layerAPct) < 0 ||
   n(engineering.materialSheet.layerAPct) > 100) && (
   <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
@@ -1175,20 +1234,28 @@ if (!payload) {
 )}
               </Field>
 
-              <Field label="Process Waste %">
-                <Input
-                  value={engineering.materialSheet.processWastePct}
-                  onChange={(v) => updateSection("materialSheet", { processWastePct: v })}
-                />
-              </Field>
+             <Field
+  label="Process Waste %"
+  requestValue=""
+  currentValue={engineering.materialSheet.processWastePct}
+>
+  <Input
+    value={engineering.materialSheet.processWastePct}
+    onChange={(v) => updateSection("materialSheet", { processWastePct: v })}
+  />
+</Field>
 
-              <Field label="Coating Layer Used">
-                <SelectField
-                  value={engineering.materialSheet.coatingUsed}
-                  onChange={(v) => updateSection("materialSheet", { coatingUsed: v })}
-                  options={["Yes", "No"]}
-                />
-              </Field>
+<Field
+  label="Coating Layer Used"
+  requestValue="No"
+  currentValue={engineering.materialSheet.coatingUsed}
+>
+  <SelectField
+    value={engineering.materialSheet.coatingUsed}
+    onChange={(v) => updateSection("materialSheet", { coatingUsed: v })}
+    options={["Yes", "No"]}
+  />
+</Field>
             </div>
 
             {engineering.materialSheet.coatingUsed === "Yes" && (
@@ -1724,9 +1791,8 @@ if (!payload) {
                 </div>
               </div>
             </div>
-          </div>
-        }
-      />
+                   </div>
+</Section>
 
       <Section
         title="2. Extrusion Process Data"
