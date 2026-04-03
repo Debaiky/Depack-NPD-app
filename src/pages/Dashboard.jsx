@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, FlaskConical, Calculator } from "lucide-react";
+import { Eye, FlaskConical, Calculator, Pencil } from "lucide-react";
 
 const fmtNumber = (v, digits = 0) => {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""));
@@ -211,30 +211,38 @@ export default function Dashboard() {
 
                     <td className="p-3">
                       <div className="flex items-center justify-center gap-3">
-                        <Link
-                          to={`/request/${r.RequestID}`}
-                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
-                          title="Open request"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
+  <Link
+    to={`/request/${r.RequestID}`}
+    className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+    title="Open request"
+  >
+    <Eye className="h-4 w-4" />
+  </Link>
 
-                        <Link
-                          to={`/engineering/${r.RequestID}`}
-                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
-                          title="Go to engineering"
-                        >
-                          <FlaskConical className="h-4 w-4" />
-                        </Link>
+  <Link
+    to={`/edit/${r.RequestID}`}
+    className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+    title="Edit request"
+  >
+    <Pencil className="h-4 w-4" />
+  </Link>
 
-                        <Link
-                          to={`/pricing/${r.RequestID}`}
-                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
-                          title="Go to pricing"
-                        >
-                          <Calculator className="h-4 w-4" />
-                        </Link>
-                      </div>
+  <Link
+    to={`/engineering/${r.RequestID}`}
+    className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+    title="Go to engineering"
+  >
+    <FlaskConical className="h-4 w-4" />
+  </Link>
+
+  <Link
+    to={`/pricing/${r.RequestID}`}
+    className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+    title="Go to pricing"
+  >
+    <Calculator className="h-4 w-4" />
+  </Link>
+</div>
                     </td>
                   </tr>
                 ))
@@ -249,15 +257,12 @@ export default function Dashboard() {
 
 function StatusBadge({ status }) {
   const colors = {
-    Draft: "bg-gray-100 text-gray-800",
-    "Project Completed": "bg-blue-100 text-blue-800",
-    ENGINEERING: "bg-blue-100 text-blue-800",
-    "Under Engineering Review": "bg-yellow-100 text-yellow-800",
-    ENGINEERING_COMPLETED: "bg-purple-100 text-purple-800",
-    "Engineering Completed": "bg-purple-100 text-purple-800",
-    PRICING_COMPLETED: "bg-green-100 text-green-800",
-    "Pricing Completed": "bg-green-100 text-green-800",
-  };
+  Draft: "bg-gray-100 text-gray-800",
+  "Waiting for Engineering": "bg-yellow-100 text-yellow-800",
+  "Under Engineering Review": "bg-blue-100 text-blue-800",
+  "Sent to Pricing": "bg-purple-100 text-purple-800",
+  Completed: "bg-green-100 text-green-800",
+};
 
   return (
     <span
