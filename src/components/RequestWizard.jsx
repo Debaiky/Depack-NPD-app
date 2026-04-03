@@ -562,22 +562,26 @@ export default function RequestWizard({
   initialData = null,
   existingFiles = [],
   onDeleteFile = null,
+  isEditMode = false,
 }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [saveMessage, setSaveMessage] = useState("Not saved yet");
 
   const [form, setForm] = useState(() => {
-    if (initialData) return initialData;
+  if (initialData) {
+    return structuredClone(initialData);
+  }
 
-    return {
-      ...initialForm,
-      metadata: {
-        ...initialForm.metadata,
-        requestId: generateRequestId(),
-        createdAt: new Date().toISOString(),
-      },
-    };
-  });
+  return {
+    ...structuredClone(initialForm),
+    metadata: {
+      ...initialForm.metadata,
+      requestId: generateRequestId(),
+      createdAt: new Date().toISOString(),
+      status: "Draft",
+    },
+  };
+});
 
   const [pendingUploads, setPendingUploads] = useState({
     samplePhotos: [],
@@ -598,7 +602,11 @@ export default function RequestWizard({
   const status = form.metadata.status || "Draft";
   const productName =
   form.project.projectName || form.product.productType || "Untitled Request";
+useEffect(() => {
+  if (!isEditMode || !initialData) return;
 
+  setForm(structuredClone(initialData));
+}, [initialData, isEditMode]);
   useEffect(() => {
     if (
       form.product.productType === "Sheet Roll" &&
@@ -1014,7 +1022,12 @@ if (!form.product.productThumbnailName) req.push("Product Picture");
 const saveDraft = async () => {
   try {
     let workingForm = structuredClone(form);
-
+if (
+  !workingForm.metadata?.status ||
+  workingForm.metadata.status === "Draft"
+) {
+  workingForm.metadata.status = "Draft";
+}
     /* ================= FIRST SAVE ================= */
 
     const firstSaveRes = await fetch("/.netlify/functions/save-draft", {
@@ -1153,8 +1166,8 @@ const saveDraft = async () => {
 
             <div>
               <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Request ID
-              </div>
+  {isEditMode ? "Edit Request" : "Request ID"}
+</div>
               <div className="text-lg font-semibold">{requestId}</div>
             </div>
           </div>
@@ -3242,7 +3255,7 @@ onChange={(e) => update("project.customerNotes", e.target.value)}
                           ...form,
                           metadata: {
                             ...form.metadata,
-                            status: "Project Completed",
+                            status: "Waiting for Engineering",
                           },
                         };
 
