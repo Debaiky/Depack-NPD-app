@@ -125,7 +125,15 @@ const OPT_SPEED_MAP = {
   PP: { A: 120, B: 600 },
   PS: { A: 150, B: 700 },
 };
+const OPT_LAYER_A_MAP = {
+  PET: 200 / (200 + 800),
+  PS: 150 / (150 + 700),
+  PP: 120 / (120 + 600),
+};
 
+function pct(value) {
+  return value * 100;
+}
 const CORE_MAP_MM = {
   "3 inch": 76.2,
   "6 inch": 152.4,
@@ -667,7 +675,11 @@ const isSheet = product.productType === "Sheet Roll";
       ) {
         next.packaging.pallet.stretchWeightPerPallet_kg = packagingReq.pallet.stretchWrapKgPerPallet;
       }
+      const defaultLayerAPct = OPT_LAYER_A_MAP[baseMaterial];
 
+      if (!next.materialSheet.layerAPct && defaultLayerAPct) {
+        next.materialSheet.layerAPct = String((defaultLayerAPct * 100).toFixed(3));
+      }
       return next;
     });
   }, [requestedBaseMaterial, autoDensity, baseMaterial, product, packagingReq]);
@@ -845,46 +857,129 @@ Object.entries(grouped).forEach(([name, parts]) => {
   }, [engineering.sheetPackaging.rollWeight_kg, engineering.sheetSpecs.rollTargetWeight_kg, sheetDerived.calcRollWeight]);
 
   const extrusionDerived = useMemo(() => {
-    const opt = OPT_SPEED_MAP[baseMaterial] || { A: 0, B: 0 };
-    const speedA = n(engineering.extrusion.grossSpeedA_kg_hr);
-    const speedB = n(engineering.extrusion.grossSpeedB_kg_hr);
-    const totalGross = speedA + speedB;
-    const efficiency = n(engineering.extrusion.efficiencyPct) / 100;
-    const scrapRate = n(engineering.extrusion.scrapRatePct) / 100;
-    const grossWidth = n(engineering.sheetSpecs.grossWidth_mm) || sheetDerived.grossWidth;
-    const netWidth = n(engineering.sheetSpecs.netWidth_mm);
+  const opt = OPT_SPEED_MAP[baseMaterial] || { A: 0, B: 0 };
 
-    const optimalTotal = n(opt.A) + n(opt.B);
-    const grossVsOptimalPct = optimalTotal > 0 ? (totalGross / optimalTotal) * 100 : 0;
+  const maxA = n(opt.A);
+  const maxB = n(opt.B);
+  const totalMax = maxA + maxB;
 
-    const netSpeed =
-      totalGross > 0 && grossWidth > 0
-        ? totalGross * (netWidth / grossWidth) * (1 - scrapRate) * (efficiency || 1)
-        : 0;
+  const layerAPct = n(engineering.materialSheet.layerAPct);
+  const layerAFrac = layerAPct / 100;
+  const layerBFrac = 1 - layerAFrac;
 
-    const netVsOptimalPct = optimalTotal > 0 ? (netSpeed / optimalTotal) * 100 : 0;
+  const optimumLayerAFrac = OPT_LAYER_A_MAP[baseMaterial] || 0;
+  const optimumLayerAPct = optimumLayerAFrac * 100;
 
-    const tph = netSpeed / 1000;
-    const tonsPerShift12h = tph * 12;
-    const tonsPerDay24h = tph * 24;
-    const tonsPerWeek = tonsPerDay24h * 7;
-    const tonsPerYear330d = tonsPerDay24h * 330;
-    const tonsPerMonth = tonsPerYear330d / 12;
+  const speedA = n(engineering.extrusion.grossSpeedA_kg_hr);
+  const speedB = n(engineering.extrusion.grossSpeedB_kg_hr);
+  const totalGross = speedA + speedB;
 
-    return {
-      opt,
-      totalGross,
-      grossVsOptimalPct,
-      netSpeed,
-      netVsOptimalPct,
-      tph,
-      tonsPerShift12h,
-      tonsPerDay24h,
-      tonsPerWeek,
-      tonsPerMonth,
-      tonsPerYear330d,
-    };
-  }, [engineering.extrusion, engineering.sheetSpecs, sheetDerived.grossWidth, baseMaterial]);
+  const efficiency = n(engineering.extrusion.efficiencyPct) / 100;
+  const scrapRate = n(engineering.extrusion.scrapRatePct) / 100;
+
+  const grossWidth = n(engineering.sheetSpecs.grossWidth_mm) || sheetDerived.grossWidth;
+  const netWidth = n(engineering.sheetSpecs.netWidth_mm);
+
+  const grossVsOptimalPct = totalMax > 0 ? (totalGross / totalMax) * 100 : 0;
+
+  const actualLayerAFromSpeedsPct =
+    totalGross > 0 ? (speedA / totalGross) * 100 : 0;
+
+  const layerMismatchPct =
+    totalGross > 0 ? actualLayerAFromSpeedsPct - layerAPct : 0;
+
+  let recommendedA = 0;
+  let recommendedB = 0;
+  let limitingExtruder = "";
+
+  if (layerAFrac > 0 && layerBFrac > 0) {
+    const totalLimitedByA = maxA / layerAFrac;
+    const totalLimitedByB = maxB / layerBFrac;
+    const recommendedTotal = Math.min(totalLimitedByA, totalLimitedByB);
+
+    recommendedA = recommendedTotal * layerAFrac;
+    recommendedB = recommendedTotal * layerBFrac;
+
+    if (totalLimitedByA < totalLimitedByB) {
+      limitingExtruder = "A";
+    } else if (totalLimitedByB < totalLimitedByA) {
+      limitingExtruder = "B";
+    }
+  }
+
+  const recommendedTotalGross = recommendedA + recommendedB;
+
+  const netSpeed =
+    totalGross > 0 && grossWidth > 0
+      ? totalGross * (netWidth / grossWidth) * (1 - scrapRate) * (efficiency || 1)
+      : 0;
+
+  const recommendedNetSpeed =
+    recommendedTotalGross > 0 && grossWidth > 0
+      ? recommendedTotalGross * (netWidth / grossWidth) * (1 - scrapRate) * (efficiency || 1)
+      : 0;
+
+  const netVsOptimalPct =
+    recommendedTotalGross > 0 ? (totalGross / recommendedTotalGross) * 100 : 0;
+
+  const tph = netSpeed / 1000;
+  const tonsPerShift12h = tph * 12;
+  const tonsPerDay24h = tph * 24;
+  const tonsPerWeek = tonsPerDay24h * 7;
+  const tonsPerYear330d = tonsPerDay24h * 330;
+  const tonsPerMonth = tonsPerYear330d / 12;
+
+  const layerADeviationFromOptimumPct = layerAPct - optimumLayerAPct;
+
+  const isLayerAOptimum = Math.abs(layerADeviationFromOptimumPct) < 0.01;
+  const isSpeedRatioMatchingLayer =
+    totalGross <= 0 ? true : Math.abs(layerMismatchPct) < 0.5;
+
+  let warningMessage = "";
+  if (!isLayerAOptimum) {
+    warningMessage = `Layer A % is not optimum for ${baseMaterial}. Recommended Layer A is ${optimumLayerAPct.toFixed(3)}%.`;
+  } else if (!isSpeedRatioMatchingLayer) {
+    warningMessage = `Entered extruder speeds do not match the selected Layer A %. Actual Layer A from speeds is ${actualLayerAFromSpeedsPct.toFixed(3)}%.`;
+  } else if (limitingExtruder) {
+    warningMessage = `At Layer A = ${layerAPct.toFixed(3)}%, Extruder ${limitingExtruder} is the limiting extruder. Recommended gross speeds are A = ${recommendedA.toFixed(2)} kg/hr and B = ${recommendedB.toFixed(2)} kg/hr.`;
+  }
+
+  return {
+    opt,
+    maxA,
+    maxB,
+    totalMax,
+    optimumLayerAPct,
+    layerAPct,
+    actualLayerAFromSpeedsPct,
+    layerMismatchPct,
+    layerADeviationFromOptimumPct,
+    recommendedA,
+    recommendedB,
+    recommendedTotalGross,
+    recommendedNetSpeed,
+    limitingExtruder,
+    totalGross,
+    grossVsOptimalPct,
+    netSpeed,
+    netVsOptimalPct,
+    tph,
+    tonsPerShift12h,
+    tonsPerDay24h,
+    tonsPerWeek,
+    tonsPerMonth,
+    tonsPerYear330d,
+    warningMessage,
+    isLayerAOptimum,
+    isSpeedRatioMatchingLayer,
+  };
+}, [
+  engineering.extrusion,
+  engineering.sheetSpecs,
+  engineering.materialSheet.layerAPct,
+  sheetDerived.grossWidth,
+  baseMaterial,
+]);
 
   useEffect(() => {
     updateSection("extrusion", {
@@ -1244,6 +1339,13 @@ if (!payload) {
         value={engineering.materialSheet.layerAPct}
         onChange={(v) => updateSection("materialSheet", { layerAPct: v })}
       />
+        {!extrusionDerived.isLayerAOptimum && baseMaterial ? (
+    <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 p-2 text-xs">
+      This Layer A % is not optimum for {baseMaterial}. Recommended:
+      {" "}
+      {fmt(extrusionDerived.optimumLayerAPct, 3)}%
+    </div>
+  ) : null}
       {(n(engineering.materialSheet.layerAPct) < 0 ||
         n(engineering.materialSheet.layerAPct) > 100) && (
         <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm mt-2">
@@ -1808,78 +1910,9 @@ if (!payload) {
 
    <Section title="2. Extrusion Process Data">
   <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="rounded-xl border bg-gray-50 p-4 space-y-4 xl:col-span-1">
-      <div className="font-medium">Calculated Summary</div>
+       
 
-      <div className="grid grid-cols-1 gap-3">
-        <RefRow
-          label="Base Material"
-          value={baseMaterial || "—"}
-        />
-        <RefRow
-          label="Requested Width / Thickness"
-          value={`${product.sheetWidthMm || "—"} mm / ${product.sheetThicknessMicron || "—"} micron`}
-        />
-        <RefRow
-          label="Total Gross Speed"
-          value={
-            extrusionDerived.totalGross
-              ? `${fmt(extrusionDerived.totalGross, 2)} kg/hr`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Gross / Optimum"
-          value={
-            extrusionDerived.grossVsOptimalPct
-              ? `${fmt(extrusionDerived.grossVsOptimalPct, 2)}%`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Net Speed"
-          value={
-            extrusionDerived.netSpeed
-              ? `${fmt(extrusionDerived.netSpeed, 2)} kg/hr`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Net / Optimum"
-          value={
-            extrusionDerived.netVsOptimalPct
-              ? `${fmt(extrusionDerived.netVsOptimalPct, 2)}%`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Tons / Hour"
-          value={
-            extrusionDerived.tph
-              ? `${fmt(extrusionDerived.tph, 3)} t/hr`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Tons / Day"
-          value={
-            extrusionDerived.tonsPerDay24h
-              ? `${fmt(extrusionDerived.tonsPerDay24h, 3)} t/day`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Tons / Year"
-          value={
-            extrusionDerived.tonsPerYear330d
-              ? `${fmt(extrusionDerived.tonsPerYear330d, 3)} t/year`
-              : "—"
-          }
-        />
-      </div>
-    </div>
-
-    <div className="space-y-4 xl:col-span-2">
+   <div className="space-y-4 xl:col-span-3">
   <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               <Field
   label="Line Name"
@@ -1972,6 +2005,11 @@ if (!payload) {
                 )}
               </div>
             </div>
+            {extrusionDerived.warningMessage ? (
+  <div className="rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 p-3 text-sm">
+    {extrusionDerived.warningMessage}
+  </div>
+) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <Field label="Net Speed (kg/hr)">
