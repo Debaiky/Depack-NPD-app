@@ -1268,6 +1268,19 @@ const layerBTotalPct = (engineering.materialSheet.layerB || []).reduce(
 
 const layerAIsValid = Math.abs(layerATotalPct - 100) < 0.001;
 const layerBIsValid = Math.abs(layerBTotalPct - 100) < 0.001;
+const bomTotalPct = (sheetDerived.materialPerTonRows || []).reduce(
+  (sum, row) => sum + n(row.totalPct),
+  0
+);
+
+const bomTotalKgPerTon =
+  (sheetDerived.materialPerTonRows || []).reduce(
+    (sum, row) => sum + n(row.kgPerTon),
+    0
+  ) + (engineering.materialSheet.coatingUsed === "Yes" ? n(sheetDerived.coatingKgPerTon) : 0);
+
+const bomPctIsValid = Math.abs(bomTotalPct - 100) < 0.01;
+const bomKgIsValid = Math.abs(bomTotalKgPerTon - 1000) < 0.01;
   const requestedWeight = n(product.productWeightG);
   const weightDiffPct =
     requestedWeight > 0 &&
@@ -1542,41 +1555,31 @@ if (!payload) {
   <div className="rounded-xl border bg-gray-50 p-4 space-y-4 xl:col-span-1">
     <div className="font-medium">Material Consumption per Ton</div>
 
-    <div className="grid grid-cols-1 gap-3">
-      <RefRow
-        label="Plastic Share"
-        value={
-          sheetDerived.plasticShare
-            ? `${fmt(sheetDerived.plasticShare * 100, 2)}%`
-            : "—"
-        }
-      />
-      <RefRow
-        label="Coating Share"
-        value={
-          engineering.materialSheet.coatingUsed === "Yes"
-            ? `${fmt(sheetDerived.coatingShare * 100, 2)}%`
-            : "0%"
-        }
-      />
-      <RefRow
-        label="Coating Kg / Ton"
-        value={
-          engineering.materialSheet.coatingUsed === "Yes"
-            ? `${fmt(sheetDerived.coatingKgPerTon, 3)} kg`
-            : "0 kg"
-        }
-      />
-      <RefRow
-        label="Total Weight / m²"
-        value={
-          sheetDerived.totalWeightPerM2_g
-            ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
-            : "—"
-        }
-      />
-    </div>
+    <div className="text-sm space-y-2">
+  <div>
+    <span className="font-medium">Plastic share:</span>{" "}
+    {fmt(sheetDerived.plasticShare * 100, 2)}% —{" "}
+    {fmt(sheetDerived.plasticShare * 1000, 3)} kg/ton
+  </div>
 
+  <div>
+    <span className="font-medium">Coating share:</span>{" "}
+    {engineering.materialSheet.coatingUsed === "Yes"
+      ? `${fmt(sheetDerived.coatingShare * 100, 2)}%`
+      : "0.00%"}{" "}
+    —{" "}
+    {engineering.materialSheet.coatingUsed === "Yes"
+      ? `${fmt(sheetDerived.coatingKgPerTon, 3)} kg/ton`
+      : "0.000 kg/ton"}
+  </div>
+
+  <div>
+    <span className="font-medium">Total weight per m²:</span>{" "}
+    {sheetDerived.totalWeightPerM2_g
+      ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
+      : "—"}
+  </div>
+</div>
     <div className="overflow-auto rounded-xl border bg-white">
       <table className="w-full text-sm">
         <thead className="bg-gray-50">
@@ -1610,46 +1613,70 @@ if (!payload) {
   </div>
 
   <div className="rounded-xl border p-4 space-y-4 xl:col-span-2">
-    <div className="flex items-center justify-between gap-4 flex-wrap">
-      <div className="font-medium">Layer Material Mix</div>
+  <div className="flex flex-col gap-4">
+    <div className="font-medium">Sheet BOM</div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
-        <div
-          className={`rounded-lg border p-3 text-sm ${
-            layerAIsValid
-              ? "border-green-200 bg-green-50 text-green-700"
-              : "border-red-200 bg-red-50 text-red-700"
-          }`}
-        >
-          Layer A total = {fmt(layerATotalPct, 2)}%
-          {!layerAIsValid && " — must equal 100%"}
-        </div>
-
-        <div
-          className={`rounded-lg border p-3 text-sm ${
-            layerBIsValid
-              ? "border-green-200 bg-green-50 text-green-700"
-              : "border-red-200 bg-red-50 text-red-700"
-          }`}
-        >
-          Layer B total = {fmt(layerBTotalPct, 2)}%
-          {!layerBIsValid && " — must equal 100%"}
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+      <div
+        className={`rounded-lg border p-3 text-sm ${
+          layerAIsValid
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-red-200 bg-red-50 text-red-700"
+        }`}
+      >
+        Layer A total = {fmt(layerATotalPct, 2)}%
+        {!layerAIsValid && " — must equal 100%"}
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={engineering.materialSheet.syncLayerBWithA}
-          onChange={(e) =>
-            updateSection("materialSheet", {
-              syncLayerBWithA: e.target.checked,
-            })
-          }
-        />
-        Add Layer A rows automatically to Layer B
-      </label>
+      <div
+        className={`rounded-lg border p-3 text-sm ${
+          layerBIsValid
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-red-200 bg-red-50 text-red-700"
+        }`}
+      >
+        Layer B total = {fmt(layerBTotalPct, 2)}%
+        {!layerBIsValid && " — must equal 100%"}
+      </div>
     </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+      <div
+        className={`rounded-lg border p-3 text-sm ${
+          bomPctIsValid
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-red-200 bg-red-50 text-red-700"
+        }`}
+      >
+        Sheet BOM total = {fmt(bomTotalPct, 2)}%
+        {!bomPctIsValid && " — must equal 100%"}
+      </div>
+
+      <div
+        className={`rounded-lg border p-3 text-sm ${
+          bomKgIsValid
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-red-200 bg-red-50 text-red-700"
+        }`}
+      >
+        Sheet BOM total = {fmt(bomTotalKgPerTon, 3)} kg/ton
+        {!bomKgIsValid && " — must equal 1000 kg/ton"}
+      </div>
+    </div>
+
+    <label className="flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={engineering.materialSheet.syncLayerBWithA}
+        onChange={(e) =>
+          updateSection("materialSheet", {
+            syncLayerBWithA: e.target.checked,
+          })
+        }
+      />
+      Add Layer A rows automatically to Layer B
+    </label>
+  </div>
 
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <div className="space-y-2">
@@ -2006,13 +2033,8 @@ if (!payload) {
                   </Field>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Field label="Operators / Pallet">
-                    <Input
-                      value={engineering.sheetPackaging.operatorsPerPallet}
-                      onChange={(v) => updateSection("sheetPackaging", { operatorsPerPallet: v })}
-                    />
-                  </Field>
+                <div className="grid grid-cols-1 gap-3">
+                  
 
                   <Field label="Packaging Instructions">
                     <TextArea
