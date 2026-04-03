@@ -125,6 +125,50 @@ const OPT_SPEED_MAP = {
   PP: { A: 120, B: 600 },
   PS: { A: 150, B: 700 },
 };
+function getBalancedExtruderSpeeds(baseMaterial, layerAPct) {
+  const opt = OPT_SPEED_MAP[baseMaterial] || { A: 0, B: 0 };
+
+  const aMax = n(opt.A);
+  const bMax = n(opt.B);
+  const aShare = n(layerAPct) / 100;
+  const bShare = 1 - aShare;
+
+  if (aMax <= 0 || bMax <= 0 || aShare <= 0 || bShare <= 0) {
+    return {
+      speedA: 0,
+      speedB: 0,
+      limitingExtruder: "",
+      recommendedLayerA: 0,
+    };
+  }
+
+  const ratioBperA = bShare / aShare;
+  const ratioAperB = aShare / bShare;
+
+  let speedA = 0;
+  let speedB = 0;
+  let limitingExtruder = "";
+
+  if (aMax * ratioBperA <= bMax) {
+    speedA = aMax;
+    speedB = aMax * ratioBperA;
+    limitingExtruder = "A";
+  } else {
+    speedB = bMax;
+    speedA = bMax * ratioAperB;
+    limitingExtruder = "B";
+  }
+
+  const recommendedLayerA =
+    aMax + bMax > 0 ? (aMax / (aMax + bMax)) * 100 : 0;
+
+  return {
+    speedA,
+    speedB,
+    limitingExtruder,
+    recommendedLayerA,
+  };
+}
 const OPT_LAYER_A_MAP = {
   PET: 200 / (200 + 800),
   PS: 150 / (150 + 700),
@@ -134,6 +178,7 @@ const OPT_LAYER_A_MAP = {
 function pct(value) {
   return value * 100;
 }
+
 const CORE_MAP_MM = {
   "3 inch": 76.2,
   "6 inch": 152.4,
@@ -586,7 +631,12 @@ const isSheet = product.productType === "Sheet Roll";
   const baseMaterial = engineering.materialSheet.baseMaterial || requestedBaseMaterial;
   const autoDensity = DENSITY_MAP[baseMaterial] || 0;
   const density = n(engineering.materialSheet.density) || autoDensity;
-
+const balancedExtrusion = useMemo(() => {
+  return getBalancedExtruderSpeeds(
+    baseMaterial,
+    engineering.materialSheet.layerAPct
+  );
+}, [baseMaterial, engineering.materialSheet.layerAPct]);
   useEffect(() => {
     const opt = OPT_SPEED_MAP[baseMaterial] || { A: 0, B: 0 };
 
@@ -600,6 +650,12 @@ const isSheet = product.productType === "Sheet Roll";
       if (!next.materialSheet.density && autoDensity) {
         next.materialSheet.density = String(autoDensity);
       }
+      const recommendedLayerA =
+  opt.A && opt.B ? (opt.A / (opt.A + opt.B)) * 100 : 0;
+
+if (!next.materialSheet.layerAPct && recommendedLayerA > 0) {
+  next.materialSheet.layerAPct = String(recommendedLayerA.toFixed(2));
+}
 
       if (!next.sheetSpecs.netWidth_mm && product.sheetWidthMm) {
         next.sheetSpecs.netWidth_mm = product.sheetWidthMm;
@@ -629,12 +685,17 @@ const isSheet = product.productType === "Sheet Roll";
         next.thermo.unitWeight_g = product.productWeightG;
       }
 
-      if (!next.extrusion.grossSpeedA_kg_hr && opt.A) {
-        next.extrusion.grossSpeedA_kg_hr = String(opt.A);
+           const balanced = getBalancedExtruderSpeeds(
+        next.materialSheet.baseMaterial || requestedBaseMaterial,
+        next.materialSheet.layerAPct
+      );
+
+      if (!next.extrusion.grossSpeedA_kg_hr && balanced.speedA > 0) {
+        next.extrusion.grossSpeedA_kg_hr = String(balanced.speedA.toFixed(2));
       }
 
-      if (!next.extrusion.grossSpeedB_kg_hr && opt.B) {
-        next.extrusion.grossSpeedB_kg_hr = String(opt.B);
+      if (!next.extrusion.grossSpeedB_kg_hr && balanced.speedB > 0) {
+        next.extrusion.grossSpeedB_kg_hr = String(balanced.speedB.toFixed(2));
       }
 
       if (!next.packaging.primary.pcsPerStack && packagingReq?.primary?.pcsPerStack) {
@@ -694,7 +755,30 @@ const isSheet = product.productType === "Sheet Roll";
       },
     }));
   }, [engineering.materialSheet.syncLayerBWithA, engineering.materialSheet.layerA]);
+useEffect(() => {
+  if (!engineering.materialSheet.layerAPct || !baseMaterial) return;
 
+  const currentA = n(engineering.extrusion.grossSpeedA_kg_hr);
+  const currentB = n(engineering.extrusion.grossSpeedB_kg_hr);
+
+  const autoA = n(balancedExtrusion.speedA);
+  const autoB = n(balancedExtrusion.speedB);
+
+  const isEmptyA = !currentA;
+  const isEmptyB = !currentB;
+
+  if (isEmptyA || isEmptyB) {
+    updateSection("extrusion", {
+      grossSpeedA_kg_hr: isEmptyA && autoA ? String(autoA.toFixed(2)) : engineering.extrusion.grossSpeedA_kg_hr,
+      grossSpeedB_kg_hr: isEmptyB && autoB ? String(autoB.toFixed(2)) : engineering.extrusion.grossSpeedB_kg_hr,
+    });
+  }
+}, [
+  balancedExtrusion.speedA,
+  balancedExtrusion.speedB,
+  engineering.materialSheet.layerAPct,
+  baseMaterial,
+]);
   useEffect(() => {
     const coreSize = engineering.sheetSpecs.coreSize || "6 inch";
     const coreDia = CORE_MAP_MM[coreSize] || n(engineering.sheetSpecs.coreDiameter_mm);
@@ -1192,6 +1276,26 @@ const layerBIsValid = Math.abs(layerBTotalPct - 100) < 0.001;
       : 0;
 
   const totalOptGross = (OPT_SPEED_MAP[baseMaterial]?.A || 0) + (OPT_SPEED_MAP[baseMaterial]?.B || 0);
+
+// ✅ STEP 6 — PUT IT HERE
+const recommendedLayerAPct =
+  balancedExtrusion.recommendedLayerA || 0;
+
+const enteredLayerAPct = n(engineering.materialSheet.layerAPct);
+
+const layerAIsNonOptimal =
+  enteredLayerAPct > 0 &&
+  Math.abs(enteredLayerAPct - recommendedLayerAPct) > 0.01;
+
+const enteredSpeedA = n(engineering.extrusion.grossSpeedA_kg_hr);
+const enteredSpeedB = n(engineering.extrusion.grossSpeedB_kg_hr);
+
+const recommendedSpeedA = n(balancedExtrusion.speedA);
+const recommendedSpeedB = n(balancedExtrusion.speedB);
+
+const extrusionSpeedMismatch =
+  Math.abs(enteredSpeedA - recommendedSpeedA) > 0.5 ||
+  Math.abs(enteredSpeedB - recommendedSpeedB) > 0.5;
 if (!payload) {
   return <div className="p-6">Loading...</div>;
 }
@@ -1350,6 +1454,21 @@ if (!payload) {
         n(engineering.materialSheet.layerAPct) > 100) && (
         <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm mt-2">
           Layer A % must be between 0 and 100.
+        </div>
+      )}
+            {recommendedLayerAPct > 0 && (
+        <div
+          className={`mt-2 rounded-lg border p-3 text-sm ${
+            layerAIsNonOptimal
+              ? "border-yellow-200 bg-yellow-50 text-yellow-700"
+              : "border-green-200 bg-green-50 text-green-700"
+          }`}
+        >
+          Recommended optimum Layer A for {baseMaterial || "selected material"} is{" "}
+          {fmt(recommendedLayerAPct, 2)}%.
+          {layerAIsNonOptimal
+            ? " Current value will not give optimum matched extruder speeds."
+            : " Current value gives optimum matched extruder speeds."}
         </div>
       )}
     </Field>
@@ -2010,6 +2129,21 @@ if (!payload) {
     {extrusionDerived.warningMessage}
   </div>
 ) : null}
+{recommendedSpeedA > 0 && recommendedSpeedB > 0 && (
+  <div
+    className={`rounded-lg border p-3 text-sm ${
+      extrusionSpeedMismatch
+        ? "border-yellow-200 bg-yellow-50 text-yellow-700"
+        : "border-green-200 bg-green-50 text-green-700"
+    }`}
+  >
+    Recommended matched speeds for current layer split:
+    {" "}A = {fmt(recommendedSpeedA, 2)} kg/hr, B = {fmt(recommendedSpeedB, 2)} kg/hr.
+    {extrusionSpeedMismatch
+      ? " Entered speeds differ from the matched optimum for this layer ratio."
+      : " Entered speeds match the recommended ratio."}
+  </div>
+)}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <Field label="Net Speed (kg/hr)">
