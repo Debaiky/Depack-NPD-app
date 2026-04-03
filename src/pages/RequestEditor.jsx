@@ -80,10 +80,11 @@ export default function RequestEditor({ isNew = false }) {
 
   return (
     <RequestWizard
-      key={isNew ? "new-request" : requestId}
-      initialData={isNew ? null : data}
-      existingFiles={isNew ? [] : files}
-      onDeleteFile={isNew ? null : handleDeleteFile}
-    />
+  key={isNew ? "new-request" : requestId}
+  initialData={isNew ? null : data}
+  existingFiles={isNew ? [] : files}
+  onDeleteFile={isNew ? null : handleDeleteFile}
+  isEditMode={!isNew}
+/>
   );
 }
