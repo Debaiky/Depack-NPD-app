@@ -504,6 +504,9 @@ investments: [],
   doubleTrailer_netWeight_kg: "",
 
   notes: "",
+  container20_cartonsRange: "",
+container40_cartonsRange: "",
+container40hc_cartonsRange: "",
 },
 
    
@@ -1435,24 +1438,54 @@ const freightCalc = useMemo(() => {
     null;
 
   const makeContainerRow = (containerName) => {
+    const containerVolume = CONTAINER_SPECS[containerName]?.volume_m3 || 0;
     const pallets = palletLookup ? palletLookup[containerName] || 0 : 0;
 
     if (isSheet) {
       return {
         pallets,
         cartons: 0,
+        cartonsRange: "",
         pcs: 0,
         rolls: pallets * rollsPerPallet,
         netWeight_kg: pallets * palletWeight_kg,
       };
     }
 
+    const palletSelected = engineering.packaging.pallet.palletSelected === "Yes";
+
+    if (palletSelected) {
+      return {
+        pallets,
+        cartons: pallets * cartonsPerPallet,
+        cartonsRange: "",
+        pcs: pallets * pcsPerPallet,
+        rolls: 0,
+        netWeight_kg: pallets * palletWeight_kg,
+      };
+    }
+
+    const maxCartonsByVolume =
+      cartonVolume_m3 > 0 ? Math.floor(containerVolume / cartonVolume_m3) : 0;
+
+    const minCartonsByVolume =
+      maxCartonsByVolume > 0 ? Math.floor(maxCartonsByVolume * 0.9) : 0;
+
+    const avgCartons =
+      maxCartonsByVolume > 0
+        ? Math.floor((minCartonsByVolume + maxCartonsByVolume) / 2)
+        : 0;
+
     return {
-      pallets,
-      cartons: pallets * cartonsPerPallet,
-      pcs: pallets * pcsPerPallet,
+      pallets: 0,
+      cartons: avgCartons,
+      cartonsRange:
+        maxCartonsByVolume > 0
+          ? `${minCartonsByVolume} - ${maxCartonsByVolume}`
+          : "",
+      pcs: avgCartons * pcsPerCarton,
       rolls: 0,
-      netWeight_kg: pallets * palletWeight_kg,
+      netWeight_kg: avgCartons * cartonWeight_kg,
     };
   };
 
@@ -1612,6 +1645,7 @@ const freightCalc = useMemo(() => {
       : "",
 
     container20_pallets: freightCalc.c20.pallets ? String(freightCalc.c20.pallets) : "",
+    container20_cartonsRange: freightCalc.c20.cartonsRange || "",
     container20_cartons: freightCalc.c20.cartons ? String(freightCalc.c20.cartons) : "",
     container20_pcs: freightCalc.c20.pcs ? String(freightCalc.c20.pcs) : "",
     container20_rolls: freightCalc.c20.rolls ? String(freightCalc.c20.rolls) : "",
@@ -1620,6 +1654,7 @@ const freightCalc = useMemo(() => {
       : "",
 
     container40_pallets: freightCalc.c40.pallets ? String(freightCalc.c40.pallets) : "",
+    container40_cartonsRange: freightCalc.c40.cartonsRange || "",
     container40_cartons: freightCalc.c40.cartons ? String(freightCalc.c40.cartons) : "",
     container40_pcs: freightCalc.c40.pcs ? String(freightCalc.c40.pcs) : "",
     container40_rolls: freightCalc.c40.rolls ? String(freightCalc.c40.rolls) : "",
@@ -1628,8 +1663,11 @@ const freightCalc = useMemo(() => {
       : "",
 
     container40hc_pallets: freightCalc.c40hc.pallets ? String(freightCalc.c40hc.pallets) : "",
+
     container40hc_cartons: freightCalc.c40hc.cartons ? String(freightCalc.c40hc.cartons) : "",
+    
     container40hc_pcs: freightCalc.c40hc.pcs ? String(freightCalc.c40hc.pcs) : "",
+    container40hc_cartonsRange: freightCalc.c40hc.cartonsRange || "",
     container40hc_rolls: freightCalc.c40hc.rolls ? String(freightCalc.c40hc.rolls) : "",
     container40hc_netWeight_kg: freightCalc.c40hc.netWeight_kg
       ? String(freightCalc.c40hc.netWeight_kg.toFixed(2))
@@ -3888,7 +3926,7 @@ if (!payload) {
               <th className="text-left p-3">Volume</th>
               <th className="text-left p-3">Tare</th>
               <th className="text-left p-3">Pallets</th>
-              {!isSheet && <th className="text-left p-3">Cartons</th>}
+             {!isSheet && <th className="text-left p-3">Cartons / Container</th>}
               {!isSheet && <th className="text-left p-3">PCS</th>}
               {isSheet && <th className="text-left p-3">Rolls</th>}
               <th className="text-left p-3">Net Weight (kg)</th>
@@ -3905,7 +3943,13 @@ if (!payload) {
                 <td className="p-3">{CONTAINER_SPECS[label].volume_m3} m³</td>
                 <td className="p-3">{CONTAINER_SPECS[label].tare_kg} kg</td>
                 <td className="p-3">{engineering.freight[`${key}_pallets`] || "—"}</td>
-                {!isSheet && <td className="p-3">{engineering.freight[`${key}_cartons`] || "—"}</td>}
+               {!isSheet && (
+  <td className="p-3">
+    {engineering.packaging.pallet.palletSelected === "Yes"
+      ? (engineering.freight[`${key}_cartons`] || "—")
+      : (engineering.freight[`${key}_cartonsRange`] || "—")}
+  </td>
+)}
                 {!isSheet && <td className="p-3">{engineering.freight[`${key}_pcs`] || "—"}</td>}
                 {isSheet && <td className="p-3">{engineering.freight[`${key}_rolls`] || "—"}</td>}
                 <td className="p-3">{engineering.freight[`${key}_netWeight_kg`] || "—"}</td>
