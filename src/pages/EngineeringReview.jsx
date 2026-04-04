@@ -184,6 +184,42 @@ const CORE_MAP_MM = {
   "6 inch": 152.4,
   "8 inch": 203.2,
 };
+const CONTAINER_SPECS = {
+  "20ft Dry": {
+    length_m: 6.06,
+    width_m: 2.44,
+    height_m: 2.59,
+    volume_m3: 33.2,
+    tare_kg: 2100,
+  },
+  "40ft Dry": {
+    length_m: 12.19,
+    width_m: 2.44,
+    height_m: 2.59,
+    volume_m3: 67.7,
+    tare_kg: 3700,
+  },
+  "40ft High Cube": {
+    length_m: 12.19,
+    width_m: 2.44,
+    height_m: 2.89,
+    volume_m3: 76.4,
+    tare_kg: 3900,
+  },
+};
+
+const PALLETS_PER_CONTAINER = {
+  EURO: {
+    "20ft Dry": 11,
+    "40ft Dry": 24,
+    "40ft High Cube": 25,
+  },
+  UK: {
+    "20ft Dry": 10,
+    "40ft Dry": 21,
+    "40ft High Cube": 22,
+  },
+};
 
 const blankMaterialRow = () => ({ id: uid(), name: "", pct: "" });
 const blankInvestmentRow = () => ({
@@ -260,8 +296,10 @@ export default function EngineeringReview() {
   separatorsPerPallet: "",
   foamLength_m: "",
   stretchKgPerPallet: "",
-  operatorsPerPallet: "",
   instructionText: "",
+  palletLength_mm: "",
+  palletWidth_mm: "",
+  palletHeight_mm: "",
 },
 
     extrusion: {
@@ -410,16 +448,63 @@ investments: [],
       instructionText: "",
     },
 
-    freight: {
-      deliveryMode: "",
-      freightBasis: "",
-      palletsPerTruck: "",
-      cartonsPerTruck: "",
-      kgPerTruck: "",
-      pcsPerTruck: "",
-      netProductWeightPerTruck_kg: "",
-      notes: "",
-    },
+  freight: {
+  deliveryMode: "",
+  freightBasis: "",
+
+  cartonVolume_m3: "",
+  cartonWeight_kg: "",
+
+  palletVolume_m3: "",
+  palletWeight_kg: "",
+  palletLength_mm: "",
+  palletWidth_mm: "",
+  palletHeight_mm: "",
+
+  container20_pallets: "",
+  container20_cartons: "",
+  container20_pcs: "",
+  container20_rolls: "",
+  container20_netWeight_kg: "",
+
+  container40_pallets: "",
+  container40_cartons: "",
+  container40_pcs: "",
+  container40_rolls: "",
+  container40_netWeight_kg: "",
+
+  container40hc_pallets: "",
+  container40hc_cartons: "",
+  container40hc_pcs: "",
+  container40hc_rolls: "",
+  container40hc_netWeight_kg: "",
+
+  smallTruck_cartons: "",
+  smallTruck_pallets: "",
+  smallTruck_pcs: "",
+  smallTruck_rolls: "",
+  smallTruck_netWeight_kg: "",
+
+  mediumTruck_cartons: "",
+  mediumTruck_pallets: "",
+  mediumTruck_pcs: "",
+  mediumTruck_rolls: "",
+  mediumTruck_netWeight_kg: "",
+
+  largeTruck_cartons: "",
+  largeTruck_pallets: "",
+  largeTruck_pcs: "",
+  largeTruck_rolls: "",
+  largeTruck_netWeight_kg: "",
+
+  doubleTrailer_cartons: "",
+  doubleTrailer_pallets: "",
+  doubleTrailer_pcs: "",
+  doubleTrailer_rolls: "",
+  doubleTrailer_netWeight_kg: "",
+
+  notes: "",
+},
 
    
   });
@@ -1287,7 +1372,170 @@ Object.entries(grouped).forEach(([name, parts]) => {
       updateSection("packaging", { instructionText: thermoPackagingDerived.instructionText });
     }
   }, [thermoPackagingDerived.instructionText]);
+const freightCalc = useMemo(() => {
+  const unitWeightKg = (n(engineering.thermo.unitWeight_g) || n(product.productWeightG)) / 1000;
 
+  const cartonLengthMm = n(engineering.packaging.secondary.secondaryLength_mm);
+  const cartonWidthMm = n(engineering.packaging.secondary.secondaryWidth_mm);
+  const cartonHeightMm = n(engineering.packaging.secondary.secondaryHeight_mm);
+
+  const cartonVolume_m3 =
+    cartonLengthMm > 0 && cartonWidthMm > 0 && cartonHeightMm > 0
+      ? (cartonLengthMm * cartonWidthMm * cartonHeightMm) / 1_000_000_000
+      : 0;
+
+  const pcsPerCarton = n(thermoPackagingDerived.pcsPerCarton);
+  const cartonWeight_kg =
+    !isSheet && pcsPerCarton > 0 && unitWeightKg > 0
+      ? pcsPerCarton * unitWeightKg
+      : 0;
+
+  const palletLength_mm = isSheet
+    ? n(engineering.sheetPackaging.palletLength_mm)
+    : n(engineering.packaging.pallet.palletLength_mm);
+
+  const palletWidth_mm = isSheet
+    ? n(engineering.sheetPackaging.palletWidth_mm)
+    : n(engineering.packaging.pallet.palletWidth_mm);
+
+  const palletHeight_mm = isSheet
+    ? n(engineering.sheetPackaging.palletHeight_mm)
+    : n(engineering.packaging.pallet.palletHeight_mm);
+
+  const palletVolume_m3 =
+    palletLength_mm > 0 && palletWidth_mm > 0 && palletHeight_mm > 0
+      ? (palletLength_mm * palletWidth_mm * palletHeight_mm) / 1_000_000_000
+      : 0;
+
+  let palletWeight_kg = 0;
+  let pcsPerPallet = 0;
+  let cartonsPerPallet = 0;
+  let rollsPerPallet = 0;
+
+  if (isSheet) {
+    rollsPerPallet = n(engineering.sheetPackaging.rollsPerPallet);
+    const rollWeight =
+      n(engineering.sheetPackaging.rollWeight_kg) ||
+      n(engineering.sheetSpecs.rollTargetWeight_kg) ||
+      sheetDerived.calcRollWeight;
+    palletWeight_kg = rollsPerPallet * rollWeight;
+  } else {
+    cartonsPerPallet = n(engineering.packaging.pallet.boxesPerPallet);
+    pcsPerPallet = n(thermoPackagingDerived.pcsPerPallet);
+    palletWeight_kg = cartonsPerPallet * cartonWeight_kg;
+  }
+
+  const palletType = isSheet
+    ? engineering.sheetPackaging.palletType
+    : engineering.packaging.pallet.palletType;
+
+  const palletLookup =
+    palletType === "EURO" ? PALLETS_PER_CONTAINER.EURO :
+    palletType === "UK" ? PALLETS_PER_CONTAINER.UK :
+    null;
+
+  const makeContainerRow = (containerName) => {
+    const pallets = palletLookup ? palletLookup[containerName] || 0 : 0;
+
+    if (isSheet) {
+      return {
+        pallets,
+        cartons: 0,
+        pcs: 0,
+        rolls: pallets * rollsPerPallet,
+        netWeight_kg: pallets * palletWeight_kg,
+      };
+    }
+
+    return {
+      pallets,
+      cartons: pallets * cartonsPerPallet,
+      pcs: pallets * pcsPerPallet,
+      rolls: 0,
+      netWeight_kg: pallets * palletWeight_kg,
+    };
+  };
+
+  const c20 = makeContainerRow("20ft Dry");
+  const c40 = makeContainerRow("40ft Dry");
+  const c40hc = makeContainerRow("40ft High Cube");
+
+  const buildTruckRow = (palletsField, cartonsField) => {
+    const pallets = n(palletsField);
+    const cartons = n(cartonsField);
+
+    if (isSheet) {
+      const rolls = pallets * rollsPerPallet;
+      return {
+        pallets,
+        cartons: 0,
+        pcs: 0,
+        rolls,
+        netWeight_kg: rolls * (n(engineering.sheetPackaging.rollWeight_kg) ||
+          n(engineering.sheetSpecs.rollTargetWeight_kg) ||
+          sheetDerived.calcRollWeight),
+      };
+    }
+
+    const effectiveCartons =
+      pallets > 0 && cartonsPerPallet > 0 ? pallets * cartonsPerPallet : cartons;
+
+    return {
+      pallets,
+      cartons: effectiveCartons,
+      pcs: effectiveCartons * pcsPerCarton,
+      rolls: 0,
+      netWeight_kg: effectiveCartons * cartonWeight_kg,
+    };
+  };
+
+  const smallTruck = buildTruckRow(
+    engineering.freight.smallTruck_pallets,
+    engineering.freight.smallTruck_cartons
+  );
+  const mediumTruck = buildTruckRow(
+    engineering.freight.mediumTruck_pallets,
+    engineering.freight.mediumTruck_cartons
+  );
+  const largeTruck = buildTruckRow(
+    engineering.freight.largeTruck_pallets,
+    engineering.freight.largeTruck_cartons
+  );
+  const doubleTrailer = buildTruckRow(
+    engineering.freight.doubleTrailer_pallets,
+    engineering.freight.doubleTrailer_cartons
+  );
+
+  return {
+    cartonVolume_m3,
+    cartonWeight_kg,
+    palletLength_mm,
+    palletWidth_mm,
+    palletHeight_mm,
+    palletVolume_m3,
+    palletWeight_kg,
+    pcsPerPallet,
+    cartonsPerPallet,
+    rollsPerPallet,
+    c20,
+    c40,
+    c40hc,
+    smallTruck,
+    mediumTruck,
+    largeTruck,
+    doubleTrailer,
+  };
+}, [
+  isSheet,
+  engineering.freight,
+  engineering.sheetPackaging,
+  engineering.sheetSpecs,
+  engineering.packaging,
+  engineering.thermo.unitWeight_g,
+  product.productWeightG,
+  thermoPackagingDerived,
+  sheetDerived.calcRollWeight,
+]);
   const freightDerived = useMemo(() => {
     const unitWeightG = n(engineering.thermo.unitWeight_g) || n(product.productWeightG);
 
@@ -1339,25 +1587,79 @@ Object.entries(grouped).forEach(([name, parts]) => {
   ]);
 
   useEffect(() => {
-    updateSection("freight", {
-      kgPerTruck: freightDerived.netProductWeightPerTruck_kg
-        ? String(freightDerived.netProductWeightPerTruck_kg.toFixed(2))
-        : "",
-      pcsPerTruck: freightDerived.pcsPerTruck
-        ? String(freightDerived.pcsPerTruck.toFixed(0))
-        : "",
-      netProductWeightPerTruck_kg: freightDerived.netProductWeightPerTruck_kg
-        ? String(freightDerived.netProductWeightPerTruck_kg.toFixed(2))
-        : "",
-      ...(!isSheet
-        ? {
-            cartonsPerTruck: freightDerived.cartonsPerTruck
-              ? String(freightDerived.cartonsPerTruck.toFixed(0))
-              : "",
-          }
-        : {}),
-    });
-  }, [freightDerived, isSheet]);
+  updateSection("freight", {
+    cartonVolume_m3: freightCalc.cartonVolume_m3
+      ? String(freightCalc.cartonVolume_m3.toFixed(6))
+      : "",
+    cartonWeight_kg: freightCalc.cartonWeight_kg
+      ? String(freightCalc.cartonWeight_kg.toFixed(3))
+      : "",
+
+    palletLength_mm: freightCalc.palletLength_mm
+      ? String(freightCalc.palletLength_mm)
+      : "",
+    palletWidth_mm: freightCalc.palletWidth_mm
+      ? String(freightCalc.palletWidth_mm)
+      : "",
+    palletHeight_mm: freightCalc.palletHeight_mm
+      ? String(freightCalc.palletHeight_mm)
+      : "",
+    palletVolume_m3: freightCalc.palletVolume_m3
+      ? String(freightCalc.palletVolume_m3.toFixed(6))
+      : "",
+    palletWeight_kg: freightCalc.palletWeight_kg
+      ? String(freightCalc.palletWeight_kg.toFixed(3))
+      : "",
+
+    container20_pallets: freightCalc.c20.pallets ? String(freightCalc.c20.pallets) : "",
+    container20_cartons: freightCalc.c20.cartons ? String(freightCalc.c20.cartons) : "",
+    container20_pcs: freightCalc.c20.pcs ? String(freightCalc.c20.pcs) : "",
+    container20_rolls: freightCalc.c20.rolls ? String(freightCalc.c20.rolls) : "",
+    container20_netWeight_kg: freightCalc.c20.netWeight_kg
+      ? String(freightCalc.c20.netWeight_kg.toFixed(2))
+      : "",
+
+    container40_pallets: freightCalc.c40.pallets ? String(freightCalc.c40.pallets) : "",
+    container40_cartons: freightCalc.c40.cartons ? String(freightCalc.c40.cartons) : "",
+    container40_pcs: freightCalc.c40.pcs ? String(freightCalc.c40.pcs) : "",
+    container40_rolls: freightCalc.c40.rolls ? String(freightCalc.c40.rolls) : "",
+    container40_netWeight_kg: freightCalc.c40.netWeight_kg
+      ? String(freightCalc.c40.netWeight_kg.toFixed(2))
+      : "",
+
+    container40hc_pallets: freightCalc.c40hc.pallets ? String(freightCalc.c40hc.pallets) : "",
+    container40hc_cartons: freightCalc.c40hc.cartons ? String(freightCalc.c40hc.cartons) : "",
+    container40hc_pcs: freightCalc.c40hc.pcs ? String(freightCalc.c40hc.pcs) : "",
+    container40hc_rolls: freightCalc.c40hc.rolls ? String(freightCalc.c40hc.rolls) : "",
+    container40hc_netWeight_kg: freightCalc.c40hc.netWeight_kg
+      ? String(freightCalc.c40hc.netWeight_kg.toFixed(2))
+      : "",
+
+    smallTruck_pcs: freightCalc.smallTruck.pcs ? String(freightCalc.smallTruck.pcs) : "",
+    smallTruck_rolls: freightCalc.smallTruck.rolls ? String(freightCalc.smallTruck.rolls) : "",
+    smallTruck_netWeight_kg: freightCalc.smallTruck.netWeight_kg
+      ? String(freightCalc.smallTruck.netWeight_kg.toFixed(2))
+      : "",
+
+    mediumTruck_pcs: freightCalc.mediumTruck.pcs ? String(freightCalc.mediumTruck.pcs) : "",
+    mediumTruck_rolls: freightCalc.mediumTruck.rolls ? String(freightCalc.mediumTruck.rolls) : "",
+    mediumTruck_netWeight_kg: freightCalc.mediumTruck.netWeight_kg
+      ? String(freightCalc.mediumTruck.netWeight_kg.toFixed(2))
+      : "",
+
+    largeTruck_pcs: freightCalc.largeTruck.pcs ? String(freightCalc.largeTruck.pcs) : "",
+    largeTruck_rolls: freightCalc.largeTruck.rolls ? String(freightCalc.largeTruck.rolls) : "",
+    largeTruck_netWeight_kg: freightCalc.largeTruck.netWeight_kg
+      ? String(freightCalc.largeTruck.netWeight_kg.toFixed(2))
+      : "",
+
+    doubleTrailer_pcs: freightCalc.doubleTrailer.pcs ? String(freightCalc.doubleTrailer.pcs) : "",
+    doubleTrailer_rolls: freightCalc.doubleTrailer.rolls ? String(freightCalc.doubleTrailer.rolls) : "",
+    doubleTrailer_netWeight_kg: freightCalc.doubleTrailer.netWeight_kg
+      ? String(freightCalc.doubleTrailer.netWeight_kg.toFixed(2))
+      : "",
+  });
+}, [freightCalc]);
 const layerATotalPct = (engineering.materialSheet.layerA || []).reduce(
   (sum, row) => sum + n(row.pct),
   0
@@ -2107,11 +2409,15 @@ if (!payload) {
 
                 <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
                   <Field label="Pallet Type">
-                    <Input
-                      value={engineering.sheetPackaging.palletType}
-                      onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
-                    />
-                  </Field>
+  <SelectField
+    value={engineering.sheetPackaging.palletType}
+    onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
+    options={[
+      { value: "UK", label: "UK Standard Pallet" },
+      { value: "EURO", label: "EURO Pallet" },
+    ]}
+  />
+</Field>
                   <Field
   label="Pallet Uses"
   requestValue=""
@@ -2120,6 +2426,26 @@ if (!payload) {
   <Input
     value={engineering.sheetPackaging.palletUses}
     onChange={(v) => updateSection("sheetPackaging", { palletUses: v })}
+  />
+</Field>
+<Field label="Pallet Length (mm)">
+  <Input
+    value={engineering.sheetPackaging.palletLength_mm}
+    onChange={(v) => updateSection("sheetPackaging", { palletLength_mm: v })}
+  />
+</Field>
+
+<Field label="Pallet Width (mm)">
+  <Input
+    value={engineering.sheetPackaging.palletWidth_mm}
+    onChange={(v) => updateSection("sheetPackaging", { palletWidth_mm: v })}
+  />
+</Field>
+
+<Field label="Pallet Height (mm)">
+  <Input
+    value={engineering.sheetPackaging.palletHeight_mm}
+    onChange={(v) => updateSection("sheetPackaging", { palletHeight_mm: v })}
   />
 </Field>
 
@@ -3384,30 +3710,48 @@ if (!payload) {
           {engineering.packaging.pallet.palletSelected === "Yes" && (
             <>
               <Field
-                label="Pallet Type"
-                requestValue={requestValueOrBlank(packagingReq?.pallet?.palletType)}
-                currentValue={engineering.packaging.pallet.palletType}
-              >
-                <Input
-                  value={engineering.packaging.pallet.palletType}
-                  onChange={(v) =>
-                    updateNested("packaging", "pallet", { palletType: v })
-                  }
-                />
-              </Field>
+  label="Pallet Type"
+  requestValue={requestValueOrBlank(packagingReq?.pallet?.palletType)}
+  currentValue={engineering.packaging.pallet.palletType}
+>
+  <SelectField
+    value={engineering.packaging.pallet.palletType}
+    onChange={(v) =>
+      updateNested("packaging", "pallet", { palletType: v })
+    }
+    options={[
+      { value: "UK", label: "UK Standard Pallet" },
+      { value: "EURO", label: "EURO Pallet" },
+    ]}
+  />
+</Field>
 
-              <Field
-                label="Pallet Dimensions (mm)"
-                requestValue={requestValueOrBlank(packagingReq?.pallet?.palletDimensionsMm)}
-                currentValue={engineering.packaging.pallet.palletWidth_mm}
-              >
-                <Input
-                  value={engineering.packaging.pallet.palletWidth_mm}
-                  onChange={(v) =>
-                    updateNested("packaging", "pallet", { palletWidth_mm: v })
-                  }
-                />
-              </Field>
+              <Field label="Pallet Length (mm)">
+  <Input
+    value={engineering.packaging.pallet.palletLength_mm}
+    onChange={(v) =>
+      updateNested("packaging", "pallet", { palletLength_mm: v })
+    }
+  />
+</Field>
+
+<Field label="Pallet Width (mm)">
+  <Input
+    value={engineering.packaging.pallet.palletWidth_mm}
+    onChange={(v) =>
+      updateNested("packaging", "pallet", { palletWidth_mm: v })
+    }
+  />
+</Field>
+
+<Field label="Pallet Height (mm)">
+  <Input
+    value={engineering.packaging.pallet.palletHeight_mm}
+    onChange={(v) =>
+      updateNested("packaging", "pallet", { palletHeight_mm: v })
+    }
+  />
+</Field>
 
               <Field
                 label="Cartons / Pallet"
@@ -3493,32 +3837,138 @@ if (!payload) {
   </Section>
 )}
 
-      <Section title={isSheet ? "5. Freight / Logistics" : "8. Freight / Logistics"}>
-  <div className="space-y-4">
+     <Section title={isSheet ? "5. Freight / Logistics" : "8. Freight / Logistics"}>
+  <div className="space-y-5">
+    <div className="rounded-xl border p-4 space-y-4">
+      <div className="font-medium">Calculated Packing Data</div>
 
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-      <Field label="Delivery Mode">
-        <Input
-          value={engineering.freight.deliveryMode}
-          onChange={(v) => updateSection("freight", { deliveryMode: v })}
-        />
-      </Field>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {!isSheet && (
+          <>
+            <RefRow
+              label="Carton Volume (m³)"
+              value={engineering.freight.cartonVolume_m3 || "—"}
+            />
+            <RefRow
+              label="Weight / Carton (kg)"
+              value={engineering.freight.cartonWeight_kg || "—"}
+            />
+          </>
+        )}
 
-      <Field label="Pallets / Truck">
-        <Input
-          value={engineering.freight.palletsPerTruck}
-          onChange={(v) => updateSection("freight", { palletsPerTruck: v })}
+        <RefRow
+          label="Pallet Dimensions (mm)"
+          value={
+            engineering.freight.palletLength_mm &&
+            engineering.freight.palletWidth_mm &&
+            engineering.freight.palletHeight_mm
+              ? `${engineering.freight.palletLength_mm} × ${engineering.freight.palletWidth_mm} × ${engineering.freight.palletHeight_mm}`
+              : "—"
+          }
         />
-      </Field>
+        <RefRow
+          label="Pallet Volume (m³)"
+          value={engineering.freight.palletVolume_m3 || "—"}
+        />
+        <RefRow
+          label="Pallet Weight (kg)"
+          value={engineering.freight.palletWeight_kg || "—"}
+        />
+      </div>
     </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <RefRow
-        label="Net Weight / Truck"
-        value={freightDerived.netProductWeightPerTruck_kg}
+    <div className="rounded-xl border p-4 space-y-4">
+      <div className="font-medium">Standard Containers</div>
+
+      <div className="overflow-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left p-3">Container</th>
+              <th className="text-left p-3">Volume</th>
+              <th className="text-left p-3">Tare</th>
+              <th className="text-left p-3">Pallets</th>
+              {!isSheet && <th className="text-left p-3">Cartons</th>}
+              {!isSheet && <th className="text-left p-3">PCS</th>}
+              {isSheet && <th className="text-left p-3">Rolls</th>}
+              <th className="text-left p-3">Net Weight (kg)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["20ft Dry", "container20"],
+              ["40ft Dry", "container40"],
+              ["40ft High Cube", "container40hc"],
+            ].map(([label, key]) => (
+              <tr key={key} className="border-t">
+                <td className="p-3">{label}</td>
+                <td className="p-3">{CONTAINER_SPECS[label].volume_m3} m³</td>
+                <td className="p-3">{CONTAINER_SPECS[label].tare_kg} kg</td>
+                <td className="p-3">{engineering.freight[`${key}_pallets`] || "—"}</td>
+                {!isSheet && <td className="p-3">{engineering.freight[`${key}_cartons`] || "—"}</td>}
+                {!isSheet && <td className="p-3">{engineering.freight[`${key}_pcs`] || "—"}</td>}
+                {isSheet && <td className="p-3">{engineering.freight[`${key}_rolls`] || "—"}</td>}
+                <td className="p-3">{engineering.freight[`${key}_netWeight_kg`] || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div className="rounded-xl border p-4 space-y-4">
+      <div className="font-medium">Other Truck Sizes</div>
+
+      <div className="space-y-3">
+        {[
+          ["Small Truck", "smallTruck"],
+          ["Medium Truck", "mediumTruck"],
+          ["Large Truck", "largeTruck"],
+          ["Double Trailer", "doubleTrailer"],
+        ].map(([label, key]) => (
+          <div key={key} className="grid grid-cols-1 md:grid-cols-5 gap-3 rounded-lg border p-3">
+            <div className="font-medium flex items-center">{label}</div>
+
+            <Field label="Pallets / Truck">
+              <Input
+                value={engineering.freight[`${key}_pallets`]}
+                onChange={(v) => updateSection("freight", { [`${key}_pallets`]: v })}
+              />
+            </Field>
+
+            {!isSheet && (
+              <Field label="Cartons / Truck">
+                <Input
+                  value={engineering.freight[`${key}_cartons`]}
+                  onChange={(v) => updateSection("freight", { [`${key}_cartons`]: v })}
+                />
+              </Field>
+            )}
+
+            <RefRow
+              label={isSheet ? "Rolls / Truck" : "PCS / Truck"}
+              value={
+                isSheet
+                  ? engineering.freight[`${key}_rolls`]
+                  : engineering.freight[`${key}_pcs`]
+              }
+            />
+
+            <RefRow
+              label="Net Weight / Truck (kg)"
+              value={engineering.freight[`${key}_netWeight_kg`] || "—"}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <Field label="Freight Notes">
+      <TextArea
+        value={engineering.freight.notes}
+        onChange={(v) => updateSection("freight", { notes: v })}
       />
-    </div>
-
+    </Field>
   </div>
 </Section>
 
