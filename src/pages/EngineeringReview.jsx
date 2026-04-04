@@ -3125,6 +3125,7 @@ if (!payload) {
       <div className="text-xl font-semibold">{fmt(investmentTotalEGP, 2)} EGP</div>
     </div>
   </div>
+  </Section>
 {!isSheet && (
   <Section title="7. Thermoformed Product Packaging Data">
     <div className="space-y-5">
