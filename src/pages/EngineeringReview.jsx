@@ -186,7 +186,16 @@ const CORE_MAP_MM = {
 };
 
 const blankMaterialRow = () => ({ id: uid(), name: "", pct: "" });
-
+const blankInvestmentRow = () => ({
+  id: uid(),
+  name: "",
+  type: "",
+  value: "",
+  currency: "EGP",
+  exchangeRate: "",
+  supplier: "",
+  leadTimeWeeks: "",
+});
 export default function EngineeringReview() {
   const { requestId } = useParams();
 
@@ -276,37 +285,89 @@ export default function EngineeringReview() {
       tonsPerMonth: "",
       tonsPerYear330d: "",
     },
+thermo: {
+  applicable: "Yes",
+  machineName: "RDM73K",
 
-    thermo: {
-      applicable: "Yes",
-      machineName: "RDM73K",
+  cavities: "",
+  cpm: "",
+  efficiencyPct: "",
+  sheetUtilizationPct: "",
+  unitWeight_g: "",
 
-      moldBaseName: "",
-      moldBaseCode: "",
-      insertName: "",
-      insertCode: "",
-      bottomName: "",
-      bottomCode: "",
-      plugAssistName: "",
-      plugAssistCode: "",
-      cuttingPlateName: "",
-      cuttingPlateCode: "",
-      stackingPlateName: "",
-      stackingPlateCode: "",
+  pcsPerHour: "",
+  pcsPerShift12h: "",
+  pcsPerDay24h: "",
+  pcsPerWeek: "",
+  pcsPerMonth: "",
+  pcsPerYear330d: "",
 
-      cavities: "",
-      cpm: "",
-      efficiencyPct: "",
-      sheetUtilizationPct: "",
-      unitWeight_g: "",
+  enterToolData: false,
+},
 
-      pcsPerHour: "",
-      pcsPerShift12h: "",
-      pcsPerDay24h: "",
-      pcsPerWeek: "",
-      pcsPerMonth: "",
-      pcsPerYear330d: "",
-    },
+tooling: {
+  enabled: false,
+
+  moldBaseName: "",
+  moldBaseCode: "",
+
+  moldInsertName: "",
+  moldInsertCode: "",
+
+  moldBottomName: "",
+  moldBottomCode: "",
+
+  cuttingPlateName: "",
+  cuttingPlateCode: "",
+
+  stackingUnitName: "",
+  stackingUnitCode: "",
+
+  plugAssistName: "",
+  plugAssistCode: "",
+},
+
+decorationEngineering: {
+  enabled: false,
+
+  print: {
+    coverageAreaPct: "",
+    inkWeightPer1000Cups: "",
+    numberOfColors: "",
+    printAreaLengthMm: "",
+    printAreaWidthMm: "",
+  },
+
+  sleeve: {
+    sleeveMaterial: "",
+    sleeveThicknessMic: "",
+    layFlatWidthMm: "",
+    layFlatTolPlusMm: "",
+    layFlatTolMinusMm: "",
+    cutLengthMm: "",
+    shrinkRatioTDPct: "",
+    shrinkRatioMDPct: "",
+    shrinkCurve: "",
+    gluePatternFileName: "",
+    gluePatternFileUrl: "",
+    repeatLengthMm: "",
+    seamOverlapWidthMm: "",
+    seamToleranceMm: "",
+  },
+
+  hybrid: {
+    blankMaterial: "",
+    gsm: "",
+    printColors: "",
+    coating: "",
+    paperBottomSelected: "No",
+    paperBottomMaterial: "",
+    paperBottomGsm: "",
+    paperBottomPE_g_m2: "",
+  },
+},
+
+investments: [],
 
     packaging: {
       usePallet: "Yes",
@@ -360,7 +421,7 @@ export default function EngineeringReview() {
       notes: "",
     },
 
-    tooling: [],
+   
   });
 
   useEffect(() => {
@@ -498,7 +559,31 @@ if (j1.success) {
       return next;
     });
   };
+const updateInvestmentRow = (id, patch) => {
+  setEngineering((prev) => ({
+    ...prev,
+    investments: (prev.investments || []).map((row) =>
+      row.id === id ? { ...row, ...patch } : row
+    ),
+  }));
+};
 
+const addInvestmentRow = () => {
+  setEngineering((prev) => ({
+    ...prev,
+    investments: [...(prev.investments || []), blankInvestmentRow()],
+  }));
+};
+
+const removeInvestmentRow = (id) => {
+  setEngineering((prev) => {
+    const nextRows = (prev.investments || []).filter((row) => row.id !== id);
+    return {
+      ...prev,
+      investments: nextRows,
+    };
+  });
+};
   const saveMasterStatus = async (statusValue) => {
     const updatedPayload = {
       ...payload,
@@ -650,13 +735,7 @@ const balancedExtrusion = useMemo(() => {
       if (!next.materialSheet.density && autoDensity) {
         next.materialSheet.density = String(autoDensity);
       }
-      const recommendedLayerA =
-  opt.A && opt.B ? (opt.A / (opt.A + opt.B)) * 100 : 0;
-
-if (!next.materialSheet.layerAPct && recommendedLayerA > 0) {
-  next.materialSheet.layerAPct = String(recommendedLayerA.toFixed(2));
-}
-
+      
       if (!next.sheetSpecs.netWidth_mm && product.sheetWidthMm) {
         next.sheetSpecs.netWidth_mm = product.sheetWidthMm;
       }
@@ -1309,6 +1388,30 @@ const recommendedSpeedB = n(balancedExtrusion.speedB);
 const extrusionSpeedMismatch =
   Math.abs(enteredSpeedA - recommendedSpeedA) > 0.5 ||
   Math.abs(enteredSpeedB - recommendedSpeedB) > 0.5;
+  const requestDecorationType = product.productType === "Sheet Roll"
+  ? "No decoration"
+  : (payload?.decoration?.decorationType || "No decoration");
+
+const hasRequestDecoration =
+  requestDecorationType &&
+  requestDecorationType !== "No decoration";
+
+const showDecorationSection =
+  !isSheet && (hasRequestDecoration || engineering.decorationEngineering?.enabled);
+
+const investmentTotalEGP = (engineering.investments || []).reduce((sum, row) => {
+  const value = n(row.value);
+  const rate = n(row.exchangeRate);
+
+  if (!value) return sum;
+
+  if (row.currency === "EGP") return sum + value;
+  if ((row.currency === "USD" || row.currency === "EUR") && rate > 0) {
+    return sum + value * rate;
+  }
+
+  return sum;
+}, 0);
 if (!payload) {
   return <div className="p-6">Loading...</div>;
 }
@@ -2244,9 +2347,764 @@ if (!payload) {
     </div>
   </Section>
 )}
+{!isSheet && (
+  <Section title="4. Tools Needed for Thermoforming">
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 rounded-xl border p-3">
+        <input
+          type="checkbox"
+          checked={engineering.thermo.enterToolData === true}
+          onChange={(e) =>
+            updateSection("thermo", { enterToolData: e.target.checked })
+          }
+        />
+        <div className="font-medium">Enter tool data</div>
+      </div>
 
+      {engineering.thermo.enterToolData && (
+        <div className="rounded-xl border p-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <Field label="Base Mold Name">
+              <Input
+                value={engineering.tooling.moldBaseName}
+                onChange={(v) =>
+                  updateSection("tooling", { moldBaseName: v, enabled: true })
+                }
+              />
+            </Field>
+            <Field label="Base Mold Code">
+              <Input
+                value={engineering.tooling.moldBaseCode}
+                onChange={(v) =>
+                  updateSection("tooling", { moldBaseCode: v, enabled: true })
+                }
+              />
+            </Field>
+
+            <Field label="Mold Insert Name">
+              <Input
+                value={engineering.tooling.moldInsertName}
+                onChange={(v) =>
+                  updateSection("tooling", { moldInsertName: v, enabled: true })
+                }
+              />
+            </Field>
+            <Field label="Mold Insert Code">
+              <Input
+                value={engineering.tooling.moldInsertCode}
+                onChange={(v) =>
+                  updateSection("tooling", { moldInsertCode: v, enabled: true })
+                }
+              />
+            </Field>
+
+            <Field label="Mold Bottom / Engraving Name">
+              <Input
+                value={engineering.tooling.moldBottomName}
+                onChange={(v) =>
+                  updateSection("tooling", { moldBottomName: v, enabled: true })
+                }
+              />
+            </Field>
+            <Field label="Mold Bottom / Engraving Code">
+              <Input
+                value={engineering.tooling.moldBottomCode}
+                onChange={(v) =>
+                  updateSection("tooling", { moldBottomCode: v, enabled: true })
+                }
+              />
+            </Field>
+
+            <Field label="Cutting Plate Name">
+              <Input
+                value={engineering.tooling.cuttingPlateName}
+                onChange={(v) =>
+                  updateSection("tooling", { cuttingPlateName: v, enabled: true })
+                }
+              />
+            </Field>
+            <Field label="Cutting Plate Code">
+              <Input
+                value={engineering.tooling.cuttingPlateCode}
+                onChange={(v) =>
+                  updateSection("tooling", { cuttingPlateCode: v, enabled: true })
+                }
+              />
+            </Field>
+
+            <Field label="Stacking Unit Name">
+              <Input
+                value={engineering.tooling.stackingUnitName}
+                onChange={(v) =>
+                  updateSection("tooling", { stackingUnitName: v, enabled: true })
+                }
+              />
+            </Field>
+            <Field label="Stacking Unit Code">
+              <Input
+                value={engineering.tooling.stackingUnitCode}
+                onChange={(v) =>
+                  updateSection("tooling", { stackingUnitCode: v, enabled: true })
+                }
+              />
+            </Field>
+
+            <Field label="Plug Assist Name">
+              <Input
+                value={engineering.tooling.plugAssistName}
+                onChange={(v) =>
+                  updateSection("tooling", { plugAssistName: v, enabled: true })
+                }
+              />
+            </Field>
+            <Field label="Plug Assist Code">
+              <Input
+                value={engineering.tooling.plugAssistCode}
+                onChange={(v) =>
+                  updateSection("tooling", { plugAssistCode: v, enabled: true })
+                }
+              />
+            </Field>
+          </div>
+        </div>
+      )}
+    </div>
+  </Section>
+)}
+{!isSheet && (
+  <Section title="5. Decoration">
+    <div className="space-y-4">
+      {!hasRequestDecoration && (
+        <div className="flex items-center gap-3 rounded-xl border p-3">
+          <input
+            type="checkbox"
+            checked={engineering.decorationEngineering.enabled === true}
+            onChange={(e) =>
+              updateSection("decorationEngineering", {
+                ...engineering.decorationEngineering,
+                enabled: e.target.checked,
+              })
+            }
+          />
+          <div className="font-medium">Add decoration</div>
+        </div>
+      )}
+
+      {showDecorationSection && (
+        <div className="rounded-xl border p-4 space-y-4">
+          <div className="text-sm text-gray-500">
+            Decoration type: {requestDecorationType}
+          </div>
+
+          {requestDecorationType === "Dry offset printing" && (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <Field label="Coverage Area %">
+                <Input
+                  value={engineering.decorationEngineering.print.coverageAreaPct}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        print: {
+                          ...prev.decorationEngineering.print,
+                          coverageAreaPct: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Ink Weight / 1000 Cups">
+                <Input
+                  value={engineering.decorationEngineering.print.inkWeightPer1000Cups}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        print: {
+                          ...prev.decorationEngineering.print,
+                          inkWeightPer1000Cups: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="No. of Colors">
+                <Input
+                  value={
+                    engineering.decorationEngineering.print.numberOfColors ||
+                    payload?.decoration?.dryOffset?.printColors ||
+                    ""
+                  }
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        print: {
+                          ...prev.decorationEngineering.print,
+                          numberOfColors: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Print Area Length (mm)">
+                <Input
+                  value={engineering.decorationEngineering.print.printAreaLengthMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        print: {
+                          ...prev.decorationEngineering.print,
+                          printAreaLengthMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Print Area Width (mm)">
+                <Input
+                  value={engineering.decorationEngineering.print.printAreaWidthMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        print: {
+                          ...prev.decorationEngineering.print,
+                          printAreaWidthMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <div className="md:col-span-5">
+                <div className="text-sm text-gray-500 mb-2">Artwork File</div>
+                <div className="text-sm text-gray-500">
+  Artwork file visibility not loaded yet in this page.
+</div>
+              </div>
+            </div>
+          )}
+
+          {requestDecorationType === "Shrink sleeve" && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Field label="Sleeve Material">
+                <SelectField
+                  value={engineering.decorationEngineering.sleeve.sleeveMaterial}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          sleeveMaterial: v,
+                        },
+                      },
+                    }))
+                  }
+                  options={["PET", "PETG", "PVC", "OPS", "Others"]}
+                />
+              </Field>
+
+              <Field label="Sleeve Thickness (micron)">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.sleeveThicknessMic}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          sleeveThicknessMic: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Lay Flat Width (mm)">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.layFlatWidthMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          layFlatWidthMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Lay Flat + Tol (mm)">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.layFlatTolPlusMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          layFlatTolPlusMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Lay Flat - Tol (mm)">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.layFlatTolMinusMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          layFlatTolMinusMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Cut Length (mm)">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.cutLengthMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          cutLengthMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Shrink Ratio TD %">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.shrinkRatioTDPct}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          shrinkRatioTDPct: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Shrink Ratio MD %">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.shrinkRatioMDPct}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          shrinkRatioMDPct: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Shrink Curve">
+                <TextArea
+                  value={engineering.decorationEngineering.sleeve.shrinkCurve}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          shrinkCurve: v,
+                        },
+                      },
+                    }))
+                  }
+                  rows={3}
+                />
+              </Field>
+
+              <Field label="Repeat Length (mm)">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.repeatLengthMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          repeatLengthMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Seam Overlap Width (mm)">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.seamOverlapWidthMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          seamOverlapWidthMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Seam Tolerance (± mm)">
+                <Input
+                  value={engineering.decorationEngineering.sleeve.seamToleranceMm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          seamToleranceMm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <div className="md:col-span-4">
+                <div className="text-sm text-gray-500 mb-2">Glue Pattern Drawing</div>
+                <Input
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        sleeve: {
+                          ...prev.decorationEngineering.sleeve,
+                          gluePatternFileName: file.name,
+                        },
+                      },
+                    }));
+                  }}
+                />
+                {engineering.decorationEngineering.sleeve.gluePatternFileName ? (
+                  <div className="text-sm mt-2">
+                    {engineering.decorationEngineering.sleeve.gluePatternFileName}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          {requestDecorationType === "Hybrid cup" && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Field label="Blank Material">
+                <Input
+                  value={engineering.decorationEngineering.hybrid.blankMaterial}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        hybrid: {
+                          ...prev.decorationEngineering.hybrid,
+                          blankMaterial: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="GSM">
+                <Input
+                  value={engineering.decorationEngineering.hybrid.gsm}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        hybrid: {
+                          ...prev.decorationEngineering.hybrid,
+                          gsm: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Print Colors">
+                <Input
+                  value={engineering.decorationEngineering.hybrid.printColors}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        hybrid: {
+                          ...prev.decorationEngineering.hybrid,
+                          printColors: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Coating">
+                <Input
+                  value={engineering.decorationEngineering.hybrid.coating}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        hybrid: {
+                          ...prev.decorationEngineering.hybrid,
+                          coating: v,
+                        },
+                      },
+                    }))
+                  }
+                />
+              </Field>
+
+              <Field label="Paper Bottom Selected">
+                <SelectField
+                  value={engineering.decorationEngineering.hybrid.paperBottomSelected}
+                  onChange={(v) =>
+                    setEngineering((prev) => ({
+                      ...prev,
+                      decorationEngineering: {
+                        ...prev.decorationEngineering,
+                        hybrid: {
+                          ...prev.decorationEngineering.hybrid,
+                          paperBottomSelected: v,
+                        },
+                      },
+                    }))
+                  }
+                  options={["Yes", "No"]}
+                />
+              </Field>
+
+              {engineering.decorationEngineering.hybrid.paperBottomSelected === "Yes" && (
+                <>
+                  <Field label="Paper Bottom Material">
+                    <Input
+                      value={engineering.decorationEngineering.hybrid.paperBottomMaterial}
+                      onChange={(v) =>
+                        setEngineering((prev) => ({
+                          ...prev,
+                          decorationEngineering: {
+                            ...prev.decorationEngineering,
+                            hybrid: {
+                              ...prev.decorationEngineering.hybrid,
+                              paperBottomMaterial: v,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </Field>
+
+                  <Field label="Paper Bottom GSM">
+                    <Input
+                      value={engineering.decorationEngineering.hybrid.paperBottomGsm}
+                      onChange={(v) =>
+                        setEngineering((prev) => ({
+                          ...prev,
+                          decorationEngineering: {
+                            ...prev.decorationEngineering,
+                            hybrid: {
+                              ...prev.decorationEngineering.hybrid,
+                              paperBottomGsm: v,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </Field>
+
+                  <Field label="Paper Bottom PE g/m²">
+                    <Input
+                      value={engineering.decorationEngineering.hybrid.paperBottomPE_g_m2}
+                      onChange={(v) =>
+                        setEngineering((prev) => ({
+                          ...prev,
+                          decorationEngineering: {
+                            ...prev.decorationEngineering,
+                            hybrid: {
+                              ...prev.decorationEngineering.hybrid,
+                              paperBottomPE_g_m2: v,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                  </Field>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </Section>
+)}
+<Section title={isSheet ? "4. Investments Required" : "7. Investments Required"}>
+  <div className="space-y-4">
+    <div>
+      <button
+        type="button"
+        className="rounded-lg border px-3 py-2 text-sm"
+        onClick={addInvestmentRow}
+      >
+        + Add Investment
+      </button>
+    </div>
+
+    {(engineering.investments || []).length === 0 ? (
+      <div className="text-sm text-gray-500">No investments added yet.</div>
+    ) : (
+      <div className="space-y-3">
+        {(engineering.investments || []).map((row) => (
+          <div key={row.id} className="rounded-xl border p-3">
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+              <Field label="Investment Name">
+                <Input
+                  value={row.name}
+                  onChange={(v) => updateInvestmentRow(row.id, { name: v })}
+                />
+              </Field>
+
+              <Field label="Type">
+                <SelectField
+                  value={row.type}
+                  onChange={(v) => updateInvestmentRow(row.id, { type: v })}
+                  options={[
+                    "Thermoforming Tools",
+                    "Printing Tools",
+                    "Shrink Sleeve Tools",
+                    "Hybrid Tools",
+                    "Others",
+                  ]}
+                />
+              </Field>
+
+              <Field label="Investment Value">
+                <Input
+                  value={row.value}
+                  onChange={(v) => updateInvestmentRow(row.id, { value: v })}
+                />
+              </Field>
+
+              <Field label="Currency">
+                <SelectField
+                  value={row.currency}
+                  onChange={(v) => updateInvestmentRow(row.id, { currency: v })}
+                  options={["EGP", "USD", "EUR"]}
+                />
+              </Field>
+
+              <Field label="Exchange Rate">
+                <Input
+                  value={row.exchangeRate}
+                  onChange={(v) => updateInvestmentRow(row.id, { exchangeRate: v })}
+                />
+              </Field>
+
+              <Field label="Supplier">
+                <Input
+                  value={row.supplier}
+                  onChange={(v) => updateInvestmentRow(row.id, { supplier: v })}
+                />
+              </Field>
+
+              <Field label="Lead Time (weeks)">
+                <Input
+                  value={row.leadTimeWeeks}
+                  onChange={(v) => updateInvestmentRow(row.id, { leadTimeWeeks: v })}
+                />
+              </Field>
+            </div>
+
+            <div className="mt-3">
+              <button
+                type="button"
+                className="text-red-600 text-sm underline"
+                onClick={() => removeInvestmentRow(row.id)}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <div className="rounded-xl border bg-gray-50 p-4">
+      <div className="text-sm text-gray-500">Total Investments in EGP</div>
+      <div className="text-xl font-semibold">{fmt(investmentTotalEGP, 2)} EGP</div>
+    </div>
+  </div>
+</Section>
       {!isSheet && (
-  <Section title="4. Thermoformed Product Packaging Data">
+  <Section title="6. Thermoformed Product Packaging Data">
     <div className="space-y-4">
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -2296,7 +3154,7 @@ if (!payload) {
   </Section>
 )}
 
-      <Section title={isSheet ? "3. Freight / Logistics" : "5. Freight / Logistics"}>
+      <Section title={isSheet ? "3. Freight / Logistics" : "8. Freight / Logistics"}>
   <div className="space-y-4">
 
     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -2325,7 +3183,7 @@ if (!payload) {
   </div>
 </Section>
 
-      <Section title={isSheet ? "4. Notes" : "6. Notes"}>
+      <Section title={isSheet ? "4. Notes" : "9. Notes"}>
   <div className="space-y-4">
 
     <RefRow
