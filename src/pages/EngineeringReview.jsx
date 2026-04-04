@@ -815,6 +815,29 @@ const balancedExtrusion = useMemo(() => {
       ) {
         next.packaging.pallet.stretchWeightPerPallet_kg = packagingReq.pallet.stretchWrapKgPerPallet;
       }
+            if (!next.packaging.primary.primaryLength_mm && packagingReq?.primary?.bagSleeveDimensionsMm) {
+        next.packaging.primary.primaryLength_mm = packagingReq.primary.bagSleeveDimensionsMm;
+      }
+
+      if (!next.packaging.primary.primaryMaterial && packagingReq?.primary?.bagSleeveMaterial) {
+        next.packaging.primary.primaryMaterial = packagingReq.primary.bagSleeveMaterial;
+      }
+
+      if (!next.packaging.secondary.secondaryType && packagingReq?.secondary?.cartonType) {
+        next.packaging.secondary.secondaryType = packagingReq.secondary.cartonType;
+      }
+
+      if (!next.packaging.secondary.secondaryLength_mm && packagingReq?.secondary?.cartonInternalDimensionsMm) {
+        next.packaging.secondary.secondaryLength_mm = packagingReq.secondary.cartonInternalDimensionsMm;
+      }
+
+      if (!next.packaging.pallet.palletWidth_mm && packagingReq?.pallet?.palletDimensionsMm) {
+        next.packaging.pallet.palletWidth_mm = packagingReq.pallet.palletDimensionsMm;
+      }
+
+      if (!next.packaging.notes && packagingReq?.primary?.primaryPackagingNotes) {
+        next.packaging.notes = packagingReq.primary.primaryPackagingNotes;
+      }
       const defaultLayerAPct = OPT_LAYER_A_MAP[baseMaterial];
 
       if (!next.materialSheet.layerAPct && defaultLayerAPct) {
@@ -3102,59 +3125,374 @@ if (!payload) {
       <div className="text-xl font-semibold">{fmt(investmentTotalEGP, 2)} EGP</div>
     </div>
   </div>
-</Section>
-      {!isSheet && (
-  <Section title="6. Thermoformed Product Packaging Data">
-    <div className="space-y-4">
+{!isSheet && (
+  <Section title="7. Thermoformed Product Packaging Data">
+    <div className="space-y-5">
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Field label="Pieces / Stack">
-          <Input
-            value={engineering.packaging.primary.pcsPerStack}
-            onChange={(v) =>
-              updateNested("packaging", "primary", { pcsPerStack: v })
-            }
-          />
-        </Field>
+      <div className="rounded-xl border p-4 space-y-4">
+        <div className="font-medium">Primary Packaging</div>
 
-        <Field label="Stacks / Primary">
-          <Input
-            value={engineering.packaging.primary.stacksPerPrimary}
-            onChange={(v) =>
-              updateNested("packaging", "primary", { stacksPerPrimary: v })
-            }
-          />
-        </Field>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <Field
+            label="Pieces / Stack"
+            requestValue={requestValueOrBlank(packagingReq?.primary?.pcsPerStack)}
+            currentValue={engineering.packaging.primary.pcsPerStack}
+          >
+            <Input
+              value={engineering.packaging.primary.pcsPerStack}
+              onChange={(v) =>
+                updateNested("packaging", "primary", { pcsPerStack: v })
+              }
+            />
+          </Field>
 
-        <Field label="Primary Name">
-          <Input
-            value={engineering.packaging.primary.primaryName}
-            onChange={(v) =>
-              updateNested("packaging", "primary", { primaryName: v })
-            }
-          />
-        </Field>
+          <Field
+            label="Stacks / Bag"
+            requestValue={requestValueOrBlank(packagingReq?.primary?.stacksPerBag)}
+            currentValue={engineering.packaging.primary.stacksPerPrimary}
+          >
+            <Input
+              value={engineering.packaging.primary.stacksPerPrimary}
+              onChange={(v) =>
+                updateNested("packaging", "primary", { stacksPerPrimary: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Bag / Sleeve Material"
+            requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveMaterial)}
+            currentValue={engineering.packaging.primary.primaryMaterial}
+          >
+            <Input
+              value={engineering.packaging.primary.primaryMaterial}
+              onChange={(v) =>
+                updateNested("packaging", "primary", { primaryMaterial: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Primary Pack Name"
+            requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveMaterial)}
+            currentValue={engineering.packaging.primary.primaryName}
+          >
+            <Input
+              value={engineering.packaging.primary.primaryName}
+              onChange={(v) =>
+                updateNested("packaging", "primary", { primaryName: v })
+              }
+            />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <Field
+            label="Bag / Sleeve Dimensions (mm)"
+            requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveDimensionsMm)}
+            currentValue={engineering.packaging.primary.primaryLength_mm}
+          >
+            <Input
+              value={engineering.packaging.primary.primaryLength_mm}
+              onChange={(v) =>
+                updateNested("packaging", "primary", { primaryLength_mm: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Sleeve Thickness (micron)"
+            requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveThicknessMicron)}
+            currentValue={engineering.packaging.primary.primaryWidth_mm}
+          >
+            <Input
+              value={engineering.packaging.primary.primaryWidth_mm}
+              onChange={(v) =>
+                updateNested("packaging", "primary", { primaryWidth_mm: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Sleeve Weight"
+            requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveWeight)}
+            currentValue={engineering.packaging.primary.primaryHeight_mm}
+          >
+            <Input
+              value={engineering.packaging.primary.primaryHeight_mm}
+              onChange={(v) =>
+                updateNested("packaging", "primary", { primaryHeight_mm: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Primary Artwork Code"
+            requestValue={requestValueOrBlank(packagingReq?.primary?.sleeveArtworkProvided)}
+            currentValue={engineering.packaging.primary.primaryArtworkCode}
+          >
+            <Input
+              value={engineering.packaging.primary.primaryArtworkCode}
+              onChange={(v) =>
+                updateNested("packaging", "primary", { primaryArtworkCode: v })
+              }
+            />
+          </Field>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Field label="Cartons / Pallet">
-          <Input
-            value={engineering.packaging.pallet.boxesPerPallet}
-            onChange={(v) =>
-              updateNested("packaging", "pallet", { boxesPerPallet: v })
-            }
+      <div className="rounded-xl border p-4 space-y-4">
+        <div className="font-medium">Secondary Packaging</div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <Field
+            label="Bags / Carton"
+            requestValue={requestValueOrBlank(packagingReq?.secondary?.bagsPerCarton)}
+            currentValue={engineering.packaging.secondary.primariesPerSecondary}
+          >
+            <Input
+              value={engineering.packaging.secondary.primariesPerSecondary}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { primariesPerSecondary: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Carton Type"
+            requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonType)}
+            currentValue={engineering.packaging.secondary.secondaryType}
+          >
+            <SelectField
+              value={engineering.packaging.secondary.secondaryType}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { secondaryType: v })
+              }
+              options={[
+                { value: "Single wall", label: "Single wall" },
+                { value: "Double wall", label: "Double wall" },
+              ]}
+            />
+          </Field>
+
+          <Field
+            label="Secondary Pack Name"
+            requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonType)}
+            currentValue={engineering.packaging.secondary.secondaryName}
+          >
+            <Input
+              value={engineering.packaging.secondary.secondaryName}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { secondaryName: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Labels / Box"
+            requestValue={requestValueOrBlank(packagingReq?.labelInstructions?.cartonLabelRequired)}
+            currentValue={engineering.packaging.secondary.labelsPerBox}
+          >
+            <Input
+              value={engineering.packaging.secondary.labelsPerBox}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { labelsPerBox: v })
+              }
+            />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <Field
+            label="Carton Internal Dimensions (mm)"
+            requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonInternalDimensionsMm)}
+            currentValue={engineering.packaging.secondary.secondaryLength_mm}
+          >
+            <Input
+              value={engineering.packaging.secondary.secondaryLength_mm}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { secondaryLength_mm: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Carton External Dimensions (mm)"
+            requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonExternalDimensionsMm)}
+            currentValue={engineering.packaging.secondary.secondaryWidth_mm}
+          >
+            <Input
+              value={engineering.packaging.secondary.secondaryWidth_mm}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { secondaryWidth_mm: v })
+              }
+            />
+          </Field>
+
+          <Field label="Secondary Height (mm)">
+            <Input
+              value={engineering.packaging.secondary.secondaryHeight_mm}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { secondaryHeight_mm: v })
+              }
+            />
+          </Field>
+
+          <Field
+            label="Label Length (mm)"
+            requestValue={requestValueOrBlank(packagingReq?.labelInstructions?.cartonLabelDimensionsMm)}
+            currentValue={engineering.packaging.secondary.labelLength_mm}
+          >
+            <Input
+              value={engineering.packaging.secondary.labelLength_mm}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { labelLength_mm: v })
+              }
+            />
+          </Field>
+
+          <Field label="Label Width (mm)">
+            <Input
+              value={engineering.packaging.secondary.labelWidth_mm}
+              onChange={(v) =>
+                updateNested("packaging", "secondary", { labelWidth_mm: v })
+              }
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="rounded-xl border p-4 space-y-4">
+        <div className="font-medium">Pallet</div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <Field
+            label="Use Pallet"
+            requestValue={packagingReq?.pallet?.noPalletNeeded ? "No" : "Yes"}
+            currentValue={engineering.packaging.pallet.palletSelected}
+          >
+            <SelectField
+              value={engineering.packaging.pallet.palletSelected}
+              onChange={(v) =>
+                updateNested("packaging", "pallet", { palletSelected: v })
+              }
+              options={["Yes", "No"]}
+            />
+          </Field>
+
+          {engineering.packaging.pallet.palletSelected === "Yes" && (
+            <>
+              <Field
+                label="Pallet Type"
+                requestValue={requestValueOrBlank(packagingReq?.pallet?.palletType)}
+                currentValue={engineering.packaging.pallet.palletType}
+              >
+                <Input
+                  value={engineering.packaging.pallet.palletType}
+                  onChange={(v) =>
+                    updateNested("packaging", "pallet", { palletType: v })
+                  }
+                />
+              </Field>
+
+              <Field
+                label="Pallet Dimensions (mm)"
+                requestValue={requestValueOrBlank(packagingReq?.pallet?.palletDimensionsMm)}
+                currentValue={engineering.packaging.pallet.palletWidth_mm}
+              >
+                <Input
+                  value={engineering.packaging.pallet.palletWidth_mm}
+                  onChange={(v) =>
+                    updateNested("packaging", "pallet", { palletWidth_mm: v })
+                  }
+                />
+              </Field>
+
+              <Field
+                label="Cartons / Pallet"
+                requestValue={requestValueOrBlank(packagingReq?.pallet?.cartonsPerPallet)}
+                currentValue={engineering.packaging.pallet.boxesPerPallet}
+              >
+                <Input
+                  value={engineering.packaging.pallet.boxesPerPallet}
+                  onChange={(v) =>
+                    updateNested("packaging", "pallet", { boxesPerPallet: v })
+                  }
+                />
+              </Field>
+
+              <Field
+                label="Stretch / Pallet (kg)"
+                requestValue={requestValueOrBlank(packagingReq?.pallet?.stretchWrapKgPerPallet)}
+                currentValue={engineering.packaging.pallet.stretchWeightPerPallet_kg}
+              >
+                <Input
+                  value={engineering.packaging.pallet.stretchWeightPerPallet_kg}
+                  onChange={(v) =>
+                    updateNested("packaging", "pallet", { stretchWeightPerPallet_kg: v })
+                  }
+                />
+              </Field>
+            </>
+          )}
+        </div>
+
+        <Field
+          label="Packaging Notes / Special Instructions"
+          requestValue={requestValueOrBlank(
+            packagingReq?.primary?.primaryPackagingNotes ||
+            packagingReq?.secondary?.cartonPackagingNotes ||
+            packagingReq?.pallet?.palletNotes
+          )}
+          currentValue={engineering.packaging.notes}
+        >
+          <TextArea
+            value={engineering.packaging.notes}
+            onChange={(v) => updateSection("packaging", { notes: v })}
+            rows={3}
           />
         </Field>
 
-        <RefRow label="Pcs / Carton" value={thermoPackagingDerived.pcsPerCarton} />
-        <RefRow label="Pcs / Pallet" value={thermoPackagingDerived.pcsPerPallet} />
-      </div>
+        <Field label="Auto Packaging Instruction">
+          <TextArea
+            value={engineering.packaging.instructionText}
+            onChange={(v) => updateSection("packaging", { instructionText: v })}
+            rows={3}
+          />
+        </Field>
 
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+          <RefRow
+            label="pcs / stack"
+            value={engineering.packaging.primary.pcsPerStack || "—"}
+          />
+          <RefRow
+            label="stacks / primary"
+            value={engineering.packaging.primary.stacksPerPrimary || "—"}
+          />
+          <RefRow
+            label="pcs / primary"
+            value={thermoPackagingDerived.pcsPerPrimary ? fmt(thermoPackagingDerived.pcsPerPrimary, 0) : "—"}
+          />
+          <RefRow
+            label="primary / carton"
+            value={engineering.packaging.secondary.primariesPerSecondary || "—"}
+          />
+          <RefRow
+            label="pcs / carton"
+            value={thermoPackagingDerived.pcsPerCarton ? fmt(thermoPackagingDerived.pcsPerCarton, 0) : "—"}
+          />
+          <RefRow
+            label="pcs / pallet"
+            value={thermoPackagingDerived.pcsPerPallet ? fmt(thermoPackagingDerived.pcsPerPallet, 0) : "—"}
+          />
+        </div>
+      </div>
     </div>
   </Section>
 )}
 
-      <Section title={isSheet ? "3. Freight / Logistics" : "8. Freight / Logistics"}>
+      <Section title={isSheet ? "5. Freight / Logistics" : "8. Freight / Logistics"}>
   <div className="space-y-4">
 
     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -3183,7 +3521,7 @@ if (!payload) {
   </div>
 </Section>
 
-      <Section title={isSheet ? "4. Notes" : "9. Notes"}>
+      <Section title={isSheet ? "6. Notes" : "9. Notes"}>
   <div className="space-y-4">
 
     <RefRow
