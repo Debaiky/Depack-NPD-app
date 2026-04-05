@@ -1286,25 +1286,47 @@ Object.entries(grouped).forEach(([name, parts]) => {
     });
   }, [extrusionDerived]);
 
-  const thermoDerived = useMemo(() => {
-    const cavities = n(engineering.thermo.cavities);
-    const cpm = n(engineering.thermo.cpm);
-    const eff = n(engineering.thermo.efficiencyPct) / 100;
-    const pcsPerHour = cavities * cpm * 60 * (eff || 1);
-    const pcsPerShift12h = pcsPerHour * 12;
-    const pcsPerDay24h = pcsPerHour * 24;
-    const pcsPerWeek = pcsPerDay24h * 7;
-    const pcsPerYear330d = pcsPerDay24h * 330;
-    const pcsPerMonth = pcsPerYear330d / 12;
-    return {
-      pcsPerHour,
-      pcsPerShift12h,
-      pcsPerDay24h,
-      pcsPerWeek,
-      pcsPerMonth,
-      pcsPerYear330d,
-    };
-  }, [engineering.thermo]);
+ const thermoDerived = useMemo(() => {
+  const cavities = n(engineering.thermo.cavities);
+  const cpm = n(engineering.thermo.cpm);
+  const eff = n(engineering.thermo.efficiencyPct) / 100;
+  const unitWeight_g = n(engineering.thermo.unitWeight_g);
+  const sheetUtilizationPct = n(engineering.thermo.sheetUtilizationPct);
+  const util = sheetUtilizationPct > 0 ? sheetUtilizationPct / 100 : 0;
+
+  const pcsPerHour = cavities * cpm * 60 * (eff || 1);
+  const pcsPerShift12h = pcsPerHour * 12;
+  const pcsPerDay24h = pcsPerHour * 24;
+  const pcsPerWeek = pcsPerDay24h * 7;
+  const pcsPerYear330d = pcsPerDay24h * 330;
+  const pcsPerMonth = pcsPerYear330d / 12;
+
+  const netProductKgPerHour = (pcsPerHour * unitWeight_g) / 1000;
+  const netProductKgPerShift12h = netProductKgPerHour * 12;
+  const netProductKgPerDay24h = netProductKgPerHour * 24;
+
+  const requiredSheetKgPerHour =
+    util > 0 ? netProductKgPerHour / util : 0;
+  const requiredSheetKgPerShift12h =
+    util > 0 ? netProductKgPerShift12h / util : 0;
+  const requiredSheetKgPerDay24h =
+    util > 0 ? netProductKgPerDay24h / util : 0;
+
+  return {
+    pcsPerHour,
+    pcsPerShift12h,
+    pcsPerDay24h,
+    pcsPerWeek,
+    pcsPerMonth,
+    pcsPerYear330d,
+    netProductKgPerHour,
+    netProductKgPerShift12h,
+    netProductKgPerDay24h,
+    requiredSheetKgPerHour,
+    requiredSheetKgPerShift12h,
+    requiredSheetKgPerDay24h,
+  };
+}, [engineering.thermo]);
 
   useEffect(() => {
     updateSection("thermo", {
@@ -2709,13 +2731,23 @@ if (!payload) {
 {!isSheet && (
   <Section title="3. Thermoforming Data">
     <div className="space-y-4">
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
         <Field label="Machine">
           <SelectField
             value={engineering.thermo.machineName}
             onChange={(v) => updateSection("thermo", { machineName: v })}
             options={["RDM73K", "RDK80"]}
+          />
+        </Field>
+
+        <Field
+          label="Product Weight (g)"
+          requestValue={requestValueOrBlank(product.productWeightG)}
+          currentValue={engineering.thermo.unitWeight_g}
+        >
+          <Input
+            value={engineering.thermo.unitWeight_g}
+            onChange={(v) => updateSection("thermo", { unitWeight_g: v })}
           />
         </Field>
 
@@ -2739,14 +2771,50 @@ if (!payload) {
             onChange={(v) => updateSection("thermo", { efficiencyPct: v })}
           />
         </Field>
+
+        <Field label="Sheet Utilization %">
+          <Input
+            value={engineering.thermo.sheetUtilizationPct}
+            onChange={(v) => updateSection("thermo", { sheetUtilizationPct: v })}
+          />
+        </Field>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
         <RefRow label="Pcs / Hr" value={engineering.thermo.pcsPerHour} />
+        <RefRow label="Pcs / Shift (12h)" value={engineering.thermo.pcsPerShift12h} />
         <RefRow label="Pcs / Day" value={engineering.thermo.pcsPerDay24h} />
+        <RefRow label="Pcs / Week" value={engineering.thermo.pcsPerWeek} />
+        <RefRow label="Pcs / Month" value={engineering.thermo.pcsPerMonth} />
         <RefRow label="Pcs / Year" value={engineering.thermo.pcsPerYear330d} />
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <RefRow
+          label="Required Sheet Weight / Hr"
+          value={
+            thermoDerived.requiredSheetKgPerHour
+              ? `${fmt(thermoDerived.requiredSheetKgPerHour, 3)} kg`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Required Sheet Weight / Shift (12h)"
+          value={
+            thermoDerived.requiredSheetKgPerShift12h
+              ? `${fmt(thermoDerived.requiredSheetKgPerShift12h, 3)} kg`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Required Sheet Weight / Day (24h)"
+          value={
+            thermoDerived.requiredSheetKgPerDay24h
+              ? `${fmt(thermoDerived.requiredSheetKgPerDay24h, 3)} kg`
+              : "—"
+          }
+        />
+      </div>
     </div>
   </Section>
 )}
