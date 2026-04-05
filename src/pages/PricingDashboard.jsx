@@ -3,9 +3,8 @@ import { Link } from "react-router-dom";
 
 function StatusBadge({ status }) {
   const colors = {
-    "Engineering Completed": "bg-green-100 text-green-700",
-    "Under Pricing": "bg-blue-100 text-blue-700",
-    "Pricing Completed": "bg-purple-100 text-purple-700",
+    "Sent to Pricing": "bg-blue-100 text-blue-700",
+    Completed: "bg-green-100 text-green-700",
   };
 
   return (
@@ -53,13 +52,32 @@ export default function PricingDashboard() {
     }
   };
 
+  const normalizedRequests = useMemo(() => {
+    return requests.map((r) => ({
+      ...r,
+      RequestID: r?.RequestID || r?.metadata?.requestId || "",
+      CustomerName:
+        r?.CustomerName ||
+        r?.customer?.customers?.[0]?.customerName ||
+        "—",
+      ProjectName:
+        r?.ProjectName ||
+        r?.project?.projectName ||
+        "—",
+      ProductType:
+        r?.ProductType ||
+        r?.product?.productType ||
+        "—",
+      Status:
+        r?.Status ||
+        r?.metadata?.status ||
+        "Draft",
+    }));
+  }, [requests]);
+
   const pending = useMemo(() => {
-    return requests
-      .filter(
-        (r) =>
-          r?.Status === "Engineering Completed" ||
-          r?.Status === "Under Pricing"
-      )
+    return normalizedRequests
+      .filter((r) => r?.Status === "Sent to Pricing")
       .filter((r) => {
         if (!search.trim()) return true;
         const q = search.toLowerCase();
@@ -69,11 +87,11 @@ export default function PricingDashboard() {
           (r?.CustomerName || "").toLowerCase().includes(q)
         );
       });
-  }, [requests, search]);
+  }, [normalizedRequests, search]);
 
   const completed = useMemo(() => {
-    return requests
-      .filter((r) => r?.Status === "Pricing Completed")
+    return normalizedRequests
+      .filter((r) => r?.Status === "Completed")
       .filter((r) => {
         if (!search.trim()) return true;
         const q = search.toLowerCase();
@@ -83,7 +101,7 @@ export default function PricingDashboard() {
           (r?.CustomerName || "").toLowerCase().includes(q)
         );
       });
-  }, [requests, search]);
+  }, [normalizedRequests, search]);
 
   if (loading) return <div className="p-6">Loading pricing requests...</div>;
 
