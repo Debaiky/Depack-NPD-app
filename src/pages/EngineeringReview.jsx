@@ -915,13 +915,29 @@ const balancedExtrusion = useMemo(() => {
         next.packaging.secondary.secondaryType = packagingReq.secondary.cartonType;
       }
 
-      if (!next.packaging.secondary.secondaryLength_mm && packagingReq?.secondary?.cartonInternalDimensionsMm) {
-        next.packaging.secondary.secondaryLength_mm = packagingReq.secondary.cartonInternalDimensionsMm;
-      }
+      if (!next.packaging.secondary.secondaryLength_mm && packagingReq?.secondary?.cartonExternalLengthMm) {
+  next.packaging.secondary.secondaryLength_mm = packagingReq.secondary.cartonExternalLengthMm;
+}
 
-      if (!next.packaging.pallet.palletWidth_mm && packagingReq?.pallet?.palletDimensionsMm) {
-        next.packaging.pallet.palletWidth_mm = packagingReq.pallet.palletDimensionsMm;
-      }
+if (!next.packaging.secondary.secondaryWidth_mm && packagingReq?.secondary?.cartonExternalWidthMm) {
+  next.packaging.secondary.secondaryWidth_mm = packagingReq.secondary.cartonExternalWidthMm;
+}
+
+if (!next.packaging.secondary.secondaryHeight_mm && packagingReq?.secondary?.cartonHeightMm) {
+  next.packaging.secondary.secondaryHeight_mm = packagingReq.secondary.cartonHeightMm;
+}
+
+if (!next.packaging.pallet.palletLength_mm && packagingReq?.pallet?.palletLengthMm) {
+  next.packaging.pallet.palletLength_mm = packagingReq.pallet.palletLengthMm;
+}
+
+if (!next.packaging.pallet.palletWidth_mm && packagingReq?.pallet?.palletWidthMm) {
+  next.packaging.pallet.palletWidth_mm = packagingReq.pallet.palletWidthMm;
+}
+
+if (!next.packaging.pallet.palletHeight_mm && packagingReq?.pallet?.palletHeightMm) {
+  next.packaging.pallet.palletHeight_mm = packagingReq.pallet.palletHeightMm;
+}
 
       if (!next.packaging.notes && packagingReq?.primary?.primaryPackagingNotes) {
         next.packaging.notes = packagingReq.primary.primaryPackagingNotes;
@@ -3668,40 +3684,44 @@ if (!payload) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <Field
-            label="Carton Internal Dimensions (mm)"
-            requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonInternalDimensionsMm)}
-            currentValue={engineering.packaging.secondary.secondaryLength_mm}
-          >
-            <Input
-              value={engineering.packaging.secondary.secondaryLength_mm}
-              onChange={(v) =>
-                updateNested("packaging", "secondary", { secondaryLength_mm: v })
-              }
-            />
-          </Field>
+       <Field
+  label="Carton External Length (mm)"
+  requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonExternalLengthMm)}
+  currentValue={engineering.packaging.secondary.secondaryLength_mm}
+>
+  <Input
+    value={engineering.packaging.secondary.secondaryLength_mm}
+    onChange={(v) =>
+      updateNested("packaging", "secondary", { secondaryLength_mm: v })
+    }
+  />
+</Field>
 
-          <Field
-            label="Carton External Dimensions (mm)"
-            requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonExternalDimensionsMm)}
-            currentValue={engineering.packaging.secondary.secondaryWidth_mm}
-          >
-            <Input
-              value={engineering.packaging.secondary.secondaryWidth_mm}
-              onChange={(v) =>
-                updateNested("packaging", "secondary", { secondaryWidth_mm: v })
-              }
-            />
-          </Field>
+<Field
+  label="Carton External Width (mm)"
+  requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonExternalWidthMm)}
+  currentValue={engineering.packaging.secondary.secondaryWidth_mm}
+>
+  <Input
+    value={engineering.packaging.secondary.secondaryWidth_mm}
+    onChange={(v) =>
+      updateNested("packaging", "secondary", { secondaryWidth_mm: v })
+    }
+  />
+</Field>
 
-          <Field label="Secondary Height (mm)">
-            <Input
-              value={engineering.packaging.secondary.secondaryHeight_mm}
-              onChange={(v) =>
-                updateNested("packaging", "secondary", { secondaryHeight_mm: v })
-              }
-            />
-          </Field>
+<Field
+  label="Carton Height (mm)"
+  requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonHeightMm)}
+  currentValue={engineering.packaging.secondary.secondaryHeight_mm}
+>
+  <Input
+    value={engineering.packaging.secondary.secondaryHeight_mm}
+    onChange={(v) =>
+      updateNested("packaging", "secondary", { secondaryHeight_mm: v })
+    }
+  />
+</Field>
 
           <Field
             label="Label Length (mm)"
