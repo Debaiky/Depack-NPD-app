@@ -8,9 +8,9 @@ export default function LandingPage() {
         <div className="grid lg:grid-cols-2 gap-10 items-center mb-12">
           <div className="space-y-6">
             <img
-              src="/Depack_cup.jpeg"
+              src="/Depack_cup.png"
               alt="Depack cup"
-              className="w-full max-w-xl rounded-3xl shadow-xl border object-cover"
+              className="w-full max-w-xl object-cover"
             />
 
             <div className="text-center lg:text-left">
@@ -30,40 +30,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="hidden lg:block">
-            <div className="rounded-3xl border bg-white shadow-xl p-6 space-y-4">
-              <div>
-                <div className="text-sm text-gray-500">Quick Access</div>
-                <div className="text-2xl font-semibold text-gray-900">
-                  Choose your workspace
-                </div>
-              </div>
-
-              <QuickCard
-                title="Projects"
-                description="Create and manage requests"
-                to="/dashboard"
-                icon={FolderKanban}
-                color="blue"
-              />
-
-              <QuickCard
-                title="Engineering"
-                description="Technical validation & data input"
-                to="/engineering-dashboard"
-                icon={FlaskConical}
-                color="purple"
-              />
-
-              <QuickCard
-                title="Pricing"
-                description="Costing & financial evaluation"
-                to="/pricing-dashboard"
-                icon={Calculator}
-                color="green"
-              />
-            </div>
-          </div>
+          <div className="hidden lg:block" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
@@ -93,37 +60,6 @@ export default function LandingPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function QuickCard({ title, description, to, color, icon: Icon }) {
-  const colors = {
-    blue: "from-blue-600 to-cyan-500",
-    purple: "from-purple-600 to-fuchsia-500",
-    green: "from-green-600 to-emerald-500",
-  };
-
-  return (
-    <Link
-      to={to}
-      className="group block rounded-2xl border bg-gray-50 hover:bg-white transition p-4"
-    >
-      <div className="flex items-start gap-4">
-        <div
-          className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${colors[color]} flex items-center justify-center text-white shadow-md`}
-        >
-          <Icon className="w-6 h-6" />
-        </div>
-
-        <div className="flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="font-semibold text-gray-900">{title}</h3>
-            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-700 transition" />
-          </div>
-          <p className="text-sm text-gray-500 mt-1">{description}</p>
-        </div>
-      </div>
-    </Link>
   );
 }
 
