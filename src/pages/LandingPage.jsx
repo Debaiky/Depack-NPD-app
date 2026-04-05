@@ -4,33 +4,29 @@ import { FolderKanban, FlaskConical, Calculator, ArrowRight } from "lucide-react
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-6">
-      <div className="max-w-6xl mx-auto flex flex-col justify-center min-h-screen">
-        <div className="grid lg:grid-cols-2 gap-10 items-center mb-12">
-          <div className="space-y-6">
-            <img
-              src="/Depack_cup.png"
-              alt="Depack cup"
-              className="w-full max-w-xl object-cover"
-            />
+      <div className="max-w-6xl mx-auto min-h-screen flex flex-col items-center justify-center">
+        <div className="w-full flex flex-col items-center text-center mb-12 space-y-6">
+          <img
+            src="/Depack_cup.png"
+            alt="Depack cup"
+            className="w-full max-w-xl object-cover"
+          />
 
-            <div className="text-center lg:text-left">
-              <img
-                src="/depacklogo.png"
-                alt="Depack"
-                className="h-16 md:h-20 mx-auto lg:mx-0 mb-4"
-              />
+          <img
+            src="/depacklogo.png"
+            alt="Depack"
+            className="h-16 md:h-20"
+          />
 
-              <h1 className="text-3xl md:text-5xl font-bold text-gray-900 leading-tight">
-                Depack NPD System
-              </h1>
+          <div>
+            <h1 className="text-3xl md:text-5xl font-bold text-gray-900 leading-tight">
+              Depack NPD System
+            </h1>
 
-              <p className="text-base md:text-lg text-gray-600 mt-3">
-                Project • Engineering • Pricing Workflow
-              </p>
-            </div>
+            <p className="text-base md:text-lg text-gray-600 mt-3">
+              Project • Engineering • Pricing Workflow
+            </p>
           </div>
-
-          <div className="hidden lg:block" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
