@@ -128,19 +128,22 @@ export default function PricingWorkspace() {
 };
 
   const summary = useMemo(() => {
-    const customer = requestData?.customer || {};
-    const product = requestData?.product || {};
-    return {
-      customerName: customer.customerName || "—",
-      projectName: project.projectName || "—",
-      productType: product.productType || "—",
-      thumbnail:
-        product?.productThumbnailPreview ||
-        (product?.productThumbnailBase64
-          ? `data:image/*;base64,${product.productThumbnailBase64}`
-          : ""),
-    };
-  }, [requestData]);
+  const customerBlock = requestData?.customer || {};
+  const primaryCustomer = customerBlock?.customers?.[0] || {};
+  const product = requestData?.product || {};
+  const project = requestData?.project || {};
+
+  return {
+    customerName: primaryCustomer.customerName || "—",
+    projectName: project.projectName || "—",
+    productType: product.productType || "—",
+    thumbnail:
+      product?.productThumbnailPreview ||
+      (product?.productThumbnailBase64
+        ? `data:image/*;base64,${product.productThumbnailBase64}`
+        : ""),
+  };
+}, [requestData]);
 
   const scenarioRows = useMemo(() => {
     return scenarios.map((s) => ({
