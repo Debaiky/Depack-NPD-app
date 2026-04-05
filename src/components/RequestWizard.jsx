@@ -227,7 +227,9 @@ cartonHeightMm: "",
     pallet: {
       noPalletNeeded: false,
       palletType: "",
-      palletDimensionsMm: "",
+     palletLengthMm: "",
+palletWidthMm: "",
+palletHeightMm: "",
       returnablePallet: "",
       palletReturnCount: "",
       cartonsPerPallet: "",
@@ -1006,12 +1008,12 @@ if (!form.product.productThumbnailName) req.push("Product Picture");
       if (!form.packaging.secondary.bagsPerCarton) req.push("Bags per Carton");
       if (!form.packaging.secondary.cartonType) req.push("Carton Type");
 
-      if (!form.packaging.pallet.noPalletNeeded) {
-        if (!form.packaging.pallet.palletType) req.push("Pallet Type");
-        if (!form.packaging.pallet.returnablePallet) req.push("Returnable Pallet");
-        if (!form.packaging.pallet.cartonsPerPallet) req.push("Cartons per Pallet");
-        if (!form.packaging.pallet.stretchWrapRequired) req.push("Stretch Wrap Required");
-      }
+   if (!form.packaging.pallet.noPalletNeeded) {
+  if (!form.packaging.pallet.palletType) req.push("Pallet Type");
+  if (!form.packaging.pallet.returnablePallet) req.push("Returnable Pallet");
+  if (!form.packaging.pallet.cartonsPerPallet) req.push("Cartons per Pallet");
+  if (!form.packaging.pallet.stretchWrapRequired) req.push("Stretch Wrap Required");
+}
 
       if (!form.delivery.desiredQtyPerTruck) req.push("Required Qty per Truck");
       if (!form.delivery.desiredQtyPerTruckUnit) req.push("Required Qty Unit");
@@ -2750,14 +2752,32 @@ onChange={(e) => update("project.customerNotes", e.target.value)}
           />
         </Field>
 
-        <Field label="Pallet Dimensions (mm)">
-          <Input
-            value={form.packaging.pallet.palletDimensionsMm}
-            onChange={(e) =>
-              update("packaging.pallet.palletDimensionsMm", e.target.value)
-            }
-          />
-        </Field>
+        <Field label="Pallet Length (mm)">
+  <Input
+    value={form.packaging.pallet.palletLengthMm}
+    onChange={(e) =>
+      update("packaging.pallet.palletLengthMm", e.target.value)
+    }
+  />
+</Field>
+
+<Field label="Pallet Width (mm)">
+  <Input
+    value={form.packaging.pallet.palletWidthMm}
+    onChange={(e) =>
+      update("packaging.pallet.palletWidthMm", e.target.value)
+    }
+  />
+</Field>
+
+<Field label="Pallet Height (mm)">
+  <Input
+    value={form.packaging.pallet.palletHeightMm}
+    onChange={(e) =>
+      update("packaging.pallet.palletHeightMm", e.target.value)
+    }
+  />
+</Field>
 
         <Field label="Returnable Pallet? *">
           <YesNoSelect
