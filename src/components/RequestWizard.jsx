@@ -200,8 +200,9 @@ productThumbnailFileName: "",
     secondary: {
       bagsPerCarton: "",
       cartonType: "",
-      cartonInternalDimensionsMm: "",
-      cartonExternalDimensionsMm: "",
+      cartonExternalLengthMm: "",
+cartonExternalWidthMm: "",
+cartonHeightMm: "",
       cartonArtworkNeeded: "",
       cartonArtworkProvided: "",
       cartonPackagingNotes: "",
@@ -2484,25 +2485,7 @@ onChange={(e) => update("project.customerNotes", e.target.value)}
     }
   />
 </Field>
-                    <Field label="Sleeve Thickness (micron)">
-                      <Input
-                        value={form.packaging.primary.bagSleeveThicknessMicron}
-                        onChange={(e) =>
-                          update(
-                            "packaging.primary.bagSleeveThicknessMicron",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </Field>
-                    <Field label="Sleeve Weight">
-                      <Input
-                        value={form.packaging.primary.bagSleeveWeight}
-                        onChange={(e) =>
-                          update("packaging.primary.bagSleeveWeight", e.target.value)
-                        }
-                      />
-                    </Field>
+                    
                   </div>
 
                   <Field label="Special Instructions">
@@ -2550,28 +2533,38 @@ onChange={(e) => update("project.customerNotes", e.target.value)}
                         </SelectContent>
                       </Select>
                     </Field>
-                    <Field label="Carton Internal Dimensions (mm)">
-                      <Input
-                        value={form.packaging.secondary.cartonInternalDimensionsMm}
-                        onChange={(e) =>
-                          update(
-                            "packaging.secondary.cartonInternalDimensionsMm",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </Field>
-                    <Field label="Carton External Dimensions (mm)">
-                      <Input
-                        value={form.packaging.secondary.cartonExternalDimensionsMm}
-                        onChange={(e) =>
-                          update(
-                            "packaging.secondary.cartonExternalDimensionsMm",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </Field>
+                    <Field label="Carton External Length (mm)">
+  <Input
+    value={form.packaging.secondary.cartonExternalLengthMm || ""}
+    onChange={(e) =>
+      update(
+        "packaging.secondary.cartonExternalLengthMm",
+        e.target.value
+      )
+    }
+  />
+</Field>
+
+<Field label="Carton External Width (mm)">
+  <Input
+    value={form.packaging.secondary.cartonExternalWidthMm || ""}
+    onChange={(e) =>
+      update(
+        "packaging.secondary.cartonExternalWidthMm",
+        e.target.value
+      )
+    }
+  />
+</Field>
+
+<Field label="Carton Height (mm)">
+  <Input
+    value={form.packaging.secondary.cartonHeightMm || ""}
+    onChange={(e) =>
+      update("packaging.secondary.cartonHeightMm", e.target.value)
+    }
+  />
+</Field>
                     <Field label="Carton Artwork Needed?">
                       <YesNoSelect
                         value={form.packaging.secondary.cartonArtworkNeeded}
@@ -2607,253 +2600,230 @@ onChange={(e) => update("project.customerNotes", e.target.value)}
                   />
                 </SectionCard>
 
-                <Tabs defaultValue="label" className="space-y-6">
-                  <TabsList className="grid grid-cols-2 rounded-2xl">
-                    <TabsTrigger value="label">Label Instructions</TabsTrigger>
-                    <TabsTrigger value="pallet">Pallet Instructions</TabsTrigger>
-                  </TabsList>
+                <SectionCard title="Label Instructions">
+  <div className="flex items-center gap-3 rounded-xl border p-3">
+    <Checkbox
+      checked={form.decoration.label.useStandardLabelSpecs}
+      onCheckedChange={(checked) =>
+        update("decoration.label.useStandardLabelSpecs", Boolean(checked))
+      }
+    />
+    <Label>Use standard labels specs</Label>
+  </div>
 
-                  <TabsContent value="label">
-                    <SectionCard title="Label Instructions">
-                      <div className="flex items-center gap-3 rounded-xl border p-3">
-                        <Checkbox
-                          checked={form.decoration.label.useStandardLabelSpecs}
-                          onCheckedChange={(checked) =>
-                            update("decoration.label.useStandardLabelSpecs", Boolean(checked))
-                          }
-                        />
-                        <Label>Use standard labels specs</Label>
-                      </div>
+  {!form.decoration.label.useStandardLabelSpecs && (
+    <>
+      <div className="grid md:grid-cols-2 gap-4">
+        <Field label="Carton Label Required?">
+          <YesNoSelect
+            value={form.packaging.labelInstructions.cartonLabelRequired}
+            onChange={(v) =>
+              update("packaging.labelInstructions.cartonLabelRequired", v)
+            }
+          />
+        </Field>
 
-                      {!form.decoration.label.useStandardLabelSpecs && (
-                        <>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <Field label="Carton Label Required?">
-                              <YesNoSelect
-                                value={form.packaging.labelInstructions.cartonLabelRequired}
-                                onChange={(v) =>
-                                  update(
-                                    "packaging.labelInstructions.cartonLabelRequired",
-                                    v
-                                  )
-                                }
-                              />
-                            </Field>
-                            <Field label="Label Dimensions (mm)">
-                              <Input
-                                value={form.packaging.labelInstructions.cartonLabelDimensionsMm}
-                                onChange={(e) =>
-                                  update(
-                                    "packaging.labelInstructions.cartonLabelDimensionsMm",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </Field>
-                            <Field label="Barcode Required?">
-                              <YesNoSelect
-                                value={form.packaging.labelInstructions.barcodeRequired}
-                                onChange={(v) =>
-                                  update("packaging.labelInstructions.barcodeRequired", v)
-                                }
-                              />
-                            </Field>
-                            <Field label="Barcode Type">
-                              <Input
-                                value={form.packaging.labelInstructions.barcodeType}
-                                onChange={(e) =>
-                                  update(
-                                    "packaging.labelInstructions.barcodeType",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </Field>
-                            <Field label="Label Artwork Provided?">
-                              <YesNoSelect
-                                value={
-                                  form.packaging.labelInstructions.cartonLabelArtworkProvided
-                                }
-                                onChange={(v) =>
-                                  update(
-                                    "packaging.labelInstructions.cartonLabelArtworkProvided",
-                                    v
-                                  )
-                                }
-                              />
-                            </Field>
-                          </div>
+        <Field label="Label Dimensions (mm)">
+          <Input
+            value={form.packaging.labelInstructions.cartonLabelDimensionsMm}
+            onChange={(e) =>
+              update(
+                "packaging.labelInstructions.cartonLabelDimensionsMm",
+                e.target.value
+              )
+            }
+          />
+        </Field>
 
-                          <div className="space-y-3">
-                            <Label>Required Label Data</Label>
-                            <div className="grid md:grid-cols-2 gap-3">
-                              {[
-                                ["Product Code", "labelFieldProductCode"],
-                                ["Batch No.", "labelFieldBatchNo"],
-                                ["Production Date", "labelFieldProdDate"],
-                                ["Expiry Date", "labelFieldExpiryDate"],
-                                ["Quantity", "labelFieldQuantity"],
-                                ["Customer Code", "labelFieldCustomerCode"],
-                              ].map(([labelText, key]) => (
-                                <div
-                                  key={key}
-                                  className="flex items-center gap-3 rounded-xl border p-3"
-                                >
-                                  <Checkbox
-                                    checked={form.packaging.labelInstructions[key]}
-                                    onCheckedChange={(checked) =>
-                                      update(
-                                        `packaging.labelInstructions.${key}`,
-                                        Boolean(checked)
-                                      )
-                                    }
-                                  />
-                                  <Label>{labelText}</Label>
-                                </div>
-                              ))}
-                            </div>
+        <Field label="Barcode Required?">
+          <YesNoSelect
+            value={form.packaging.labelInstructions.barcodeRequired}
+            onChange={(v) =>
+              update("packaging.labelInstructions.barcodeRequired", v)
+            }
+          />
+        </Field>
 
-                            <Field label="Other Label Data">
-                              <Input
-                                value={form.packaging.labelInstructions.labelFieldOther}
-                                onChange={(e) =>
-                                  update(
-                                    "packaging.labelInstructions.labelFieldOther",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </Field>
-                          </div>
+        <Field label="Barcode Type">
+          <Input
+            value={form.packaging.labelInstructions.barcodeType}
+            onChange={(e) =>
+              update("packaging.labelInstructions.barcodeType", e.target.value)
+            }
+          />
+        </Field>
 
-                          <Field label="Special Instructions">
-                            <Textarea
-                              value={form.packaging.labelInstructions.cartonLabelNotes}
-                              onChange={(e) =>
-                                update(
-                                  "packaging.labelInstructions.cartonLabelNotes",
-                                  e.target.value
-                                )
-                              }
-                              rows={4}
-                            />
-                          </Field>
+        <Field label="Label Artwork Provided?">
+          <YesNoSelect
+            value={form.packaging.labelInstructions.cartonLabelArtworkProvided}
+            onChange={(v) =>
+              update(
+                "packaging.labelInstructions.cartonLabelArtworkProvided",
+                v
+              )
+            }
+          />
+        </Field>
+      </div>
 
-                          <FileUploadBox
-                            title="Carton Label Artwork Upload"
-                            files={form.attachments.cartonLabelArtworkFiles}
-                            onAdd={(files) =>
-                              handleAttachmentAdd("cartonLabelArtworkFiles", files)
-                            }
-                          />
-                        </>
-                      )}
-                    </SectionCard>
-                  </TabsContent>
+      <div className="space-y-3">
+        <Label>Required Label Data</Label>
 
-                  <TabsContent value="pallet">
-                    <SectionCard title="Pallet Instructions">
-                      <div className="flex items-center gap-3 rounded-xl border p-3">
-                        <Checkbox
-                          checked={form.packaging.pallet.noPalletNeeded}
-                          onCheckedChange={(checked) =>
-                            update("packaging.pallet.noPalletNeeded", Boolean(checked))
-                          }
-                        />
-                        <Label>No pallet needed</Label>
-                      </div>
+        <div className="grid md:grid-cols-2 gap-3">
+          {[
+            ["Product Code", "labelFieldProductCode"],
+            ["Batch No.", "labelFieldBatchNo"],
+            ["Production Date", "labelFieldProdDate"],
+            ["Expiry Date", "labelFieldExpiryDate"],
+            ["Quantity", "labelFieldQuantity"],
+            ["Customer Code", "labelFieldCustomerCode"],
+          ].map(([labelText, key]) => (
+            <div
+              key={key}
+              className="flex items-center gap-3 rounded-xl border p-3"
+            >
+              <Checkbox
+                checked={form.packaging.labelInstructions[key]}
+                onCheckedChange={(checked) =>
+                  update(
+                    `packaging.labelInstructions.${key}`,
+                    Boolean(checked)
+                  )
+                }
+              />
+              <Label>{labelText}</Label>
+            </div>
+          ))}
+        </div>
 
-                      {!form.packaging.pallet.noPalletNeeded && (
-                        <>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <Field label="Pallet Type *">
-                              <Input
-                                value={form.packaging.pallet.palletType}
-                                onChange={(e) =>
-                                  update("packaging.pallet.palletType", e.target.value)
-                                }
-                              />
-                            </Field>
-                            <Field label="Pallet Dimensions (mm)">
-                              <Input
-                                value={form.packaging.pallet.palletDimensionsMm}
-                                onChange={(e) =>
-                                  update(
-                                    "packaging.pallet.palletDimensionsMm",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </Field>
-                            <Field label="Returnable Pallet? *">
-                              <YesNoSelect
-                                value={form.packaging.pallet.returnablePallet}
-                                onChange={(v) =>
-                                  update("packaging.pallet.returnablePallet", v)
-                                }
-                              />
-                            </Field>
-                            {form.packaging.pallet.returnablePallet === "Yes" && (
-                              <Field label="Number of Returns">
-                                <Input
-                                  value={form.packaging.pallet.palletReturnCount}
-                                  onChange={(e) =>
-                                    update(
-                                      "packaging.pallet.palletReturnCount",
-                                      e.target.value
-                                    )
-                                  }
-                                />
-                              </Field>
-                            )}
-                            <Field label="Cartons per Pallet *">
-                              <Input
-                                value={form.packaging.pallet.cartonsPerPallet}
-                                onChange={(e) =>
-                                  update(
-                                    "packaging.pallet.cartonsPerPallet",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </Field>
-                            <Field label="Stretch Wrap Required? *">
-                              <YesNoSelect
-                                value={form.packaging.pallet.stretchWrapRequired}
-                                onChange={(v) =>
-                                  update("packaging.pallet.stretchWrapRequired", v)
-                                }
-                              />
-                            </Field>
-                            {form.packaging.pallet.stretchWrapRequired === "Yes" && (
-                              <Field label="Stretch Wrap kg per Pallet">
-                                <Input
-                                  value={form.packaging.pallet.stretchWrapKgPerPallet}
-                                  onChange={(e) =>
-                                    update(
-                                      "packaging.pallet.stretchWrapKgPerPallet",
-                                      e.target.value
-                                    )
-                                  }
-                                />
-                              </Field>
-                            )}
-                          </div>
+        <Field label="Other Label Data">
+          <Input
+            value={form.packaging.labelInstructions.labelFieldOther}
+            onChange={(e) =>
+              update("packaging.labelInstructions.labelFieldOther", e.target.value)
+            }
+          />
+        </Field>
+      </div>
 
-                          <Field label="Special Instructions">
-                            <Textarea
-                              value={form.packaging.pallet.palletNotes}
-                              onChange={(e) =>
-                                update("packaging.pallet.palletNotes", e.target.value)
-                              }
-                              rows={4}
-                            />
-                          </Field>
-                        </>
-                      )}
-                    </SectionCard>
-                  </TabsContent>
-                </Tabs>
+      <Field label="Special Instructions">
+        <Textarea
+          value={form.packaging.labelInstructions.cartonLabelNotes}
+          onChange={(e) =>
+            update("packaging.labelInstructions.cartonLabelNotes", e.target.value)
+          }
+          rows={4}
+        />
+      </Field>
+
+      <FileUploadBox
+        title="Carton Label Artwork Upload"
+        files={form.attachments.cartonLabelArtworkFiles}
+        onAdd={(files) =>
+          handleAttachmentAdd("cartonLabelArtworkFiles", files)
+        }
+      />
+    </>
+  )}
+</SectionCard>
+
+<SectionCard title="Pallet Instructions">
+  <div className="flex items-center gap-3 rounded-xl border p-3">
+    <Checkbox
+      checked={form.packaging.pallet.noPalletNeeded}
+      onCheckedChange={(checked) =>
+        update("packaging.pallet.noPalletNeeded", Boolean(checked))
+      }
+    />
+    <Label>No pallet needed</Label>
+  </div>
+
+  {!form.packaging.pallet.noPalletNeeded && (
+    <>
+      <div className="grid md:grid-cols-2 gap-4">
+        <Field label="Pallet Type *">
+          <Input
+            value={form.packaging.pallet.palletType}
+            onChange={(e) =>
+              update("packaging.pallet.palletType", e.target.value)
+            }
+          />
+        </Field>
+
+        <Field label="Pallet Dimensions (mm)">
+          <Input
+            value={form.packaging.pallet.palletDimensionsMm}
+            onChange={(e) =>
+              update("packaging.pallet.palletDimensionsMm", e.target.value)
+            }
+          />
+        </Field>
+
+        <Field label="Returnable Pallet? *">
+          <YesNoSelect
+            value={form.packaging.pallet.returnablePallet}
+            onChange={(v) =>
+              update("packaging.pallet.returnablePallet", v)
+            }
+          />
+        </Field>
+
+        {form.packaging.pallet.returnablePallet === "Yes" && (
+          <Field label="Number of Returns">
+            <Input
+              value={form.packaging.pallet.palletReturnCount}
+              onChange={(e) =>
+                update("packaging.pallet.palletReturnCount", e.target.value)
+              }
+            />
+          </Field>
+        )}
+
+        <Field label="Cartons per Pallet *">
+          <Input
+            value={form.packaging.pallet.cartonsPerPallet}
+            onChange={(e) =>
+              update("packaging.pallet.cartonsPerPallet", e.target.value)
+            }
+          />
+        </Field>
+
+        <Field label="Stretch Wrap Required? *">
+          <YesNoSelect
+            value={form.packaging.pallet.stretchWrapRequired}
+            onChange={(v) =>
+              update("packaging.pallet.stretchWrapRequired", v)
+            }
+          />
+        </Field>
+
+        {form.packaging.pallet.stretchWrapRequired === "Yes" && (
+          <Field label="Stretch Wrap kg per Pallet">
+            <Input
+              value={form.packaging.pallet.stretchWrapKgPerPallet}
+              onChange={(e) =>
+                update(
+                  "packaging.pallet.stretchWrapKgPerPallet",
+                  e.target.value
+                )
+              }
+            />
+          </Field>
+        )}
+      </div>
+
+      <Field label="Special Instructions">
+        <Textarea
+          value={form.packaging.pallet.palletNotes}
+          onChange={(e) =>
+            update("packaging.pallet.palletNotes", e.target.value)
+          }
+          rows={4}
+        />
+      </Field>
+    </>
+  )}
+</SectionCard>
               </div>
             )}
 
