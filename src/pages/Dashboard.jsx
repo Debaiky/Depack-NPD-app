@@ -86,6 +86,29 @@ export default function Dashboard() {
     return data;
   }, [normalizedRequests, search, requester]);
 
+  const groupedSections = useMemo(() => {
+    const drafts = filtered.filter((r) => r.Status === "Draft");
+
+    const engineering = filtered.filter((r) =>
+      ["Waiting for Engineering", "Under Engineering Review"].includes(r.Status)
+    );
+
+    const pricing = filtered.filter((r) =>
+      ["Sent to Pricing", "Under Pricing Review"].includes(r.Status)
+    );
+
+    const completed = filtered.filter((r) =>
+      ["Completed", "Project Completed"].includes(r.Status)
+    );
+
+    return [
+      { key: "drafts", title: "Drafts", rows: drafts },
+      { key: "engineering", title: "In Engineering Review", rows: engineering },
+      { key: "pricing", title: "In Pricing Review", rows: pricing },
+      { key: "completed", title: "Completed", rows: completed },
+    ];
+  }, [filtered]);
+
   const requesters = useMemo(() => {
     return [...new Set(normalizedRequests.map((r) => r.Requester).filter(Boolean))];
   }, [normalizedRequests]);
@@ -105,7 +128,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-4">
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-xl font-semibold">Projects Dashboard</h1>
 
@@ -139,6 +162,21 @@ export default function Dashboard() {
         </select>
       </div>
 
+      {groupedSections.map((section) => (
+        <DashboardSection key={section.key} title={section.title} rows={section.rows} />
+      ))}
+    </div>
+  );
+}
+
+function DashboardSection({ title, rows }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <div className="text-sm text-gray-500">{rows.length} item(s)</div>
+      </div>
+
       <div className="bg-white border rounded-xl overflow-hidden">
         <div className="w-full">
           <table className="w-full text-xs md:text-sm table-fixed">
@@ -150,21 +188,21 @@ export default function Dashboard() {
                 <th className="p-3 w-[180px]">Customer</th>
                 <th className="p-3 w-[140px]">Product</th>
                 <th className="p-3 w-[140px]">Requester</th>
-              <th className="p-3 w-[170px]">Annual Turnover</th>
-<th className="p-3 w-[140px]">Status</th>
-                <th className="p-3 w-[150px] text-center">Actions</th>
+                <th className="p-3 w-[170px]">Annual Turnover</th>
+                <th className="p-3 w-[140px]">Status</th>
+                <th className="p-3 w-[190px] text-center">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {filtered.length === 0 ? (
+              {rows.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-6 text-center text-gray-500">
-                    No requests found.
+                    No requests in this section.
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => (
+                rows.map((r) => (
                   <tr key={r.RequestID} className="border-t align-top">
                     <td className="p-3">
                       {r.Thumbnail ? (
@@ -184,16 +222,10 @@ export default function Dashboard() {
                     </td>
 
                     <td className="p-3 font-medium break-words">{r.RequestID}</td>
-
                     <td className="p-3 break-words whitespace-normal">{r.ProjectName}</td>
-
                     <td className="p-3 break-words whitespace-normal">{r.CustomerName}</td>
-
                     <td className="p-3 break-words whitespace-normal">{r.ProductType}</td>
-
                     <td className="p-3 break-words whitespace-normal">{r.Requester}</td>
-
-                   
 
                     <td className="p-3 break-words whitespace-normal font-medium">
                       {r.AnnualTurnover !== "" &&
@@ -207,42 +239,40 @@ export default function Dashboard() {
                       <StatusBadge status={r.Status} />
                     </td>
 
-                   
-
                     <td className="p-3">
-                      <div className="flex items-center justify-center gap-3">
-  <Link
-    to={`/request/${r.RequestID}`}
-    className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
-    title="Open request"
-  >
-    <Eye className="h-4 w-4" />
-  </Link>
+                      <div className="flex items-center justify-center gap-3 flex-wrap">
+                        <Link
+                          to={`/request/${r.RequestID}`}
+                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+                          title="Open request"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
 
-  <Link
-    to={`/edit/${r.RequestID}`}
-    className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
-    title="Edit request"
-  >
-    <Pencil className="h-4 w-4" />
-  </Link>
+                        <Link
+                          to={`/edit/${r.RequestID}`}
+                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+                          title="Edit request"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Link>
 
-  <Link
-    to={`/engineering/${r.RequestID}`}
-    className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
-    title="Go to engineering"
-  >
-    <FlaskConical className="h-4 w-4" />
-  </Link>
+                        <Link
+                          to={`/engineering/${r.RequestID}`}
+                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+                          title="Go to engineering"
+                        >
+                          <FlaskConical className="h-4 w-4" />
+                        </Link>
 
-  <Link
-    to={`/pricing/${r.RequestID}`}
-    className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
-    title="Go to pricing"
-  >
-    <Calculator className="h-4 w-4" />
-  </Link>
-</div>
+                        <Link
+                          to={`/pricing/${r.RequestID}`}
+                          className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
+                          title="Go to pricing"
+                        >
+                          <Calculator className="h-4 w-4" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -257,12 +287,14 @@ export default function Dashboard() {
 
 function StatusBadge({ status }) {
   const colors = {
-  Draft: "bg-gray-100 text-gray-800",
-  "Waiting for Engineering": "bg-yellow-100 text-yellow-800",
-  "Under Engineering Review": "bg-blue-100 text-blue-800",
-  "Sent to Pricing": "bg-purple-100 text-purple-800",
-  Completed: "bg-green-100 text-green-800",
-};
+    Draft: "bg-gray-100 text-gray-800",
+    "Waiting for Engineering": "bg-yellow-100 text-yellow-800",
+    "Under Engineering Review": "bg-blue-100 text-blue-800",
+    "Sent to Pricing": "bg-purple-100 text-purple-800",
+    "Under Pricing Review": "bg-indigo-100 text-indigo-800",
+    Completed: "bg-green-100 text-green-800",
+    "Project Completed": "bg-green-100 text-green-800",
+  };
 
   return (
     <span
@@ -271,24 +303,6 @@ function StatusBadge({ status }) {
       }`}
     >
       {status}
-    </span>
-  );
-}
-
-function PriorityBadge({ value }) {
-  const colors = {
-    High: "bg-red-100 text-red-800",
-    Normal: "bg-gray-100 text-gray-800",
-    Low: "bg-green-100 text-green-800",
-  };
-
-  return (
-    <span
-      className={`inline-block px-2 py-1 rounded text-xs whitespace-normal ${
-        colors[value] || "bg-gray-100 text-gray-800"
-      }`}
-    >
-      {value || "Normal"}
     </span>
   );
 }
