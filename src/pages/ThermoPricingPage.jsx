@@ -337,9 +337,12 @@ export default function ThermoPricingPage() {
     }
   }, [engineeringData, requestData, requestId]);
 
-  const customer = requestData?.customer || {};
+  const customerBlock = requestData?.customer || {};
+  const primaryCustomer = customerBlock?.customers?.[0] || {};
+  const project = requestData?.project || {};
   const product = requestData?.product || {};
   const thumb =
+    product?.productThumbnailUrl ||
     product?.productThumbnailPreview ||
     (product?.productThumbnailBase64
       ? `data:image/*;base64,${product.productThumbnailBase64}`
