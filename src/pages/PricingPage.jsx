@@ -95,6 +95,22 @@ function SectionNote({ children, tone = "gray" }) {
   return <div className={`rounded-lg border p-3 text-sm ${styles[tone]}`}>{children}</div>;
 }
 
+function TabButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 rounded-lg border text-sm ${
+        active
+          ? "bg-black text-white border-black"
+          : "bg-white hover:bg-gray-50 border-gray-300"
+      }`}
+      type="button"
+    >
+      {children}
+    </button>
+  );
+}
+
 function convertAmount(amount, fromCurrency, targetCurrency, usdEgp, eurUsd) {
   const val = toNum(amount);
   const from = String(fromCurrency || "").toUpperCase();
@@ -127,12 +143,11 @@ function convertAmount(amount, fromCurrency, targetCurrency, usdEgp, eurUsd) {
 
 function buildInitialScenarioFromEngineering(requestData, engineeringData) {
   const product = requestData?.product || {};
-  const customer = requestData?.customer || {};
   const project = requestData?.project || {};
   const ms = engineeringData?.materialSheet || {};
   const ss = engineeringData?.sheetSpecs || {};
   const ex = engineeringData?.extrusion || {};
-  const pk = engineeringData?.packaging || {};
+  const pk = engineeringData?.sheetPackaging || {};
 
   const baseMaterial =
     ms.baseMaterial || product.sheetMaterial || product.productMaterial || "PP";
@@ -153,9 +168,7 @@ function buildInitialScenarioFromEngineering(requestData, engineeringData) {
 
   const rollDiameter = ss.rollDiameter_mm || "";
   const rollWeight = ss.rollTargetWeight_kg || ss.rollWeight_kg || "";
-  const coreDiameter =
-    ss.coreDiameter_mm ||
-    (String(ss.coreType || "").includes("3") ? "76.2" : String(ss.coreType || "").includes("6") ? "152.4" : "");
+  const coreDiameter = ss.coreDiameter_mm || "";
   const coreType = ss.coreType || "";
   const layerStructure = ms.structure || "AB";
   const coatingUsed = ms.coatingUsed || "No";
@@ -183,6 +196,7 @@ function buildInitialScenarioFromEngineering(requestData, engineeringData) {
       });
     });
   };
+
   pushMaterials(ms.layerA || [], "A");
   pushMaterials(ms.layerB || [], "B");
 
@@ -213,8 +227,8 @@ function buildInitialScenarioFromEngineering(requestData, engineeringData) {
     {
       id: "roll-labels",
       name: "Labels per Roll",
-      engQty: toNum(ss.labelsPerRoll || pk.labelsPerRoll || 0),
-      scenarioQty: String(toNum(ss.labelsPerRoll || pk.labelsPerRoll || 0) || ""),
+      engQty: toNum(pk.labelsPerRoll || 0),
+      scenarioQty: String(toNum(pk.labelsPerRoll || 0) || ""),
       unit: "unit",
       wastePct: "",
       price: "",
@@ -243,8 +257,8 @@ function buildInitialScenarioFromEngineering(requestData, engineeringData) {
     {
       id: "strap",
       name: "Strap Length / Pallet",
-      engQty: toNum(pk.strapLengthM || 0),
-      scenarioQty: String(toNum(pk.strapLengthM || 0) || ""),
+      engQty: toNum(pk.strapLength_m || 0),
+      scenarioQty: String(toNum(pk.strapLength_m || 0) || ""),
       unit: "m",
       wastePct: "",
       price: "",
@@ -253,8 +267,8 @@ function buildInitialScenarioFromEngineering(requestData, engineeringData) {
     {
       id: "separator",
       name: "Separators / Pallet",
-      engQty: toNum(pk.separatorCount || 0),
-      scenarioQty: String(toNum(pk.separatorCount || 0) || ""),
+      engQty: toNum(pk.separatorsPerPallet || 0),
+      scenarioQty: String(toNum(pk.separatorsPerPallet || 0) || ""),
       unit: "unit",
       wastePct: "",
       price: "",
@@ -263,8 +277,8 @@ function buildInitialScenarioFromEngineering(requestData, engineeringData) {
     {
       id: "foam",
       name: "Foam Sheet Length / Pallet",
-      engQty: toNum(pk.foamWrappingM || 0),
-      scenarioQty: String(toNum(pk.foamWrappingM || 0) || ""),
+      engQty: toNum(pk.foamLength_m || 0),
+      scenarioQty: String(toNum(pk.foamLength_m || 0) || ""),
       unit: "m",
       wastePct: "",
       price: "",
@@ -311,6 +325,7 @@ function buildInitialScenarioFromEngineering(requestData, engineeringData) {
     },
     materialRows,
     packagingRows,
+    investmentRows: engineeringData?.investments || [],
   };
 }
 
@@ -322,6 +337,7 @@ export default function PricingPage() {
   const [requestData, setRequestData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [activeTab, setActiveTab] = useState("engineering");
 
   const [pricing, setPricing] = useState({
     currency: "",
@@ -339,6 +355,7 @@ export default function PricingPage() {
   const [scenarioSheet, setScenarioSheet] = useState(null);
   const [materialRows, setMaterialRows] = useState([]);
   const [packagingRows, setPackagingRows] = useState([]);
+  const [investmentRows, setInvestmentRows] = useState([]);
 
   const pieRef = useRef(null);
   const chartRef = useRef(null);
@@ -376,7 +393,7 @@ export default function PricingPage() {
 
           setScenarioName(scJson.scenario?.ScenarioName || "");
           setScenarioNote(scJson.scenario?.ScenarioNote || "");
-          setCreatedBy(scJson.scenario?.CreatedBy || "");
+          setCreatedBy(scJson.scenario?.CreatedBy || localStorage.getItem("pricingCreatedBy") || "");
           setScenarioStatus(scJson.scenario?.ScenarioStatus || "Draft");
           setCompareSelected((scJson.scenario?.CompareSelected || "") === "Yes");
 
@@ -391,10 +408,12 @@ export default function PricingPage() {
           setScenarioSheet(saved.sheetScenario || init.scenarioSheet);
           setMaterialRows(saved.materialRows || init.materialRows);
           setPackagingRows(saved.packagingRows || init.packagingRows);
+          setInvestmentRows(saved.investmentRows || init.investmentRows || []);
         } else {
           setScenarioSheet(init.scenarioSheet);
           setMaterialRows(init.materialRows);
           setPackagingRows(init.packagingRows);
+          setInvestmentRows(init.investmentRows || []);
         }
 
         setInitialized(true);
@@ -408,16 +427,19 @@ export default function PricingPage() {
     load();
   }, [requestId, pricingId]);
 
-  const customer = requestData?.customer || {};
+  const customerBlock = requestData?.customer || {};
+  const primaryCustomer = customerBlock?.customers?.[0] || {};
   const product = requestData?.product || {};
   const project = requestData?.project || {};
   const ms = engineeringData?.materialSheet || {};
   const ss = engineeringData?.sheetSpecs || {};
   const ex = engineeringData?.extrusion || {};
-  const pk = engineeringData?.packaging || {};
-  const tooling = engineeringData?.tooling || [];
+  const sheetPk = engineeringData?.sheetPackaging || {};
+  const reqPk = requestData?.packaging || {};
+  const tooling = engineeringData?.tooling || {};
 
   const thumb =
+    product?.productThumbnailUrl ||
     product?.productThumbnailPreview ||
     (product?.productThumbnailBase64
       ? `data:image/*;base64,${product.productThumbnailBase64}`
@@ -425,6 +447,8 @@ export default function PricingPage() {
 
   const missingRequired =
     !scenarioName.trim() ||
+    !createdBy.trim() ||
+    !scenarioStatus.trim() ||
     !scenarioNote.trim() ||
     !pricing.currency ||
     !pricing.usdEgp ||
@@ -438,8 +462,7 @@ export default function PricingPage() {
       productName: project.projectName || requestId,
       productCode: requestId,
       baseMaterial,
-      density:
-        toNum(ms.density) || DENSITY_MAP[baseMaterial] || "",
+      density: toNum(ms.density) || DENSITY_MAP[baseMaterial] || "",
       netWidth_mm: ss.netWidth_mm || "",
       grossWidth_mm:
         ss.grossWidth_mm ||
@@ -450,20 +473,12 @@ export default function PricingPage() {
       widthTolPlus_mm: ss.widthTolPlus_mm || ss.widthTolerancePlus_mm || "",
       widthTolMinus_mm: ss.widthTolMinus_mm || ss.widthToleranceMinus_mm || "",
       thickness_mic: ss.thickness_mic || "",
-      thicknessTolPlus_mic:
-        ss.thicknessTolPlus_mic || ss.thicknessTolerancePlus_mic || "",
-      thicknessTolMinus_mic:
-        ss.thicknessTolMinus_mic || ss.thicknessToleranceMinus_mic || "",
+      thicknessTolPlus_mic: ss.thicknessTolPlus_mic || ss.thicknessTolerancePlus_mic || "",
+      thicknessTolMinus_mic: ss.thicknessTolMinus_mic || ss.thicknessToleranceMinus_mic || "",
+      coreType: ss.coreType || "",
+      coreDiameter_mm: ss.coreDiameter_mm || "",
       rollDiameter_mm: ss.rollDiameter_mm || "",
       rollWeight_kg: ss.rollTargetWeight_kg || ss.rollWeight_kg || "",
-      coreDiameter_mm:
-        ss.coreDiameter_mm ||
-        (String(ss.coreType || "").includes("3")
-          ? "76.2"
-          : String(ss.coreType || "").includes("6")
-          ? "152.4"
-          : ""),
-      coreType: ss.coreType || "",
       layerStructure: ms.structure || "AB",
       coatingUsed: ms.coatingUsed || "No",
       coatingName: ms.coatingName || "",
@@ -474,6 +489,35 @@ export default function PricingPage() {
       sheetUtilizationPct: ex.netEfficiencyPct || ex.sheetUtilizationPct || "",
     };
   }, [project.projectName, ex, ms, product, requestId, ss]);
+
+  const requestReference = useMemo(() => {
+    return {
+      productName: project.projectName || requestId,
+      productCode: requestId,
+      baseMaterial: product.sheetMaterial || product.productMaterial || "",
+      density: "",
+      netWidth_mm: product.sheetWidthMm || "",
+      grossWidth_mm: "",
+      edgeTrimPerSide_mm: "",
+      widthTolPlus_mm: "",
+      widthTolMinus_mm: "",
+      thickness_mic: product.sheetThicknessMicron || "",
+      thicknessTolPlus_mic: "",
+      thicknessTolMinus_mic: "",
+      coreType: product.coreMaterial || "",
+      coreDiameter_mm: "",
+      rollDiameter_mm: "",
+      rollWeight_kg: product.rollWeightKg || "",
+      layerStructure: "AB",
+      coatingUsed: "No",
+      coatingName: "",
+      coatingWeight_g_m2: "",
+      grossSpeedA_kg_hr: "",
+      grossSpeedB_kg_hr: "",
+      efficiencyPct: "",
+      sheetUtilizationPct: "",
+    };
+  }, [project.projectName, product, requestId]);
 
   const scenarioDerived = useMemo(() => {
     if (!scenarioSheet) return null;
@@ -532,6 +576,7 @@ export default function PricingPage() {
     const totalGrossSpeed = grossSpeedA + grossSpeedB;
     const efficiencyPct = toNum(scenarioSheet.efficiencyPct);
     const effFactor = efficiencyPct / 100;
+
     const netSpeed_kg_hr =
       totalGrossSpeed *
       (grossWidth_mm > 0 ? netWidth_mm / grossWidth_mm : 0) *
@@ -582,11 +627,8 @@ export default function PricingPage() {
       item.currency = row.currency || "EGP";
       item.ratePct = toNum(row.ratePct);
 
-      if (row.layer === "A") {
-        item.pctLayerA += toNum(row.scenarioPct);
-      } else if (row.layer === "B") {
-        item.pctLayerB += toNum(row.scenarioPct);
-      }
+      if (row.layer === "A") item.pctLayerA += toNum(row.scenarioPct);
+      if (row.layer === "B") item.pctLayerB += toNum(row.scenarioPct);
     });
 
     const plasticShare =
@@ -617,7 +659,7 @@ export default function PricingPage() {
       const convertedPrice = convertAmount(
         item.price,
         item.currency,
-        pricing.currency,
+        pricing.currency || "EGP",
         pricing.usdEgp,
         pricing.eurUsd
       );
@@ -659,7 +701,7 @@ export default function PricingPage() {
         const convertedPrice = convertAmount(
           row.price,
           row.currency,
-          pricing.currency,
+          pricing.currency || "EGP",
           pricing.usdEgp,
           pricing.eurUsd
         );
@@ -700,7 +742,7 @@ export default function PricingPage() {
   const totalPerTon = materialCost + packagingCost + conversionPerTon;
 
   useEffect(() => {
-    if (!pieRef.current || !initialized) return;
+    if (!pieRef.current || !initialized || activeTab !== "results") return;
 
     if (chartRef.current) chartRef.current.destroy();
 
@@ -737,6 +779,7 @@ export default function PricingPage() {
       if (chartRef.current) chartRef.current.destroy();
     };
   }, [
+    activeTab,
     conversionPerTon,
     initialized,
     materialBaseCost,
@@ -773,6 +816,31 @@ export default function PricingPage() {
     );
   };
 
+  const updateInvestmentRow = (index, patch) => {
+    setInvestmentRows((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, ...patch } : row))
+    );
+  };
+
+  const addInvestmentRow = () => {
+    setInvestmentRows((prev) => [
+      ...prev,
+      {
+        name: "",
+        type: "",
+        value: "",
+        currency: "EGP",
+        exchangeRate: "",
+        supplier: "",
+        leadTimeWeeks: "",
+      },
+    ]);
+  };
+
+  const removeInvestmentRow = (index) => {
+    setInvestmentRows((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const saveScenario = async () => {
     try {
       if (missingRequired) {
@@ -787,6 +855,7 @@ export default function PricingPage() {
         sheetScenario: scenarioSheet,
         materialRows,
         packagingRows,
+        investmentRows,
         sheetSummary: {
           totalPerTon,
           materialBaseCost,
@@ -834,125 +903,130 @@ export default function PricingPage() {
       alert("Failed to save scenario");
     }
   };
-const markAsCompleted = async () => {
-  try {
-    // 1. Load current request
-    const reqRes = await fetch(
-      `/.netlify/functions/get-request?requestId=${requestId}`
-    );
-    const reqJson = await reqRes.json();
 
-    if (!reqJson.success) {
-      alert("Failed to load request");
-      return;
-    }
+  const markAsCompleted = async () => {
+    try {
+      const reqRes = await fetch(`/.netlify/functions/get-request?requestId=${requestId}`);
+      const reqJson = await reqRes.json();
 
-    const payload = reqJson.payload || {};
+      if (!reqJson.success) {
+        alert("Failed to load request");
+        return;
+      }
 
-    // 2. Update status
-    const saveRes = await fetch("/.netlify/functions/save-draft", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...payload,
-        metadata: {
-          ...(payload.metadata || {}),
-          status: "Completed",
+      const payload = reqJson.payload || {};
+
+      const saveRes = await fetch("/.netlify/functions/save-draft", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      }),
-    });
+        body: JSON.stringify({
+          ...payload,
+          metadata: {
+            ...(payload.metadata || {}),
+            status: "Completed",
+          },
+        }),
+      });
 
-    const saveJson = await saveRes.json();
+      const saveJson = await saveRes.json();
 
-    if (!saveJson.success) {
-      alert("Failed to update project status");
-      return;
+      if (!saveJson.success) {
+        alert("Failed to update project status");
+        return;
+      }
+
+      alert("✅ Project marked as Completed");
+    } catch (err) {
+      console.error(err);
+      alert("Error completing project");
     }
+  };
 
-    alert("✅ Project marked as Completed");
+  const goToThermoPricing = async () => {
+    try {
+      if (missingRequired) {
+        alert("Please complete all required scenario fields before going to thermo pricing.");
+        return;
+      }
 
-  } catch (err) {
-    console.error(err);
-    alert("Error completing project");
-  }
-};
-  const goToThermo = async () => {
-    if (missingRequired) {
-      alert("Please complete all required scenario fields before moving to thermo pricing.");
-      return;
-    }
+      localStorage.setItem("pricingCreatedBy", createdBy.trim());
 
-    const bundle = {
-      requestId,
-      pricingId,
-      sheetName: project.projectName || product.productType || "Sheet",
-      sheetCode: requestId,
-      usdEgp: pricing.usdEgp,
-      eurUsd: pricing.eurUsd,
-      currency: pricing.currency,
-      sheetMaterialCostPerTon: materialCost,
-      sheetPackagingCostPerTon: packagingCost,
-      netExtruderKgPerHour: scenarioDerived?.netSpeed_kg_hr || 0,
-      netExtruderKgPerDay: (scenarioDerived?.netSpeed_kg_hr || 0) * 24,
-      bomPerTon: materialSummary.map((x) => ({
-        name: x.name,
-        kg: x.totalQty,
-      })),
-      tooling,
-    };
-
-    const pricingData = {
-      pricing,
-      sheetScenario: scenarioSheet,
-      materialRows,
-      packagingRows,
-      sheetSummary: {
-        totalPerTon,
-        materialBaseCost,
-        materialWasteCost,
-        packagingBaseCost,
-        packagingWasteCost,
-        conversionPerTon,
-        tonsPerDay: scenarioDerived?.tonsPerDay || 0,
-        netExtruderKgPerHour: scenarioDerived?.netSpeed_kg_hr || 0,
-      },
-      thermoBundle: bundle,
-    };
-
-    const res = await fetch("/.netlify/functions/save-pricing-scenario", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+      const thermoBundle = {
         requestId,
         pricingId,
-        scenarioName,
-        scenarioNote,
-        createdBy,
-        scenarioStatus,
-        compareSelected,
-        scenarioCurrency: pricing.currency,
+        sheetName: project.projectName || product.productType || "Sheet",
+        sheetCode: requestId,
         usdEgp: pricing.usdEgp,
         eurUsd: pricing.eurUsd,
-        pricingData,
-        totalCostPer1000: totalPerTon,
-        sellingPricePer1000: "",
-        marginPct: "",
-      }),
-    });
+        currency: pricing.currency,
+        sheetMaterialCostPerTon: materialCost,
+        sheetPackagingCostPerTon: packagingCost,
+        netExtruderKgPerHour: scenarioDerived?.netSpeed_kg_hr || 0,
+        netExtruderKgPerDay: (scenarioDerived?.netSpeed_kg_hr || 0) * 24,
+        bomPerTon: materialSummary.map((x) => ({
+          name: x.name,
+          kg: x.totalQty,
+        })),
+        tooling,
+      };
 
-    const json = await res.json();
-    if (!json.success) {
-      alert(json.error || "Failed to save scenario before thermo");
-      return;
+      const pricingData = {
+        pricing,
+        sheetScenario: scenarioSheet,
+        materialRows,
+        packagingRows,
+        investmentRows,
+        sheetSummary: {
+          totalPerTon,
+          materialBaseCost,
+          materialWasteCost,
+          packagingBaseCost,
+          packagingWasteCost,
+          conversionPerTon,
+          tonsPerDay: scenarioDerived?.tonsPerDay || 0,
+          netExtruderKgPerHour: scenarioDerived?.netSpeed_kg_hr || 0,
+        },
+        thermoBundle,
+      };
+
+      const res = await fetch("/.netlify/functions/save-pricing-scenario", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId,
+          pricingId,
+          scenarioName,
+          scenarioNote,
+          createdBy,
+          scenarioStatus,
+          compareSelected,
+          scenarioCurrency: pricing.currency,
+          usdEgp: pricing.usdEgp,
+          eurUsd: pricing.eurUsd,
+          pricingData,
+          totalCostPer1000: totalPerTon,
+          sellingPricePer1000: "",
+          marginPct: "",
+        }),
+      });
+
+      const json = await res.json();
+      if (!json.success) {
+        alert(json.error || "Failed to save scenario before thermo pricing");
+        return;
+      }
+
+      navigate(`/pricing/${requestId}/scenario/${pricingId}/thermo`, {
+        state: { bundle: thermoBundle },
+      });
+    } catch (error) {
+      console.error(error);
+      alert("Failed to open thermo pricing");
     }
-
-    navigate(`/pricing/${requestId}/scenario/${pricingId}/thermo`, {
-      state: { bundle },
-    });
   };
 
   if (loading || !scenarioSheet) {
@@ -962,6 +1036,33 @@ const markAsCompleted = async () => {
   if (!engineeringData) {
     return <div className="p-6">No engineering data found for this project.</div>;
   }
+
+  const engineeringFields = [
+    ["Product Name", "productName"],
+    ["Product Code", "productCode"],
+    ["Base Material", "baseMaterial"],
+    ["Density", "density"],
+    ["Net Width (mm)", "netWidth_mm"],
+    ["Edge Trim / Side (mm)", "edgeTrimPerSide_mm"],
+    ["Gross Width (mm)", "grossWidth_mm"],
+    ["Width + Tol (mm)", "widthTolPlus_mm"],
+    ["Width - Tol (mm)", "widthTolMinus_mm"],
+    ["Thickness (mic)", "thickness_mic"],
+    ["Thickness + Tol (mic)", "thicknessTolPlus_mic"],
+    ["Thickness - Tol (mic)", "thicknessTolMinus_mic"],
+    ["Core Type", "coreType"],
+    ["Core Diameter (mm)", "coreDiameter_mm"],
+    ["Roll Diameter (mm)", "rollDiameter_mm"],
+    ["Roll Weight (kg)", "rollWeight_kg"],
+    ["Layer Structure", "layerStructure"],
+    ["Coating Used", "coatingUsed"],
+    ["Coating Name", "coatingName"],
+    ["Coating Weight (g/m²)", "coatingWeight_g_m2"],
+    ["Gross Speed A (kg/hr)", "grossSpeedA_kg_hr"],
+    ["Gross Speed B (kg/hr)", "grossSpeedB_kg_hr"],
+    ["Extruder Efficiency %", "efficiencyPct"],
+    ["Sheet Utilization %", "sheetUtilizationPct"],
+  ];
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -980,7 +1081,7 @@ const markAsCompleted = async () => {
           )}
 
           <div>
-            <h1 className="text-xl font-semibold">Pricing Scenario — Sheet Roll</h1>
+            <h1 className="text-xl font-semibold">Pricing Scenario</h1>
             <p className="text-sm text-gray-500">
               {project.projectName || requestId} • {product.productType || "—"} • {pricingId}
             </p>
@@ -1006,20 +1107,24 @@ const markAsCompleted = async () => {
           </button>
 
           <button
-            onClick={goToThermo}
-            className="px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-500"
+            onClick={goToThermoPricing}
+            disabled={missingRequired}
+            className={`px-4 py-2 rounded-md text-white ${
+              missingRequired ? "bg-gray-400" : "bg-emerald-600 hover:bg-emerald-500"
+            }`}
           >
-            ➜ Thermoformed Product
+            ➜ Thermo Pricing
           </button>
+
           <button
-  onClick={markAsCompleted}
-  disabled={missingRequired}
-  className={`px-4 py-2 rounded-md text-white ${
-    missingRequired ? "bg-gray-400" : "bg-green-600 hover:bg-green-500"
-  }`}
->
-  ✔ Complete Project
-</button>
+            onClick={markAsCompleted}
+            disabled={missingRequired}
+            className={`px-4 py-2 rounded-md text-white ${
+              missingRequired ? "bg-gray-400" : "bg-green-600 hover:bg-green-500"
+            }`}
+          >
+            ✔ Complete Project
+          </button>
         </div>
       </div>
 
@@ -1028,7 +1133,7 @@ const markAsCompleted = async () => {
           {missingRequired && (
             <div className="md:col-span-4">
               <SectionNote tone="red">
-                Scenario name, scenario note, currency, USD/EGP, and EUR/USD are required.
+                Scenario Name, Creator, Status, Notes, Offer Currency, USD/EGP, and EUR/USD are required.
               </SectionNote>
             </div>
           )}
@@ -1043,21 +1148,22 @@ const markAsCompleted = async () => {
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">Created By</div>
+            <div className="text-xs text-gray-500 mb-1">Creator</div>
             <ScenarioInput
               value={createdBy}
               onChange={setCreatedBy}
-              placeholder="Created by"
+              placeholder="Creator"
             />
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">Scenario Status</div>
+            <div className="text-xs text-gray-500 mb-1">Status</div>
             <select
               className="border p-2 rounded w-full"
               value={scenarioStatus}
               onChange={(e) => setScenarioStatus(e.target.value)}
             >
+              <option value="">Select</option>
               <option>Draft</option>
               <option>Final</option>
               <option>Archived</option>
@@ -1076,16 +1182,16 @@ const markAsCompleted = async () => {
           </div>
 
           <div className="md:col-span-2">
-            <div className="text-xs text-gray-500 mb-1">Scenario Note</div>
+            <div className="text-xs text-gray-500 mb-1">Notes</div>
             <ScenarioInput
               value={scenarioNote}
               onChange={setScenarioNote}
-              placeholder="Explain what this scenario represents and assumptions used"
+              placeholder="Scenario notes"
             />
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">Currency</div>
+            <div className="text-xs text-gray-500 mb-1">Offer Currency</div>
             <select
               className={`border p-2 rounded w-full ${
                 !pricing.currency ? "border-red-400 bg-red-50" : ""
@@ -1101,7 +1207,7 @@ const markAsCompleted = async () => {
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">USD / EGP</div>
+            <div className="text-xs text-gray-500 mb-1">USD / EGP Exchange Rate</div>
             <ScenarioInput
               value={pricing.usdEgp}
               onChange={(v) => setPricing({ ...pricing, usdEgp: v })}
@@ -1110,7 +1216,7 @@ const markAsCompleted = async () => {
           </div>
 
           <div>
-            <div className="text-xs text-gray-500 mb-1">EUR / USD</div>
+            <div className="text-xs text-gray-500 mb-1">EUR / USD Exchange Rate</div>
             <ScenarioInput
               value={pricing.eurUsd}
               onChange={(v) => setPricing({ ...pricing, eurUsd: v })}
@@ -1129,272 +1235,476 @@ const markAsCompleted = async () => {
         </div>
       </Card>
 
-      <Card
-        title="Sheet Specifications — Engineering vs Scenario"
-        right={
-          scenarioDerived?.trimLossPct > 15 ? (
-            <SectionNote tone="red">Trim loss is above 15%.</SectionNote>
-          ) : (
-            <SectionNote tone="green">
-              Trim loss = {fmt(scenarioDerived?.trimLossPct || 0, 2)}%
-            </SectionNote>
-          )
-        }
-      >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-          <div className="font-medium text-gray-500">Parameter</div>
-          <div className="font-medium text-gray-500">Engineering</div>
-          <div className="font-medium text-gray-500">Scenario</div>
+      <Card title="Scenario Tabs">
+        <div className="flex gap-2 flex-wrap">
+          <TabButton active={activeTab === "engineering"} onClick={() => setActiveTab("engineering")}>
+            Engineering Data
+          </TabButton>
+          <TabButton active={activeTab === "bom"} onClick={() => setActiveTab("bom")}>
+            BOM Cost
+          </TabButton>
+          <TabButton active={activeTab === "investments"} onClick={() => setActiveTab("investments")}>
+            Investments
+          </TabButton>
+          <TabButton active={activeTab === "results"} onClick={() => setActiveTab("results")}>
+            Results
+          </TabButton>
+        </div>
+      </Card>
 
-          {[
-            ["Product Name", "productName"],
-            ["Product Code", "productCode"],
-            ["Base Material", "baseMaterial"],
-            ["Density", "density"],
-            ["Net Width (mm)", "netWidth_mm"],
-            ["Edge Trim / Side (mm)", "edgeTrimPerSide_mm"],
-            ["Gross Width (mm)", "grossWidth_mm"],
-            ["Width + Tol (mm)", "widthTolPlus_mm"],
-            ["Width - Tol (mm)", "widthTolMinus_mm"],
-            ["Thickness (mic)", "thickness_mic"],
-            ["Thickness + Tol (mic)", "thicknessTolPlus_mic"],
-            ["Thickness - Tol (mic)", "thicknessTolMinus_mic"],
-            ["Core Type", "coreType"],
-            ["Core Diameter (mm)", "coreDiameter_mm"],
-            ["Roll Diameter (mm)", "rollDiameter_mm"],
-            ["Roll Weight (kg)", "rollWeight_kg"],
-            ["Layer Structure", "layerStructure"],
-            ["Coating Used", "coatingUsed"],
-            ["Coating Name", "coatingName"],
-            ["Coating Weight (g/m²)", "coatingWeight_g_m2"],
-            ["Gross Speed A (kg/hr)", "grossSpeedA_kg_hr"],
-            ["Gross Speed B (kg/hr)", "grossSpeedB_kg_hr"],
-            ["Extruder Efficiency %", "efficiencyPct"],
-            ["Sheet Utilization %", "sheetUtilizationPct"],
-          ].map(([label, key]) => (
-            <div key={key} className="contents">
-              <div className="py-1">{label}</div>
-              <ValueCell value={engineerReference[key]} />
-              <div>
-                {["baseMaterial", "coreType", "coatingUsed", "layerStructure"].includes(key) ? (
-                  <SelectInput
-                    value={scenarioSheet[key]}
-                    onChange={(v) => updateScenarioSheet(key, v)}
-                    changed={isDifferent(scenarioSheet[key], engineerReference[key])}
-                    options={
-                      key === "baseMaterial"
-                        ? ["PP", "PET", "PS", "Other"]
-                        : key === "coreType"
-                        ? ["", "3 inch core", "6 inch core", "8 inch core"]
-                        : key === "coatingUsed"
-                        ? ["No", "Yes"]
-                        : ["AB", "ABA", "ABC", "Mono"]
-                    }
-                  />
-                ) : (
-                  <NumberInput
-                    value={scenarioSheet[key]}
-                    onChange={(v) => updateScenarioSheet(key, v)}
-                    changed={isDifferent(scenarioSheet[key], engineerReference[key])}
-                  />
-                )}
+      {activeTab === "engineering" && (
+        <Card
+          title="Engineering Data"
+          right={
+            scenarioDerived?.trimLossPct > 15 ? (
+              <SectionNote tone="red">Trim loss is above 15%.</SectionNote>
+            ) : (
+              <SectionNote tone="green">
+                Trim loss = {fmt(scenarioDerived?.trimLossPct || 0, 2)}%
+              </SectionNote>
+            )
+          }
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+            <div className="font-medium text-gray-500">Parameter</div>
+            <div className="font-medium text-gray-500">Scenario Value</div>
+            <div className="font-medium text-gray-500">Engineering Review</div>
+            <div className="font-medium text-gray-500">Request Initiation</div>
+
+            {engineeringFields.map(([label, key]) => (
+              <div key={key} className="contents">
+                <div className="py-1">{label}</div>
+
+                <div>
+                  {["baseMaterial", "coreType", "coatingUsed", "layerStructure"].includes(key) ? (
+                    <SelectInput
+                      value={scenarioSheet[key]}
+                      onChange={(v) => updateScenarioSheet(key, v)}
+                      changed={isDifferent(scenarioSheet[key], engineerReference[key])}
+                      options={
+                        key === "baseMaterial"
+                          ? ["PP", "PET", "PS", "Other"]
+                          : key === "coreType"
+                          ? ["", "Cardboard", "3 inch core", "6 inch core", "8 inch core"]
+                          : key === "coatingUsed"
+                          ? ["No", "Yes"]
+                          : ["AB", "ABA", "ABC", "Mono"]
+                      }
+                    />
+                  ) : (
+                    <NumberInput
+                      value={scenarioSheet[key]}
+                      onChange={(v) => updateScenarioSheet(key, v)}
+                      changed={isDifferent(scenarioSheet[key], engineerReference[key])}
+                    />
+                  )}
+                </div>
+
+                <div
+                  className={`text-xs rounded p-2 border ${
+                    isDifferent(scenarioSheet[key], engineerReference[key])
+                      ? "border-red-200 bg-red-50 text-red-700"
+                      : "border-gray-200 bg-gray-50 text-gray-700"
+                  }`}
+                >
+                  {engineerReference[key] || "—"}
+                </div>
+
+                <div className="text-xs rounded p-2 border border-gray-200 bg-gray-50 text-gray-700">
+                  {requestReference[key] || "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2">
+            <ValueCell value={fmt(scenarioDerived?.plasticWeightPerM2_g || 0, 3)} unit=" g/m² plastic" />
+            <ValueCell value={fmt(scenarioDerived?.coatingWeightPerM2_g || 0, 3)} unit=" g/m² coating" />
+            <ValueCell value={fmt(scenarioDerived?.totalWeightPerM2_g || 0, 3)} unit=" g/m² total" />
+            <ValueCell value={fmt(scenarioDerived?.calcRollWeight_kg || 0, 3)} unit=" kg calc roll wt" />
+            <ValueCell value={fmt(scenarioDerived?.calcRollDiameter_mm || 0, 3)} unit=" mm calc roll dia" />
+          </div>
+        </Card>
+      )}
+
+      {activeTab === "bom" && (
+        <>
+          <Card title="Material BOM Unit Price">
+            <SectionNote tone="gray">
+              Enter each material price in its own currency. The system converts everything to the selected offer currency.
+            </SectionNote>
+
+            <div className="grid grid-cols-1 md:grid-cols-9 gap-3 text-sm">
+              <div className="font-medium text-gray-500">Material</div>
+              <div className="font-medium text-gray-500">Layer</div>
+              <div className="font-medium text-gray-500">Eng. %</div>
+              <div className="font-medium text-gray-500">Scenario %</div>
+              <div className="font-medium text-gray-500">Consumption / ton</div>
+              <div className="font-medium text-gray-500">Waste %</div>
+              <div className="font-medium text-gray-500">Price</div>
+              <div className="font-medium text-gray-500">Currency</div>
+              <div className="font-medium text-gray-500">Cost / ton</div>
+
+              {materialRows.map((row) => {
+                const summaryRow = materialSummary.find((m) => m.name === row.name);
+                return (
+                  <div key={row.id} className="contents">
+                    <div className="py-1">{row.name}</div>
+                    <div className="py-1">{row.layer}</div>
+                    <ValueCell value={row.engPct || "—"} unit={row.engPct ? "%" : ""} />
+                    <div>
+                      <ScenarioInput
+                        value={row.scenarioPct}
+                        onChange={(v) => updateMaterialRow(row.id, { scenarioPct: v })}
+                        changed={isDifferent(row.scenarioPct, row.engPct)}
+                      />
+                    </div>
+                    <ValueCell value={fmt(summaryRow?.baseQty || 0, 3)} unit=" kg" />
+                    <div>
+                      <ScenarioInput
+                        value={row.ratePct}
+                        onChange={(v) => updateMaterialRow(row.id, { ratePct: v })}
+                      />
+                    </div>
+                    <div>
+                      <ScenarioInput
+                        value={row.price}
+                        onChange={(v) => updateMaterialRow(row.id, { price: v })}
+                      />
+                    </div>
+                    <div>
+                      <SelectInput
+                        value={row.currency || "EGP"}
+                        onChange={(v) => updateMaterialRow(row.id, { currency: v })}
+                        options={["EGP", "USD", "EUR"]}
+                      />
+                    </div>
+                    <ValueCell value={fmt(summaryRow?.totalCost || 0, 3)} />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
+              <SectionNote tone="green">
+                Material Cost / Ton = {fmt(materialCost, 3)} {pricing.currency || "EGP"}
+              </SectionNote>
+              <SectionNote tone="orange">
+                Material Waste / Ton = {fmt(materialWasteCost, 3)} {pricing.currency || "EGP"}
+              </SectionNote>
+            </div>
+          </Card>
+
+          <Card title="Packaging BOM">
+            <SectionNote tone="gray">
+              Engineering values are prefilled. Scenario values can be changed for pricing assumptions.
+            </SectionNote>
+
+            <div className="grid grid-cols-1 md:grid-cols-8 gap-3 text-sm">
+              <div className="font-medium text-gray-500">Item</div>
+              <div className="font-medium text-gray-500">Eng. Qty</div>
+              <div className="font-medium text-gray-500">Scenario Qty</div>
+              <div className="font-medium text-gray-500">Unit</div>
+              <div className="font-medium text-gray-500">Waste %</div>
+              <div className="font-medium text-gray-500">Price</div>
+              <div className="font-medium text-gray-500">Currency</div>
+              <div className="font-medium text-gray-500">Cost / ton</div>
+
+              {packagingRows.map((row) => {
+                const summaryRow = packagingSummary.find((p) => p.id === row.id);
+                return (
+                  <div key={row.id} className="contents">
+                    <div className="py-1">{row.name}</div>
+                    <ValueCell value={row.engQty} />
+                    <div>
+                      <ScenarioInput
+                        value={row.scenarioQty}
+                        onChange={(v) => updatePackagingRow(row.id, { scenarioQty: v })}
+                        changed={isDifferent(row.scenarioQty, String(row.engQty ?? ""))}
+                      />
+                    </div>
+                    <div>
+                      <SelectInput
+                        value={row.unit || "unit"}
+                        onChange={(v) => updatePackagingRow(row.id, { unit: v })}
+                        options={["unit", "kg", "g", "m", "ton", "roll"]}
+                      />
+                    </div>
+                    <div>
+                      <ScenarioInput
+                        value={row.wastePct}
+                        onChange={(v) => updatePackagingRow(row.id, { wastePct: v })}
+                      />
+                    </div>
+                    <div>
+                      <ScenarioInput
+                        value={row.price}
+                        onChange={(v) => updatePackagingRow(row.id, { price: v })}
+                      />
+                    </div>
+                    <div>
+                      <SelectInput
+                        value={row.currency || "EGP"}
+                        onChange={(v) => updatePackagingRow(row.id, { currency: v })}
+                        options={["EGP", "USD", "EUR"]}
+                      />
+                    </div>
+                    <ValueCell value={fmt(summaryRow?.costPerTon || 0, 3)} />
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
+              <SectionNote tone="green">
+                Packaging Cost / Ton = {fmt(packagingCost, 3)} {pricing.currency || "EGP"}
+              </SectionNote>
+              <SectionNote tone="orange">
+                Packaging Waste / Ton = {fmt(packagingWasteCost, 3)} {pricing.currency || "EGP"}
+              </SectionNote>
+            </div>
+
+            <SectionNote tone="green">
+              Packing instruction: Use {scenarioSheet.coreType || "selected core"} with{" "}
+              {scenarioSheet.coreDiameter_mm || "selected diameter"} mm core diameter and target roll
+              diameter {scenarioSheet.rollDiameter_mm || "—"} mm / roll weight{" "}
+              {scenarioSheet.rollWeight_kg || "—"} kg. Put{" "}
+              {packagingRows.find((r) => r.id === "rolls-per-pallet")?.scenarioQty || "—"} rolls on
+              each pallet, use {packagingRows.find((r) => r.id === "separator")?.scenarioQty || "—"}{" "}
+              separators, {packagingRows.find((r) => r.id === "strap")?.scenarioQty || "—"} m strap,
+              and {packagingRows.find((r) => r.id === "stretch")?.scenarioQty || "—"} kg stretch film.
+            </SectionNote>
+          </Card>
+
+          <Card title="Decoration Cost">
+            <SectionNote tone="gray">
+              Decoration cost section placeholder. We will connect it next to the engineering decoration data and pricing inputs.
+            </SectionNote>
+          </Card>
+
+          <Card title="Working Capital Cost">
+            <SectionNote tone="gray">
+              Working capital cost section placeholder. We will add DSO, DIO, DPO and interest logic in the next step.
+            </SectionNote>
+          </Card>
+
+          <Card title="Freight Cost">
+            <SectionNote tone="gray">
+              Freight cost section placeholder. We will connect it to Engineering Review freight and container/truck data next.
+            </SectionNote>
+          </Card>
+        </>
+      )}
+
+      {activeTab === "investments" && (
+        <Card title="Investments">
+          <div className="flex justify-between items-center flex-wrap gap-3">
+            <SectionNote tone="gray">
+              Investments are pulled from Engineering Review and can be extended here.
+            </SectionNote>
+
+            <button
+              type="button"
+              onClick={addInvestmentRow}
+              className="px-4 py-2 rounded-md bg-black text-white hover:bg-gray-800"
+            >
+              + Add Investment
+            </button>
+          </div>
+
+          {investmentRows.length === 0 ? (
+            <div className="text-sm text-gray-500">No investments added yet.</div>
+          ) : (
+            <div className="space-y-3">
+              {investmentRows.map((row, index) => (
+                <div key={index} className="rounded-xl border p-3">
+                  <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Investment Name</div>
+                      <ScenarioInput
+                        value={row.name || ""}
+                        onChange={(v) => updateInvestmentRow(index, { name: v })}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Type</div>
+                      <ScenarioInput
+                        value={row.type || ""}
+                        onChange={(v) => updateInvestmentRow(index, { type: v })}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Value</div>
+                      <ScenarioInput
+                        value={row.value || ""}
+                        onChange={(v) => updateInvestmentRow(index, { value: v })}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Currency</div>
+                      <SelectInput
+                        value={row.currency || "EGP"}
+                        onChange={(v) => updateInvestmentRow(index, { currency: v })}
+                        options={["EGP", "USD", "EUR"]}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Exchange Rate</div>
+                      <ScenarioInput
+                        value={row.exchangeRate || ""}
+                        onChange={(v) => updateInvestmentRow(index, { exchangeRate: v })}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Supplier</div>
+                      <ScenarioInput
+                        value={row.supplier || ""}
+                        onChange={(v) => updateInvestmentRow(index, { supplier: v })}
+                      />
+                    </div>
+
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Lead Time (weeks)</div>
+                      <ScenarioInput
+                        value={row.leadTimeWeeks || ""}
+                        onChange={(v) => updateInvestmentRow(index, { leadTimeWeeks: v })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => removeInvestmentRow(index)}
+                      className="text-red-600 hover:underline text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {activeTab === "results" && (
+        <>
+          <Card title="Results Summary">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Material Base Cost</span>
+                <span>{fmt(materialBaseCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Material Waste Cost</span>
+                <span>{fmt(materialWasteCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Packaging Base Cost</span>
+                <span>{fmt(packagingBaseCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Packaging Waste Cost</span>
+                <span>{fmt(packagingWasteCost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Conversion / ton</span>
+                <span>{fmt(conversionPerTon)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Offer Currency</span>
+                <span>{pricing.currency || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>USD / EGP</span>
+                <span>{fmt(pricing.usdEgp, 3)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>EUR / USD</span>
+                <span>{fmt(pricing.eurUsd, 4)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Net Extruder Speed</span>
+                <span>{fmt(scenarioDerived?.netSpeed_kg_hr || 0, 3)} kg/hr</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Net Productivity</span>
+                <span>{fmt(scenarioDerived?.tonsPerDay || 0, 3)} ton/day</span>
+              </div>
+              <div className="flex justify-between font-semibold border-t pt-2">
+                <span>Total / ton</span>
+                <span>{fmt(totalPerTon)}</span>
               </div>
             </div>
-          ))}
-        </div>
+          </Card>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <ValueCell value={fmt(scenarioDerived?.plasticWeightPerM2_g || 0, 3)} unit=" g/m² plastic" />
-          <ValueCell value={fmt(scenarioDerived?.coatingWeightPerM2_g || 0, 3)} unit=" g/m² coating" />
-          <ValueCell value={fmt(scenarioDerived?.totalWeightPerM2_g || 0, 3)} unit=" g/m² total" />
-          <ValueCell value={fmt(scenarioDerived?.calcRollWeight_kg || 0, 3)} unit=" kg calc roll wt" />
-          <ValueCell value={fmt(scenarioDerived?.calcRollDiameter_mm || 0, 3)} unit=" mm calc roll dia" />
-        </div>
-      </Card>
+          <div className="bg-white border rounded-xl p-4">
+            <canvas ref={pieRef}></canvas>
+          </div>
+        </>
+      )}
 
-      <Card title="Material Pricing">
+      <Card title="Scenario Comparison Snapshot">
         <SectionNote tone="gray">
-          Enter each material price in its own currency. The system converts everything to the
-          selected scenario currency.
-        </SectionNote>
-
-        <div className="grid grid-cols-1 md:grid-cols-9 gap-3 text-sm">
-          <div className="font-medium text-gray-500">Material</div>
-          <div className="font-medium text-gray-500">Layer</div>
-          <div className="font-medium text-gray-500">Eng. %</div>
-          <div className="font-medium text-gray-500">Scenario %</div>
-          <div className="font-medium text-gray-500">Base Qty / ton</div>
-          <div className="font-medium text-gray-500">Waste %</div>
-          <div className="font-medium text-gray-500">Price</div>
-          <div className="font-medium text-gray-500">Currency</div>
-          <div className="font-medium text-gray-500">Total Cost / ton</div>
-
-          {materialRows.map((row) => {
-            const summaryRow = materialSummary.find((m) => m.name === row.name);
-            return (
-              <div key={row.id} className="contents">
-                <div className="py-1">{row.name}</div>
-                <div className="py-1">{row.layer}</div>
-                <ValueCell value={row.engPct || "—"} unit={row.engPct ? "%" : ""} />
-                <div>
-                  <ScenarioInput
-                    value={row.scenarioPct}
-                    onChange={(v) => updateMaterialRow(row.id, { scenarioPct: v })}
-                    changed={isDifferent(row.scenarioPct, row.engPct)}
-                  />
-                </div>
-                <ValueCell value={fmt(summaryRow?.baseQty || 0, 3)} unit=" kg" />
-                <div>
-                  <ScenarioInput
-                    value={row.ratePct}
-                    onChange={(v) => updateMaterialRow(row.id, { ratePct: v })}
-                  />
-                </div>
-                <div>
-                  <ScenarioInput
-                    value={row.price}
-                    onChange={(v) => updateMaterialRow(row.id, { price: v })}
-                  />
-                </div>
-                <div>
-                  <SelectInput
-                    value={row.currency || "EGP"}
-                    onChange={(v) => updateMaterialRow(row.id, { currency: v })}
-                    options={["EGP", "USD", "EUR"]}
-                  />
-                </div>
-                <ValueCell value={fmt(summaryRow?.totalCost || 0, 3)} />
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      <Card title="Sheet Packaging Pricing">
-        <SectionNote tone="gray">
-          Engineering values are shown in blue. Scenario values can be changed and will turn orange
-          when different.
-        </SectionNote>
-
-        <div className="grid grid-cols-1 md:grid-cols-8 gap-3 text-sm">
-          <div className="font-medium text-gray-500">Item</div>
-          <div className="font-medium text-gray-500">Eng. Qty</div>
-          <div className="font-medium text-gray-500">Scenario Qty</div>
-          <div className="font-medium text-gray-500">Unit</div>
-          <div className="font-medium text-gray-500">Waste %</div>
-          <div className="font-medium text-gray-500">Price</div>
-          <div className="font-medium text-gray-500">Currency</div>
-          <div className="font-medium text-gray-500">Cost / ton</div>
-
-          {packagingRows.map((row) => {
-            const summaryRow = packagingSummary.find((p) => p.id === row.id);
-            return (
-              <div key={row.id} className="contents">
-                <div className="py-1">{row.name}</div>
-                <ValueCell value={row.engQty} />
-                <div>
-                  <ScenarioInput
-                    value={row.scenarioQty}
-                    onChange={(v) => updatePackagingRow(row.id, { scenarioQty: v })}
-                    changed={isDifferent(row.scenarioQty, String(row.engQty ?? ""))}
-                  />
-                </div>
-                <div>
-                  <SelectInput
-                    value={row.unit || "unit"}
-                    onChange={(v) => updatePackagingRow(row.id, { unit: v })}
-                    options={["unit", "kg", "g", "m", "ton", "roll"]}
-                  />
-                </div>
-                <div>
-                  <ScenarioInput
-                    value={row.wastePct}
-                    onChange={(v) => updatePackagingRow(row.id, { wastePct: v })}
-                  />
-                </div>
-                <div>
-                  <ScenarioInput
-                    value={row.price}
-                    onChange={(v) => updatePackagingRow(row.id, { price: v })}
-                  />
-                </div>
-                <div>
-                  <SelectInput
-                    value={row.currency || "EGP"}
-                    onChange={(v) => updatePackagingRow(row.id, { currency: v })}
-                    options={["EGP", "USD", "EUR"]}
-                  />
-                </div>
-                <ValueCell value={fmt(summaryRow?.costPerTon || 0, 3)} />
-              </div>
-            );
-          })}
-        </div>
-
-        <SectionNote tone="green">
-          Packing instruction: Use {scenarioSheet.coreType || "selected core"} with{" "}
-          {scenarioSheet.coreDiameter_mm || "selected diameter"} mm core diameter and target roll
-          diameter {scenarioSheet.rollDiameter_mm || "—"} mm / roll weight{" "}
-          {scenarioSheet.rollWeight_kg || "—"} kg. Put{" "}
-          {packagingRows.find((r) => r.id === "rolls-per-pallet")?.scenarioQty || "—"} rolls on
-          each pallet, use {packagingRows.find((r) => r.id === "separator")?.scenarioQty || "—"}{" "}
-          separators, {packagingRows.find((r) => r.id === "strap")?.scenarioQty || "—"} m strap,
-          and {packagingRows.find((r) => r.id === "stretch")?.scenarioQty || "—"} kg stretch film.
+          Placeholder only for now. Comparison snapshot details will be added later.
         </SectionNote>
       </Card>
 
-      <Card title="Summary (per ton)">
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span>Material Base Cost</span>
-            <span>{fmt(materialBaseCost)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Material Waste Cost</span>
-            <span>{fmt(materialWasteCost)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Packaging Base Cost</span>
-            <span>{fmt(packagingBaseCost)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Packaging Waste Cost</span>
-            <span>{fmt(packagingWasteCost)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Conversion / ton</span>
-            <span>{fmt(conversionPerTon)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Scenario Currency</span>
-            <span>{pricing.currency || "—"}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>USD / EGP</span>
-            <span>{fmt(pricing.usdEgp, 3)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>EUR / USD</span>
-            <span>{fmt(pricing.eurUsd, 4)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Net Extruder Speed</span>
-            <span>{fmt(scenarioDerived?.netSpeed_kg_hr || 0, 3)} kg/hr</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Net Productivity</span>
-            <span>{fmt(scenarioDerived?.tonsPerDay || 0, 3)} ton/day</span>
-          </div>
-          <div className="flex justify-between font-semibold border-t pt-2">
-            <span>Total / ton</span>
-            <span>{fmt(totalPerTon)}</span>
-          </div>
+      <Card title="Project Reference">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <ValueCell value={primaryCustomer.customerName || "—"} />
+          <ValueCell value={project.projectName || "—"} />
+          <ValueCell value={product.productType || "—"} />
+          <ValueCell value={requestId || "—"} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs text-gray-500">
+          <div>Customer</div>
+          <div>Project</div>
+          <div>Product</div>
+          <div>Request No.</div>
         </div>
       </Card>
 
-      <div className="bg-white border rounded-xl p-4">
-        <canvas ref={pieRef}></canvas>
-      </div>
+      <Card title="Pulled Request Packaging Reference">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+          <ValueCell value={reqPk?.primary?.pcsPerStack || "—"} />
+          <ValueCell value={reqPk?.primary?.stacksPerBag || "—"} />
+          <ValueCell value={reqPk?.secondary?.bagsPerCarton || "—"} />
+          <ValueCell value={reqPk?.pallet?.cartonsPerPallet || "—"} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs text-gray-500">
+          <div>Pieces / Stack</div>
+          <div>Stacks / Bag</div>
+          <div>Bags / Carton</div>
+          <div>Cartons / Pallet</div>
+        </div>
+      </Card>
+
+      <Card title="Pulled Engineering Sheet Packaging Reference">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
+          <ValueCell value={sheetPk?.rollsPerPallet || "—"} />
+          <ValueCell value={sheetPk?.labelsPerRoll || "—"} />
+          <ValueCell value={sheetPk?.separatorsPerPallet || "—"} />
+          <ValueCell value={sheetPk?.strapLength_m || "—"} />
+          <ValueCell value={sheetPk?.stretchKgPerPallet || "—"} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs text-gray-500">
+          <div>Rolls / Pallet</div>
+          <div>Labels / Roll</div>
+          <div>Separators / Pallet</div>
+          <div>Strap Length / Pallet</div>
+          <div>Stretch Film / Pallet</div>
+        </div>
+      </Card>
     </div>
   );
 }
