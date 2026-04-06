@@ -1313,8 +1313,56 @@ export default function PricingPage() {
       rows: (prev?.rows || []).filter((row) => row.id !== id),
     }));
   };
+    const syncRequestPricingBucket = async () => {
+    try {
+      const listRes = await fetch(
+        `/.netlify/functions/list-pricing-scenarios?requestId=${requestId}`
+      );
+      const listJson = await listRes.json();
 
-  const saveScenario = async () => {
+      if (!listJson.success) {
+        throw new Error(
+          listJson.error || "Failed to load pricing scenarios for pricing sync"
+        );
+      }
+
+      const scenarios = Array.isArray(listJson.scenarios) ? listJson.scenarios : [];
+
+      const hasFinalScenario = scenarios.some(
+        (row) => String(row?.ScenarioStatus || "").trim().toLowerCase() === "final"
+      );
+
+      const nextPricingStatus = hasFinalScenario
+        ? "Pricing Completed"
+        : "Pending Pricing";
+
+      const syncRes = await fetch("/.netlify/functions/save-pricing-project-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId,
+          pricingStatus: nextPricingStatus,
+          sentToPricing: true,
+          inPricing: !hasFinalScenario,
+          pricingRequired: true,
+        }),
+      });
+
+      const syncJson = await syncRes.json();
+
+      if (!syncJson.success) {
+        throw new Error(syncJson.error || "Failed to save pricing project status");
+      }
+
+      return { success: true, pricingStatus: nextPricingStatus };
+    } catch (error) {
+      console.error("Failed to sync request pricing bucket:", error);
+      return { success: false, error };
+    }
+  };
+    const saveScenario = async () => {
     try {
       if (missingRequired) {
         alert("Please complete all required scenario setup fields.");
@@ -1339,15 +1387,19 @@ export default function PricingPage() {
           productName: engineeringScenario?.productName || "",
           materialBaseCostPerTon,
           materialWasteCostPerTon,
+          materialBaseCostPer1000,
+          materialWasteCostPer1000,
           packagingBaseCostPerOutputUnit: packagingComputed.totalBaseCostPerOutputUnit,
           packagingWasteCostPerOutputUnit: packagingComputed.totalWasteCostPerOutputUnit,
           decorationCostPer1000,
+          decorationCostPerTon,
           workingCapitalCost: workingCapitalComputed.cost,
           freightCostPerTon: freightCostComputed.costPerTon,
           freightCostPer1000Pcs: freightCostComputed.costPer1000Pcs,
           totalInvestmentCost,
           nonAmortizedInvestmentTotal,
           amortizationCostPerOutput,
+          resultsDerived,
         },
       };
 
@@ -1368,8 +1420,14 @@ export default function PricingPage() {
           usdEgp: scenarioSetup.usdEgp,
           eurUsd: scenarioSetup.eurUsd,
           pricingData,
-          totalCostPer1000: "",
-          sellingPricePer1000: "",
+          totalCostPer1000:
+            resultsDerived?.type === "nonSheet"
+              ? resultsDerived?.requiredSellingPricePer1000 || ""
+              : resultsDerived?.requiredSalesPricePerTon || "",
+          sellingPricePer1000:
+            resultsDerived?.type === "nonSheet"
+              ? resultsDerived?.requiredSellingPricePer1000 || ""
+              : "",
           marginPct: "",
         }),
       });
@@ -1381,7 +1439,17 @@ export default function PricingPage() {
         return;
       }
 
-      setSaveMessage("Scenario saved successfully.");
+      const syncResult = await syncRequestPricingBucket();
+
+      if (!syncResult.success) {
+        setSaveMessage("Scenario saved, but dashboard pricing status could not be synced.");
+        alert("Scenario saved, but project pricing status was not updated in dashboard.");
+        return;
+      }
+
+      setSaveMessage(
+        `Scenario saved successfully. Project bucket updated to: ${syncResult.pricingStatus}`
+      );
     } catch (error) {
       console.error(error);
       alert("Failed to save scenario");
@@ -1389,7 +1457,6 @@ export default function PricingPage() {
       setSaving(false);
     }
   };
-
   if (loading || !bomScenario || !investmentsScenario) {
     return <div className="p-6">Loading pricing scenario...</div>;
   }
