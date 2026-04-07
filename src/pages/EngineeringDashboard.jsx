@@ -7,6 +7,9 @@ function StatusBadge({ status }) {
     "Waiting for Engineering": "bg-yellow-100 text-yellow-800",
     "Under Engineering Review": "bg-blue-100 text-blue-800",
     "Sent to Pricing": "bg-purple-100 text-purple-800",
+    "Pending pricing": "bg-orange-100 text-orange-800",
+    "Under Pricing Review": "bg-purple-100 text-purple-800",
+    "Pricing completed": "bg-green-100 text-green-800",
     Completed: "bg-green-100 text-green-800",
   };
 
@@ -141,6 +144,9 @@ export default function EngineeringDashboard() {
           "Waiting for Engineering",
           "Under Engineering Review",
           "Sent to Pricing",
+          "Pending pricing",
+          "Under Pricing Review",
+          "Pricing completed",
           "Completed",
         ].includes(r?.Status)
       )
@@ -158,8 +164,8 @@ export default function EngineeringDashboard() {
 
   const waiting = visibleRows.filter((r) => r.Status === "Waiting for Engineering");
   const inReview = visibleRows.filter((r) => r.Status === "Under Engineering Review");
-  const closed = visibleRows.filter((r) =>
-    ["Sent to Pricing", "Completed"].includes(r.Status)
+  const movedToPricing = visibleRows.filter((r) =>
+    ["Sent to Pricing", "Pending pricing", "Under Pricing Review", "Pricing completed", "Completed"].includes(r.Status)
   );
 
   if (loading) return <div className="p-6">Loading engineering dashboard...</div>;
@@ -196,7 +202,7 @@ export default function EngineeringDashboard() {
 
         <SectionTable title="Waiting for Engineering" rows={waiting} />
         <SectionTable title="Under Engineering Review" rows={inReview} />
-        <SectionTable title="Sent to Pricing / Closed" rows={closed} />
+        <SectionTable title="Moved to Pricing / Closed" rows={movedToPricing} />
       </div>
     </div>
   );
