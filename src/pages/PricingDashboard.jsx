@@ -3,76 +3,32 @@ import { Link } from "react-router-dom";
 
 const PRICING_PASSWORD = "DepackPricing_2026";
 
-function getStatus(row, payload) {
-  return (
-    row?.Status ||
-    row?.status ||
-    payload?.metadata?.status ||
-    payload?.status ||
-    ""
-  );
-}
-
-function getThumbnail(row, payload) {
-  const product = payload?.product || {};
-
+function getThumbnailFromRequestRow(row) {
   return (
     row?.Thumbnail ||
     row?.thumbnailUrl ||
     row?.thumbnail ||
     (row?.thumbnailBase64 ? `data:image/*;base64,${row.thumbnailBase64}` : "") ||
-    product?.productThumbnailUrl ||
-    product?.productThumbnailPreview ||
-    (product?.productThumbnailBase64
-      ? `data:image/*;base64,${product.productThumbnailBase64}`
-      : "")
+    ""
   );
 }
 
 function normalizeRows(rows) {
-  return (rows || []).map((row) => {
-    const payload = row?.payload || {};
-
-    const product = payload?.product || {};
-    const project = payload?.project || {};
-    const customerBlock = payload?.customer || {};
-    const primaryCustomer = customerBlock?.customers?.[0] || {};
-
-    return {
-      raw: row,
-      payload,
-      requestId:
-        row?.RequestID ||
-        row?.requestId ||
-        payload?.metadata?.requestId ||
-        payload?.requestId ||
-        "",
-      status: getStatus(row, payload),
-      productType:
-        row?.ProductType ||
-        row?.productType ||
-        product?.productType ||
-        "—",
-      projectName:
-        row?.ProjectName ||
-        row?.projectName ||
-        project?.projectName ||
-        "—",
-      customerName:
-        row?.CustomerName ||
-        row?.customerName ||
-        primaryCustomer?.customerName ||
-        "—",
-      thumbnail: getThumbnail(row, payload),
-      updatedAt:
-        row?.UpdatedAt ||
-        row?.updatedAt ||
-        row?.CreatedAt ||
-        row?.createdAt ||
-        payload?.metadata?.updatedAt ||
-        "",
-    };
-  });
+  return (rows || []).map((row) => ({
+    raw: row,
+    requestId: row?.RequestID || row?.requestId || "",
+    status: row?.Status || row?.status || "",
+    productType: row?.ProductType || row?.productType || "—",
+    projectName: row?.ProjectName || row?.projectName || "—",
+    customerName: row?.CustomerName || row?.customerName || "—",
+    thumbnail: getThumbnailFromRequestRow(row),
+    updatedAt:
+      row?.UpdatedAt ||
+      row?.updatedAt ||
+      row?.CreatedAt ||
+      row?.createdAt ||
+      "",
+  }));
 }
 
 function sortByUpdatedDesc(rows) {
@@ -169,7 +125,7 @@ export default function PricingDashboard() {
       setLoading(true);
       setError("");
 
-      const res = await fetch("/.netlify/functions/list-pricing-workspaces");
+      const res = await fetch("/.netlify/functions/list-requests");
       const json = await res.json();
 
       if (!json.success) {
@@ -178,9 +134,7 @@ export default function PricingDashboard() {
         return;
       }
 
-      const normalized = normalizeRows(
-        json.rows || json.workspaces || json.items || []
-      );
+      const normalized = normalizeRows(json.requests || json.rows || []);
       setRows(normalized);
     } catch (err) {
       console.error("Pricing dashboard load error:", err);
