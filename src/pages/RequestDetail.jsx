@@ -1,11 +1,13 @@
-import { Children, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import OpenPricingWorkspaceButton from "../components/pricing/OpenPricingWorkspaceButton";
 
 /* ===== UI COMPONENTS ===== */
 
 function Card({ title, children }) {
-  const validChildren = Children.toArray(children).filter(Boolean);
+  const validChildren = Array.isArray(children)
+    ? children.filter(Boolean)
+    : [children].filter(Boolean);
+
   if (validChildren.length === 0) return null;
 
   return (
@@ -53,25 +55,12 @@ function Attachment({ file }) {
   );
 }
 
-function StatusBadge({ status }) {
-  const tones = {
-    Draft: "bg-gray-100 text-gray-700",
-    "Waiting for Engineering": "bg-yellow-100 text-yellow-700",
-    "Under Engineering Review": "bg-blue-100 text-blue-700",
-    "Sent to Pricing": "bg-orange-100 text-orange-700",
-    "Pending Pricing": "bg-orange-100 text-orange-700",
-    "Pricing Completed": "bg-green-100 text-green-700",
-    Completed: "bg-green-100 text-green-700",
-  };
-
+function SectionHeader({ title, subtitle }) {
   return (
-    <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-        tones[status] || "bg-gray-100 text-gray-700"
-      }`}
-    >
-      {status || "—"}
-    </span>
+    <div>
+      <div className="text-xl font-semibold">{title}</div>
+      {subtitle ? <div className="text-sm text-gray-500">{subtitle}</div> : null}
+    </div>
   );
 }
 
@@ -90,21 +79,20 @@ export default function RequestDetail() {
       try {
         setLoading(true);
 
-        const [requestRes, filesRes] = await Promise.all([
+        const [r, f] = await Promise.all([
           fetch(`/.netlify/functions/get-request?requestId=${requestId}`),
           fetch(`/.netlify/functions/list-request-files?requestId=${requestId}`),
         ]);
 
-        const requestJson = await requestRes.json();
-        const filesJson = await filesRes.json();
-
-        if (requestJson.success) {
-          setRequest(requestJson.request || null);
-          setPayload(requestJson.payload || null);
+        const j = await r.json();
+        if (j.success) {
+          setRequest(j.request);
+          setPayload(j.payload);
         }
 
-        if (filesJson.success) {
-          setFiles(filesJson.files || []);
+        const jf = await f.json();
+        if (jf.success) {
+          setFiles(jf.files || []);
         }
       } catch (error) {
         console.error("Failed to load request detail:", error);
@@ -116,13 +104,8 @@ export default function RequestDetail() {
     load();
   }, [requestId]);
 
-  if (loading) {
-    return <div className="p-6">Loading...</div>;
-  }
-
-  if (!request || !payload) {
-    return <div className="p-6">Request not found.</div>;
-  }
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (!request || !payload) return <div className="p-6">Request not found.</div>;
 
   const customer = payload.customer?.customers?.[0] || {};
   const project = payload.project || {};
@@ -130,12 +113,13 @@ export default function RequestDetail() {
   const decoration = payload.decoration || {};
   const packaging = payload.packaging || {};
   const delivery = payload.delivery || {};
+  const metadata = payload.metadata || {};
 
   const image =
     request?.Thumbnail ||
-    product?.productThumbnailUrl ||
-    product?.productThumbnailPreview ||
-    (product?.productThumbnailBase64
+    product.productThumbnailUrl ||
+    product.productThumbnailPreview ||
+    (product.productThumbnailBase64
       ? `data:image/*;base64,${product.productThumbnailBase64}`
       : "");
 
@@ -143,89 +127,81 @@ export default function RequestDetail() {
     ? `https://drive.google.com/drive/folders/${request.DriveFolderID}`
     : "";
 
-  const currentStatus =
-    request?.Status || payload?.metadata?.status || "—";
+  const currentStatus = request?.Status || metadata?.status || "—";
+  const materialText = product.productMaterial || product.sheetMaterial || "—";
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6 bg-gray-50">
+    <div className="max-w-6xl mx-auto p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* ===== TOP SUMMARY CARD ===== */}
-      <div className="bg-white border rounded-2xl shadow-sm p-5 space-y-5">
-        <div className="flex gap-6 flex-wrap items-start">
-          {image ? (
-            <img
-              src={image}
-              alt="Product thumbnail"
-              className="w-28 h-28 object-cover rounded-xl border"
-            />
-          ) : (
-            <div className="w-28 h-28 rounded-xl border bg-gray-100 flex items-center justify-center text-xs text-gray-500">
-              No image
-            </div>
-          )}
-
-          <div className="flex-1 min-w-[250px] space-y-1">
-            <div className="mb-2">
-              <StatusBadge status={currentStatus} />
-            </div>
-
-            <Row label="Request ID" value={requestId} />
-            <Row label="Customer" value={request?.CustomerName || customer?.customerName} />
-            <Row label="Project" value={project?.projectName} />
-            <Row label="Product Type" value={product?.productType} />
-            <Row label="Material" value={product?.productMaterial || product?.sheetMaterial} />
-            <Row label="Decoration" value={decoration?.decorationType} />
-            <Row label="Annual Volume" value={project?.forecastAnnualVolume} />
-            <Row label="Target Price" value={project?.targetSellingPrice} />
-
-            {driveLink && (
-              <div className="text-sm pt-2">
-                <span className="font-medium text-gray-500">Drive Folder: </span>
-                <a
-                  href={driveLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-600 underline"
-                >
-                  Open Folder
-                </a>
-              </div>
-            )}
+      <div className="bg-white border rounded-2xl shadow-sm p-5 flex gap-6 flex-wrap items-start">
+        {image ? (
+          <img
+            src={image}
+            alt="Product thumbnail"
+            className="w-28 h-28 object-cover rounded-xl border"
+          />
+        ) : (
+          <div className="w-28 h-28 rounded-xl border bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+            No image
           </div>
+        )}
+
+        <div className="flex-1 min-w-[260px] space-y-2">
+          <SectionHeader
+            title={project.projectName || requestId}
+            subtitle={`${product.productType || "—"} • ${materialText}`}
+          />
+
+          <Row label="Request ID" value={requestId} />
+          <Row label="Status" value={currentStatus} />
+          <Row label="Customer" value={request.CustomerName || customer.customerName} />
+          <Row label="Decoration" value={decoration.decorationType} />
+          <Row label="Annual Volume" value={project.forecastAnnualVolume} />
+          <Row label="Target Price" value={project.targetSellingPrice} />
+
+          {driveLink ? (
+            <div className="text-sm pt-2">
+              <span className="font-medium text-gray-500">Drive Folder: </span>
+              <a
+                href={driveLink}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 underline"
+              >
+                Open Folder
+              </a>
+            </div>
+          ) : null}
         </div>
 
-        {/* ===== ACTION BUTTONS ===== */}
-        <div className="flex items-center gap-3 flex-wrap border-t pt-4">
+        <div className="flex flex-col gap-3 min-w-[220px]">
           <Link
-            to={`/edit/${requestId}`}
-            className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
+            to="/dashboard"
+            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 text-center"
           >
-            Edit Request
+            ← Back to Dashboard
           </Link>
 
           <Link
             to={`/engineering/${requestId}`}
-            className="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-500"
+            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 text-center"
           >
-            Engineering Review
+            Open Engineering Review
           </Link>
 
-          <OpenPricingWorkspaceButton
-            requestId={requestId}
-            className="rounded-lg bg-black text-white px-4 py-2 hover:bg-gray-800"
+          <Link
+            to={`/pricing/${requestId}`}
+            className="px-4 py-2 rounded-lg bg-black text-white hover:bg-gray-800 text-center"
           >
             Open Pricing Workspace
-          </OpenPricingWorkspaceButton>
+          </Link>
 
-          {driveLink && (
-            <a
-              href={driveLink}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
-            >
-              Open Drive Folder
-            </a>
-          )}
+          <Link
+            to={`/edit/${requestId}`}
+            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 text-center"
+          >
+            Edit Request
+          </Link>
         </div>
       </div>
 
@@ -237,6 +213,13 @@ export default function RequestDetail() {
         <Row label="Phone" value={customer.contactPhone} />
         <Row label="Country" value={customer.countryMarket} />
         <Row label="Delivery Location" value={customer.deliveryLocation} />
+      </Card>
+
+      {/* ===== PROJECT ===== */}
+      <Card title="Project Information">
+        {Object.entries(project).map(([k, v]) => (
+          <Row key={k} label={k} value={v} />
+        ))}
       </Card>
 
       {/* ===== PRODUCT ===== */}
@@ -256,19 +239,19 @@ export default function RequestDetail() {
       {/* ===== PACKAGING ===== */}
       <Card title="Packaging Details">
         {Object.entries(packaging.primary || {}).map(([k, v]) => (
-          <Row key={`primary-${k}`} label={k} value={v} />
+          <Row key={`primary-${k}`} label={`Primary - ${k}`} value={v} />
         ))}
 
         {Object.entries(packaging.secondary || {}).map(([k, v]) => (
-          <Row key={`secondary-${k}`} label={k} value={v} />
+          <Row key={`secondary-${k}`} label={`Secondary - ${k}`} value={v} />
         ))}
 
         {Object.entries(packaging.pallet || {}).map(([k, v]) => (
-          <Row key={`pallet-${k}`} label={k} value={v} />
+          <Row key={`pallet-${k}`} label={`Pallet - ${k}`} value={v} />
         ))}
 
         {Object.entries(packaging.sheet || {}).map(([k, v]) => (
-          <Row key={`sheet-${k}`} label={k} value={v} />
+          <Row key={`sheet-${k}`} label={`Sheet - ${k}`} value={v} />
         ))}
       </Card>
 
@@ -281,9 +264,11 @@ export default function RequestDetail() {
 
       {/* ===== ATTACHMENTS ===== */}
       <Card title="Attachments">
-        {files.map((f) => (
-          <Attachment key={f.driveFileId || `${f.fileName}-${f.driveLink}`} file={f} />
-        ))}
+        {files.length === 0 ? (
+          <div className="text-sm text-gray-500">No attachments found.</div>
+        ) : (
+          files.map((f) => <Attachment key={f.driveFileId || f.fileName} file={f} />)
+        )}
       </Card>
     </div>
   );
