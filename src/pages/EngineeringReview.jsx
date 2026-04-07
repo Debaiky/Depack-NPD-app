@@ -761,27 +761,27 @@ const removeInvestmentRow = (id) => {
     }
   };
 
-  const sendToPricing = async () => {
-    try {
-      const engJson = await saveEngineeringOnly("Sent to Pricing");
-      if (!engJson.success) {
-        alert("Failed to save engineering data");
-        return;
-      }
-
-      const reqJson = await saveMasterStatus("Sent to Pricing");
-      if (!reqJson.success) {
-        alert("Engineering saved, but failed to update project status");
-        return;
-      }
-
-      alert("Sent to Pricing");
-      window.location.href = `/pricing/${requestId}`;
-    } catch (err) {
-      console.error(err);
-      alert("Error sending to pricing");
+const sendToPricing = async () => {
+  try {
+    const engJson = await saveEngineeringOnly("Sent to Pricing");
+    if (!engJson.success) {
+      alert("Failed to save engineering data");
+      return;
     }
-  };
+
+    const reqJson = await saveMasterStatus("Pending pricing");
+    if (!reqJson.success) {
+      alert("Engineering saved, but failed to update project status");
+      return;
+    }
+
+    alert("Sent to Pricing");
+    window.location.href = `/pricing/${requestId}`;
+  } catch (err) {
+    console.error(err);
+    alert("Error sending to pricing");
+  }
+};
 
 
 
