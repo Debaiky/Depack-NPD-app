@@ -1,62 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const PRICING_PASSWORD = "DepackPricing_2026";
-const PRICING_SESSION_KEY = "depack_pricing_unlocked";
 
-function StatusBadge({ status }) {
-  const styles = {
-    "Pending Pricing": "bg-amber-100 text-amber-700 border-amber-200",
-    "Pricing Completed": "bg-green-100 text-green-700 border-green-200",
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-        styles[status] || "bg-gray-100 text-gray-700 border-gray-200"
-      }`}
-    >
-      {status || "—"}
-    </span>
-  );
+function getStatus(payload) {
+  return payload?.metadata?.status || "";
 }
 
-function normalizeArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function getRequestPayload(row) {
-  return row?.payload || row || {};
-}
-
-function getRequestId(row) {
-  const payload = getRequestPayload(row);
-  return (
-    payload?.metadata?.requestId ||
-    payload?.requestId ||
-    row?.requestId ||
-    row?.RequestID ||
-    row?.id ||
-    ""
-  );
-}
-
-function getCustomerName(payload) {
-  const customerBlock = payload?.customer || {};
-  const firstCustomer = normalizeArray(customerBlock?.customers)[0] || {};
-  return firstCustomer?.customerName || customerBlock?.customerName || "—";
-}
-
-function getProjectName(payload) {
-  return payload?.project?.projectName || "—";
-}
-
-function getProductType(payload) {
-  return payload?.product?.productType || payload?.product?.productName || "—";
-}
-
-function getThumbnail(payload) {
-  const product = payload?.product || {};
+function getThumbnail(product) {
   return (
     product?.productThumbnailUrl ||
     product?.productThumbnailPreview ||
@@ -66,42 +17,53 @@ function getThumbnail(payload) {
   );
 }
 
-function inferPricingStatus(payload, scenarios) {
-  const metadataStatus = String(payload?.metadata?.status || "").trim().toLowerCase();
-  const pricingStatus = String(payload?.metadata?.pricingStatus || "").trim().toLowerCase();
+function normalizeRows(rows) {
+  return (rows || []).map((row) => {
+    const payload = row?.payload || row || {};
+    const product = payload?.product || {};
+    const project = payload?.project || {};
+    const customerBlock = payload?.customer || {};
+    const primaryCustomer = customerBlock?.customers?.[0] || {};
 
-  const hasFinalScenario = scenarios.some(
-    (s) => String(s?.ScenarioStatus || "").trim().toLowerCase() === "final"
-  );
-
-  if (
-    pricingStatus === "pricing completed" ||
-    pricingStatus === "completed" ||
-    metadataStatus === "pricing completed" ||
-    hasFinalScenario
-  ) {
-    return "Pricing Completed";
-  }
-
-  return "Pending Pricing";
+    return {
+      raw: row,
+      payload,
+      requestId:
+        payload?.metadata?.requestId ||
+        payload?.requestId ||
+        row?.requestId ||
+        row?.RequestID ||
+        "",
+      status: getStatus(payload),
+      productType: product?.productType || "—",
+      projectName: project?.projectName || "—",
+      customerName: primaryCustomer?.customerName || "—",
+      thumbnail: getThumbnail(product),
+      updatedAt:
+        payload?.metadata?.updatedAt ||
+        row?.updatedAt ||
+        row?.UpdatedAt ||
+        "",
+    };
+  });
 }
 
-function isPricingRelevant(payload, scenarios) {
-  const metadataStatus = String(payload?.metadata?.status || "").trim().toLowerCase();
-  const pricingStatus = String(payload?.metadata?.pricingStatus || "").trim().toLowerCase();
-
-  if (
-    pricingStatus.includes("pricing") ||
-    metadataStatus.includes("pricing") ||
-    scenarios.length > 0
-  ) {
-    return true;
-  }
-
-  return false;
+function sortByUpdatedDesc(rows) {
+  return [...rows].sort((a, b) => {
+    const aTime = new Date(a.updatedAt || 0).getTime();
+    const bTime = new Date(b.updatedAt || 0).getTime();
+    return bTime - aTime;
+  });
 }
 
-function ProjectCard({ item, onOpen }) {
+function ProjectCard({ item, badge, badgeTone = "gray" }) {
+  const badgeStyles = {
+    gray: "bg-gray-100 text-gray-700",
+    orange: "bg-orange-100 text-orange-700",
+    green: "bg-green-100 text-green-700",
+    blue: "bg-blue-100 text-blue-700",
+  };
+
   return (
     <div className="rounded-2xl border bg-white shadow-sm p-4">
       <div className="flex items-start gap-4">
@@ -120,35 +82,35 @@ function ProjectCard({ item, onOpen }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="min-w-0">
-              <h3 className="font-semibold truncate">{item.projectName}</h3>
-              <p className="text-sm text-gray-500 truncate">{item.customerName}</p>
+              <div className="font-semibold truncate">{item.projectName}</div>
+              <div className="text-sm text-gray-500 truncate">
+                {item.customerName} • {item.productType}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Request No.: {item.requestId || "—"}
+              </div>
             </div>
 
-            <StatusBadge status={item.pricingStatus} />
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                badgeStyles[badgeTone] || badgeStyles.gray
+              }`}
+            >
+              {badge}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 mt-3 text-sm">
-            <div>
-              <span className="text-gray-500">Request No.:</span> {item.requestId}
-            </div>
-            <div>
-              <span className="text-gray-500">Product:</span> {item.productType}
-            </div>
-            <div>
-              <span className="text-gray-500">Scenarios:</span> {item.scenarioCount}
-            </div>
-            <div>
-              <span className="text-gray-500">Customer:</span> {item.customerName}
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <button
-              onClick={onOpen}
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
+            <Link
+              to={`/pricing/${item.requestId}`}
               className="rounded-lg bg-black text-white px-4 py-2 text-sm hover:bg-gray-800"
             >
               Open Pricing Workspace
-            </button>
+            </Link>
+
+            <span className="text-xs text-gray-400">
+              Current status: {item.status || "—"}
+            </span>
           </div>
         </div>
       </div>
@@ -157,125 +119,74 @@ function ProjectCard({ item, onOpen }) {
 }
 
 export default function PricingDashboard() {
-  const navigate = useNavigate();
-
   const [loading, setLoading] = useState(true);
-  const [loadingUnlock, setLoadingUnlock] = useState(false);
-  const [error, setError] = useState("");
   const [enteredPassword, setEnteredPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
-  const [projects, setProjects] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const pricingUnlocked = sessionStorage.getItem(PRICING_SESSION_KEY) === "yes";
+    const pricingUnlocked = sessionStorage.getItem("pricing_unlocked") === "yes";
     if (pricingUnlocked) {
       setUnlocked(true);
     }
   }, []);
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    if (!unlocked) return;
+    loadData();
+  }, [unlocked]);
 
-  const loadDashboard = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const reqRes = await fetch("/.netlify/functions/list-requests");
-      const reqJson = await reqRes.json();
+      const res = await fetch("/.netlify/functions/list-draft");
+      const json = await res.json();
 
-      if (!reqJson.success) {
-        setError(reqJson.error || "Failed to load requests");
-        setProjects([]);
+      if (!json.success) {
+        setError(json.error || "Failed to load pricing dashboard");
+        setRows([]);
         return;
       }
 
-      const requestRows = normalizeArray(reqJson.requests);
-
-      const enriched = await Promise.all(
-        requestRows.map(async (row) => {
-          const payload = getRequestPayload(row);
-          const requestId = getRequestId(row);
-
-          if (!requestId) return null;
-
-          let scenarios = [];
-          try {
-            const scRes = await fetch(
-              `/.netlify/functions/list-pricing-scenarios?requestId=${requestId}`
-            );
-            const scJson = await scRes.json();
-            scenarios = scJson.success ? normalizeArray(scJson.scenarios) : [];
-          } catch {
-            scenarios = [];
-          }
-
-          if (!isPricingRelevant(payload, scenarios)) {
-            return null;
-          }
-
-          return {
-            requestId,
-            payload,
-            thumbnail: getThumbnail(payload),
-            customerName: getCustomerName(payload),
-            projectName: getProjectName(payload),
-            productType: getProductType(payload),
-            pricingStatus: inferPricingStatus(payload, scenarios),
-            scenarioCount: scenarios.length,
-          };
-        })
-      );
-
-      setProjects(enriched.filter(Boolean));
+      const normalized = normalizeRows(json.rows || json.drafts || json.items || []);
+      setRows(normalized);
     } catch (err) {
       console.error("Pricing dashboard load error:", err);
       setError("Failed to load pricing dashboard");
-      setProjects([]);
+      setRows([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const unlockPricing = async () => {
-    try {
-      setLoadingUnlock(true);
-
-      if (enteredPassword === PRICING_PASSWORD) {
-        setUnlocked(true);
-        sessionStorage.setItem(PRICING_SESSION_KEY, "yes");
-        setEnteredPassword("");
-        return;
-      }
-
-      alert("Wrong password");
-    } finally {
-      setLoadingUnlock(false);
+  const unlockDashboard = () => {
+    if (enteredPassword === PRICING_PASSWORD) {
+      setUnlocked(true);
+      sessionStorage.setItem("pricing_unlocked", "yes");
+      setEnteredPassword("");
+      return;
     }
+
+    alert("Wrong password");
   };
+const pendingPricingRows = useMemo(() => {
+  return sortByUpdatedDesc(
+    rows.filter(
+      (r) => String(r.status || "").trim().toLowerCase() === "pending pricing"
+    )
+  );
+}, [rows]);
 
-  const pendingProjects = useMemo(() => {
-    return projects.filter((p) => p.pricingStatus === "Pending Pricing");
-  }, [projects]);
-
-  const completedProjects = useMemo(() => {
-    return projects.filter((p) => p.pricingStatus === "Pricing Completed");
-  }, [projects]);
-
-  if (loading) {
-    return <div className="p-6">Loading pricing dashboard...</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-          {error}
-        </div>
-      </div>
-    );
-  }
+const pricingCompletedRows = useMemo(() => {
+  return sortByUpdatedDesc(
+    rows.filter(
+      (r) => String(r.status || "").trim().toLowerCase() === "pricing completed"
+    )
+  );
+}, [rows]);
 
   if (!unlocked) {
     return (
@@ -283,6 +194,7 @@ export default function PricingDashboard() {
         <div className="max-w-xl mx-auto space-y-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <h1 className="text-2xl font-bold">Pricing Dashboard</h1>
+
             <Link
               to="/"
               className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
@@ -294,7 +206,7 @@ export default function PricingDashboard() {
           <div className="rounded-2xl border bg-white shadow-sm p-6 space-y-4">
             <h2 className="text-lg font-semibold">Enter Pricing Password</h2>
             <p className="text-sm text-gray-600">
-              Please enter the pricing section password to access the pricing dashboard and all pricing workspaces.
+              Please enter the pricing section password to access all pricing workspaces.
             </p>
 
             <input
@@ -303,17 +215,11 @@ export default function PricingDashboard() {
               value={enteredPassword}
               onChange={(e) => setEnteredPassword(e.target.value)}
               placeholder="Enter password"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") unlockPricing();
-              }}
             />
 
             <button
-              onClick={unlockPricing}
-              disabled={loadingUnlock}
-              className={`w-full rounded-lg px-4 py-3 text-white ${
-                loadingUnlock ? "bg-gray-400" : "bg-black hover:bg-gray-800"
-              }`}
+              onClick={unlockDashboard}
+              className="w-full rounded-lg bg-black text-white px-4 py-3"
             >
               Unlock
             </button>
@@ -323,20 +229,26 @@ export default function PricingDashboard() {
     );
   }
 
+  if (loading) {
+    return <div className="p-6">Loading pricing dashboard...</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="rounded-2xl border bg-white shadow-sm p-5">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold">Pricing Dashboard</h1>
-              <p className="text-sm text-gray-500 mt-1">
-                All projects currently in pricing, grouped by pricing status.
-              </p>
+              <div className="text-sm text-gray-500 mt-1">
+                Pending Pricing: {pendingPricingRows.length} • Pricing Completed:{" "}
+                {pricingCompletedRows.length}
+              </div>
             </div>
 
             <button
-              onClick={loadDashboard}
+              type="button"
+              onClick={loadData}
               className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
             >
               Refresh
@@ -344,51 +256,57 @@ export default function PricingDashboard() {
           </div>
         </div>
 
-        <section className="space-y-4">
+        {error ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="rounded-2xl border bg-white shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-xl font-semibold">Pending Pricing</h2>
-            <StatusBadge status="Pending Pricing" />
+            <h2 className="text-lg font-semibold">Pending Pricing</h2>
+            <span className="text-sm text-gray-500">{pendingPricingRows.length} project(s)</span>
           </div>
 
-          {pendingProjects.length === 0 ? (
-            <div className="rounded-2xl border bg-white shadow-sm p-6 text-sm text-gray-500">
-              No pending pricing projects found.
-            </div>
+          {pendingPricingRows.length === 0 ? (
+            <div className="text-sm text-gray-500">No pending pricing projects.</div>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {pendingProjects.map((item) => (
+              {pendingPricingRows.map((item) => (
                 <ProjectCard
-                  key={item.requestId}
+                  key={`pending-${item.requestId}`}
                   item={item}
-                  onOpen={() => navigate(`/pricing/${item.requestId}`)}
+                  badge="Pending Pricing"
+                  badgeTone="orange"
                 />
               ))}
             </div>
           )}
-        </section>
+        </div>
 
-        <section className="space-y-4">
+        <div className="rounded-2xl border bg-white shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-xl font-semibold">Pricing Completed</h2>
-            <StatusBadge status="Pricing Completed" />
+            <h2 className="text-lg font-semibold">Pricing Completed</h2>
+            <span className="text-sm text-gray-500">
+              {pricingCompletedRows.length} project(s)
+            </span>
           </div>
 
-          {completedProjects.length === 0 ? (
-            <div className="rounded-2xl border bg-white shadow-sm p-6 text-sm text-gray-500">
-              No completed pricing projects found.
-            </div>
+          {pricingCompletedRows.length === 0 ? (
+            <div className="text-sm text-gray-500">No completed pricing projects.</div>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {completedProjects.map((item) => (
+              {pricingCompletedRows.map((item) => (
                 <ProjectCard
-                  key={item.requestId}
+                  key={`completed-${item.requestId}`}
                   item={item}
-                  onOpen={() => navigate(`/pricing/${item.requestId}`)}
+                  badge="Pricing Completed"
+                  badgeTone="green"
                 />
               ))}
             </div>
           )}
-        </section>
+        </div>
       </div>
     </div>
   );
