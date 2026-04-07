@@ -25,6 +25,55 @@ function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj || {}));
 }
 
+function isPlainObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepMergeEngineering(base, override) {
+  if (Array.isArray(base) || Array.isArray(override)) {
+    if (Array.isArray(override) && override.length > 0) return deepClone(override);
+    if (Array.isArray(base)) return deepClone(base);
+    return [];
+  }
+
+  if (!isPlainObject(base) && !isPlainObject(override)) {
+    return override !== undefined ? override : base;
+  }
+
+  const result = {};
+  const keys = new Set([
+    ...Object.keys(base || {}),
+    ...Object.keys(override || {}),
+  ]);
+
+  keys.forEach((key) => {
+    const baseValue = base?.[key];
+    const overrideValue = override?.[key];
+
+    if (Array.isArray(baseValue) || Array.isArray(overrideValue)) {
+      result[key] =
+        Array.isArray(overrideValue) && overrideValue.length > 0
+          ? deepClone(overrideValue)
+          : Array.isArray(baseValue)
+          ? deepClone(baseValue)
+          : [];
+      return;
+    }
+
+    if (isPlainObject(baseValue) || isPlainObject(overrideValue)) {
+      result[key] = deepMergeEngineering(baseValue || {}, overrideValue || {});
+      return;
+    }
+
+    result[key] =
+      overrideValue !== undefined && overrideValue !== null && overrideValue !== ""
+        ? overrideValue
+        : baseValue;
+  });
+
+  return result;
+}
+
 function Card({ title, children, right }) {
   return (
     <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-4">
@@ -269,8 +318,9 @@ export default function PricingPage() {
           savedPricingData
         );
 
-        const nextScenarioEngineering = deepClone(
-          savedPricingData.engineeringScenario || engPayload || {}
+        const nextScenarioEngineering = deepMergeEngineering(
+          engPayload || {},
+          savedPricingData.engineeringScenario || {}
         );
 
         setRequestData(reqPayload);
