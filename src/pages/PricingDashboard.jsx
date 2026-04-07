@@ -3,12 +3,24 @@ import { Link } from "react-router-dom";
 
 const PRICING_PASSWORD = "DepackPricing_2026";
 
-function getStatus(payload) {
-  return payload?.metadata?.status || "";
+function getStatus(row, payload) {
+  return (
+    row?.Status ||
+    row?.status ||
+    payload?.metadata?.status ||
+    payload?.status ||
+    ""
+  );
 }
 
-function getThumbnail(product) {
+function getThumbnail(row, payload) {
+  const product = payload?.product || {};
+
   return (
+    row?.Thumbnail ||
+    row?.thumbnailUrl ||
+    row?.thumbnail ||
+    (row?.thumbnailBase64 ? `data:image/*;base64,${row.thumbnailBase64}` : "") ||
     product?.productThumbnailUrl ||
     product?.productThumbnailPreview ||
     (product?.productThumbnailBase64
@@ -19,7 +31,8 @@ function getThumbnail(product) {
 
 function normalizeRows(rows) {
   return (rows || []).map((row) => {
-    const payload = row?.payload || row || {};
+    const payload = row?.payload || {};
+
     const product = payload?.product || {};
     const project = payload?.project || {};
     const customerBlock = payload?.customer || {};
@@ -29,20 +42,34 @@ function normalizeRows(rows) {
       raw: row,
       payload,
       requestId:
+        row?.RequestID ||
+        row?.requestId ||
         payload?.metadata?.requestId ||
         payload?.requestId ||
-        row?.requestId ||
-        row?.RequestID ||
         "",
-      status: getStatus(payload),
-      productType: product?.productType || "—",
-      projectName: project?.projectName || "—",
-      customerName: primaryCustomer?.customerName || "—",
-      thumbnail: getThumbnail(product),
+      status: getStatus(row, payload),
+      productType:
+        row?.ProductType ||
+        row?.productType ||
+        product?.productType ||
+        "—",
+      projectName:
+        row?.ProjectName ||
+        row?.projectName ||
+        project?.projectName ||
+        "—",
+      customerName:
+        row?.CustomerName ||
+        row?.customerName ||
+        primaryCustomer?.customerName ||
+        "—",
+      thumbnail: getThumbnail(row, payload),
       updatedAt:
-        payload?.metadata?.updatedAt ||
-        row?.updatedAt ||
         row?.UpdatedAt ||
+        row?.updatedAt ||
+        row?.CreatedAt ||
+        row?.createdAt ||
+        payload?.metadata?.updatedAt ||
         "",
     };
   });
@@ -142,7 +169,7 @@ export default function PricingDashboard() {
       setLoading(true);
       setError("");
 
-      const res = await fetch("/.netlify/functions/list-draft");
+      const res = await fetch("/.netlify/functions/list-pricing-workspaces");
       const json = await res.json();
 
       if (!json.success) {
@@ -151,7 +178,9 @@ export default function PricingDashboard() {
         return;
       }
 
-      const normalized = normalizeRows(json.rows || json.drafts || json.items || []);
+      const normalized = normalizeRows(
+        json.rows || json.workspaces || json.items || []
+      );
       setRows(normalized);
     } catch (err) {
       console.error("Pricing dashboard load error:", err);
@@ -172,21 +201,26 @@ export default function PricingDashboard() {
 
     alert("Wrong password");
   };
-const pendingPricingRows = useMemo(() => {
-  return sortByUpdatedDesc(
-    rows.filter(
-      (r) => String(r.status || "").trim().toLowerCase() === "pending pricing"
-    )
-  );
-}, [rows]);
 
-const pricingCompletedRows = useMemo(() => {
-  return sortByUpdatedDesc(
-    rows.filter(
-      (r) => String(r.status || "").trim().toLowerCase() === "pricing completed"
-    )
-  );
-}, [rows]);
+  const pendingPricingRows = useMemo(() => {
+    return sortByUpdatedDesc(
+      rows.filter((r) =>
+        ["pending pricing", "under pricing review", "under pricing"].includes(
+          String(r.status || "").trim().toLowerCase()
+        )
+      )
+    );
+  }, [rows]);
+
+  const pricingCompletedRows = useMemo(() => {
+    return sortByUpdatedDesc(
+      rows.filter((r) =>
+        ["pricing completed", "completed"].includes(
+          String(r.status || "").trim().toLowerCase()
+        )
+      )
+    );
+  }, [rows]);
 
   if (!unlocked) {
     return (
