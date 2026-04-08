@@ -7,14 +7,19 @@ exports.handler = async (event) => {
     if (event.httpMethod !== "POST") {
       return {
         statusCode: 405,
-        body: JSON.stringify({ success: false, error: "Method not allowed" }),
+        body: JSON.stringify({
+          success: false,
+          error: "Method not allowed",
+        }),
       };
     }
 
     const body = JSON.parse(event.body || "{}");
 
     const requestId = String(body.requestId || "").trim();
-    const scenarioId = String(body.scenarioId || "").trim();
+    const scenarioId = String(
+      body.scenarioId || body.pricing20Id || ""
+    ).trim();
 
     if (!requestId || !scenarioId) {
       return {
@@ -26,17 +31,19 @@ exports.handler = async (event) => {
       };
     }
 
-    const scenarioData = body.scenarioData || {};
+    const scenarioData = body.scenarioData || body.pricing20Data || {};
     const scenarioSetup = scenarioData.scenarioSetup || {};
 
     const record = {
       requestId,
       scenarioId,
-      scenarioName: scenarioSetup.scenarioName || "",
-      createdBy: scenarioSetup.createdBy || "",
-      scenarioDate: scenarioSetup.scenarioDate || "",
-      scenarioStatus: scenarioSetup.scenarioStatus || "Draft",
-      scenarioDataJson: JSON.stringify(scenarioData),
+      pricing20Id: scenarioId,
+      scenarioName: body.scenarioName || scenarioSetup.scenarioName || "",
+      createdBy: body.createdBy || scenarioSetup.createdBy || "",
+      scenarioDate: body.scenarioDate || scenarioSetup.scenarioDate || "",
+      scenarioStatus:
+        body.scenarioStatus || scenarioSetup.scenarioStatus || "Draft",
+      scenarioDataJson: JSON.stringify(scenarioData || {}),
     };
 
     const saved = await upsertObject(SCENARIO_SHEET, "scenarioId", record);
@@ -46,6 +53,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         success: true,
         scenarioId,
+        pricing20Id: scenarioId,
         row: saved,
       }),
     };
