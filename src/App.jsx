@@ -14,10 +14,10 @@ import RequestEditor from "./pages/RequestEditor";
 
 import PricingAccessGate from "./components/PricingAccessGate";
 
-import Pricing20Dashboard from "./pages/Pricing20Dashboard";
-import Pricing20Workspace from "./pages/Pricing20Workspace";
-import Pricing20Page from "./pages/Pricing20Page";
-import Pricing20AccessGate from "./components/pricing20/Pricing20AccessGate";
+import Pricing20Dashboard from "./pages/Pricing20Dashboard.jsx";
+import Pricing20Workspace from "./pages/Pricing20Workspace.jsx";
+import Pricing20Page from "./pages/Pricing20Page.jsx";
+import Pricing20AccessGate from "./components/pricing20/Pricing20AccessGate.jsx";
 
 export default function App() {
   return (
