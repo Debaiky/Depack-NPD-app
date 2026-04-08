@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import PricingEngineeringTab from "../components/pricing/PricingEngineeringTab";
-import Pricing20PricingTab from "../components/pricing20/Pricing20PricingTab";
-
+import { Pricing20PricingTab } from "../components/pricing20/Pricing20PricingTab";
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj || {}));
 }
