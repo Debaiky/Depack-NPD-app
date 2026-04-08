@@ -191,17 +191,18 @@ async function clearSheet(title) {
 async function writeValues(title, matrix) {
   await ensureSheetExists(title);
 
-  const range = encodeURIComponent(`${quoteSheetTitle(title)}!A1`);
-  await sheetsRequest(`values/${range}?valueInputOption=USER_ENTERED`, {
+  const quotedRange = `${quoteSheetTitle(title)}!A1`;
+  const encodedRange = encodeURIComponent(quotedRange);
+
+  await sheetsRequest(`values/${encodedRange}?valueInputOption=USER_ENTERED`, {
     method: "PUT",
     body: JSON.stringify({
-      range: `${title}!A1`,
+      range: quotedRange,
       majorDimension: "ROWS",
       values: matrix,
     }),
   });
 }
-
 function rowsToObjects(values) {
   if (!values || values.length === 0) return [];
 
