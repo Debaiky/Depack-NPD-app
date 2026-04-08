@@ -83,7 +83,7 @@ function ProjectCard({ item, badge, badgeTone = "gray" }) {
 
           <div className="mt-4 flex items-center gap-3 flex-wrap">
             <Link
-              to={`/pricing-2/${item.requestId}`}
+              to={`/pricing20/${item.requestId}`}
               className="rounded-lg bg-black text-white px-4 py-2 text-sm hover:bg-gray-800"
             >
               Open Pricing 2.0 Workspace
