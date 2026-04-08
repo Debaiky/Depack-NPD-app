@@ -6,7 +6,10 @@ function n(v) {
 }
 
 function fmt(v, d = 3) {
-  if (v === "" || v === null || v === undefined || Number.isNaN(Number(v))) return "—";
+  if (v === "" || v === null || v === undefined || Number.isNaN(Number(v))) {
+    return "—";
+  }
+
   return Number(v).toLocaleString(undefined, {
     maximumFractionDigits: d,
     minimumFractionDigits: 0,
@@ -42,7 +45,9 @@ function egpToEur(value, usdEgp, eurUsd) {
 function perTonToPer1000(perTon, productWeightG, sheetUtilPct) {
   const weightG = n(productWeightG);
   const util = n(sheetUtilPct) > 0 ? n(sheetUtilPct) / 100 : 1;
+
   if (!weightG || !util) return 0;
+
   return (n(perTon) * weightG) / (1000 * util);
 }
 
@@ -106,17 +111,13 @@ function buildGroupedMaterialRows(scenarioEngineering) {
   const density = n(ms.density);
   const thicknessMic = n(scenarioEngineering?.sheetSpecs?.thickness_mic);
 
-  const plasticWeightPerM2 =
-    density > 0 && thicknessMic > 0 ? density * thicknessMic : 0;
-
+  const plasticWeightPerM2 = density > 0 && thicknessMic > 0 ? density * thicknessMic : 0;
   const totalWeightPerM2 = plasticWeightPerM2 + (coatingUsed ? coatingWeight : 0);
   const coatingShare = totalWeightPerM2 > 0 ? coatingWeight / totalWeightPerM2 : 0;
   const plasticShare = 1 - coatingShare;
 
   const rows = Array.from(grouped.values()).map((item, idx) => {
-    const totalPct =
-      item.pctLayerA * layerAPct +
-      item.pctLayerB * layerBPct;
+    const totalPct = item.pctLayerA * layerAPct + item.pctLayerB * layerBPct;
 
     return {
       id: `material-${idx + 1}-${item.name}`,
@@ -182,7 +183,6 @@ function buildSheetPackagingRows(scenarioEngineering) {
   const stretchKgPerPallet = n(sheetPackaging.stretchKgPerPallet);
   const coreUses = n(sheetPackaging.coreUses) || 1;
   const palletUses = n(sheetPackaging.palletUses) || 1;
-
   const perRollDivisor = rollsPerPallet > 0 ? rollsPerPallet : 1;
 
   return [
@@ -263,6 +263,7 @@ function buildSheetPackagingRows(scenarioEngineering) {
 
 function buildIntermediatePackagingRowsForNonSheet(scenarioEngineering) {
   const sheetPackaging = scenarioEngineering?.sheetPackaging || {};
+
   const rollsPerPallet = n(sheetPackaging.rollsPerPallet);
   const labelsPerRoll = n(sheetPackaging.labelsPerRoll);
   const separatorsPerPallet = n(sheetPackaging.separatorsPerPallet);
@@ -350,7 +351,6 @@ function buildIntermediatePackagingRowsForNonSheet(scenarioEngineering) {
 }
 
 function buildThermoPackagingRows(scenarioEngineering) {
-  const primary = scenarioEngineering?.packaging?.primary || {};
   const secondary = scenarioEngineering?.packaging?.secondary || {};
   const pallet = scenarioEngineering?.packaging?.pallet || {};
 
@@ -404,7 +404,7 @@ function buildThermoPackagingRows(scenarioEngineering) {
     {
       id: "thermo-pack-others",
       name: "Others",
-      unit: "per pallet",
+      unit: "per carton",
       sourceConsumptionPerCarton: 1,
       sourceNoOfUses: 1,
       priceInCurrency: "",
@@ -420,28 +420,24 @@ function buildDefaultFreightRows() {
       name: "Local Transportation",
       tripCostCurrency: "",
       currency: "EGP",
-      priceInEgp: "",
     },
     {
       id: "freight-shipping",
       name: "Shipping Cost",
       tripCostCurrency: "",
       currency: "EGP",
-      priceInEgp: "",
     },
     {
       id: "freight-thc",
       name: "THC Cost",
       tripCostCurrency: "",
       currency: "EGP",
-      priceInEgp: "",
     },
     {
       id: "freight-other",
       name: "Other Costs",
       tripCostCurrency: "",
       currency: "EGP",
-      priceInEgp: "",
     },
   ];
 }
@@ -603,7 +599,56 @@ function CompactInput({
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] text-gray-500">{suffix}</div>
         {showOverride ? (
-          <div className="text-[11px] text-orange-700 font-medium">Override vs engineering</div>
+          <div className="text-[11px] text-orange-700 font-medium">
+            Override vs engineering
+          </div>
+        ) : null}
+      </div>
+    </label>
+  );
+}
+
+function CompactSelect({
+  label,
+  value,
+  onChange,
+  options = [],
+  mode = "user",
+  referenceValue,
+}) {
+  const readOnly = mode === "locked_engineering" || mode === "calculated";
+  const showOverride =
+    mode === "editable_from_engineering" &&
+    referenceValue !== undefined &&
+    String(referenceValue).trim() !== "" &&
+    isDifferent(value, referenceValue);
+
+  return (
+    <label className="block space-y-1">
+      <div className="text-xs text-gray-600">{label}</div>
+      <select
+        className={`w-full rounded-lg border px-3 py-2 text-sm ${toneClasses(mode)}`}
+        value={value ?? ""}
+        disabled={readOnly}
+        onChange={(e) => onChange?.(e.target.value)}
+      >
+        <option value="">Select</option>
+        {options.map((option) => {
+          const val = typeof option === "string" ? option : option.value;
+          const lbl = typeof option === "string" ? option : option.label;
+          return (
+            <option key={val} value={val}>
+              {lbl}
+            </option>
+          );
+        })}
+      </select>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] text-gray-500" />
+        {showOverride ? (
+          <div className="text-[11px] text-orange-700 font-medium">
+            Override vs engineering
+          </div>
         ) : null}
       </div>
     </label>
@@ -641,11 +686,17 @@ function Section({ title, tone = "gray", children }) {
   };
 
   return (
-    <div className={`rounded-2xl border p-4 space-y-4 shadow-sm ${tones[tone] || tones.gray}`}>
+    <div
+      className={`rounded-2xl border p-4 space-y-4 shadow-sm ${tones[tone] || tones.gray}`}
+    >
       <div className="font-semibold">{title}</div>
       {children}
     </div>
   );
+}
+
+function pctOfSales(value, salesPriceBaseEgp) {
+  return salesPriceBaseEgp > 0 ? (n(value) / salesPriceBaseEgp) * 100 : 0;
 }
 
 function Pricing20PricingTab({
@@ -682,20 +733,8 @@ function Pricing20PricingTab({
       n(scenarioEngineering?.sheetPackaging?.rollWeight_kg) ||
       n(scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg);
 
-    const extrusionTonsPerDay =
-      n(scenarioEngineering?.extrusion?.tonsPerDay24h) || 0;
-
-    const thermoPcsPerDay =
-      n(scenarioEngineering?.thermo?.pcsPerDay24h) || 0;
-
-    const requiredSheetKgPerDay =
-      n(scenarioEngineering?.freight?.palletWeight_kg) > 0 && false
-        ? 0
-        : n(
-            scenarioEngineering?.thermo?.sheetUtilizationPct
-              ? scenarioEngineering?.thermo?.requiredSheetKgPerDay24h
-              : 0
-          ) || 0;
+    const extrusionTonsPerDay = n(scenarioEngineering?.extrusion?.tonsPerDay24h) || 0;
+    const thermoPcsPerDay = n(scenarioEngineering?.thermo?.pcsPerDay24h) || 0;
 
     const freightOptionCandidates = [
       {
@@ -784,10 +823,6 @@ function Pricing20PricingTab({
               scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg ||
               "",
             rollsPerPallet: scenarioEngineering?.sheetPackaging?.rollsPerPallet || "",
-            weightPerPalletKg:
-              n(scenarioEngineering?.sheetPackaging?.rollWeight_kg ||
-                scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg) *
-                n(scenarioEngineering?.sheetPackaging?.rollsPerPallet) || "",
             productivityTonsPerDay: scenarioEngineering?.extrusion?.tonsPerDay24h || "",
           }
         : {
@@ -816,14 +851,12 @@ function Pricing20PricingTab({
             primariesPerCarton:
               scenarioEngineering?.packaging?.secondary?.primariesPerSecondary || "",
             cartonsPerPallet: scenarioEngineering?.packaging?.pallet?.boxesPerPallet || "",
-            pcsPerCarton: engineeringRefs.pcsPerCarton || "",
           };
 
       const desiredMaterialRows = buildGroupedMaterialRows(scenarioEngineering);
       const desiredSheetPackagingRows = buildSheetPackagingRows(scenarioEngineering);
-      const desiredIntermediateRows = buildIntermediatePackagingRowsForNonSheet(
-        scenarioEngineering
-      );
+      const desiredIntermediateRows =
+        buildIntermediatePackagingRowsForNonSheet(scenarioEngineering);
       const desiredThermoRows = buildThermoPackagingRows(scenarioEngineering);
       const desiredWasteRows = buildDefaultWasteRows(caseType);
       const desiredWorkingCapitalRows = buildDefaultWorkingCapitalRows(
@@ -835,7 +868,7 @@ function Pricing20PricingTab({
 
       let changed = false;
 
-      if (JSON.stringify(next.assumptions || {}) !== JSON.stringify(nextAssumptions)) {
+      if (JSON.stringify(next.assumptions || {}) !== JSON.stringify({ ...(next.assumptions || {}), ...nextAssumptions })) {
         next.assumptions = {
           ...(next.assumptions || {}),
           ...nextAssumptions,
@@ -861,7 +894,10 @@ function Pricing20PricingTab({
         next.sheetPackagingRows || [],
         desiredSheetPackagingRows
       );
-      if (JSON.stringify(next.sheetPackagingRows || []) !== JSON.stringify(mergedSheetPackagingRows)) {
+      if (
+        JSON.stringify(next.sheetPackagingRows || []) !==
+        JSON.stringify(mergedSheetPackagingRows)
+      ) {
         next.sheetPackagingRows = mergedSheetPackagingRows;
         changed = true;
       }
@@ -878,8 +914,14 @@ function Pricing20PricingTab({
         changed = true;
       }
 
-      const mergedThermoRows = mergeRowsById(next.thermoPackagingRows || [], desiredThermoRows);
-      if (JSON.stringify(next.thermoPackagingRows || []) !== JSON.stringify(mergedThermoRows)) {
+      const mergedThermoRows = mergeRowsById(
+        next.thermoPackagingRows || [],
+        desiredThermoRows
+      );
+      if (
+        JSON.stringify(next.thermoPackagingRows || []) !==
+        JSON.stringify(mergedThermoRows)
+      ) {
         next.thermoPackagingRows = mergedThermoRows;
         changed = true;
       }
@@ -909,12 +951,14 @@ function Pricing20PricingTab({
       }
 
       const mergedAmortRows = mergeRowsById(next.amortizationRows || [], desiredAmortRows);
-      if (JSON.stringify(next.amortizationRows || []) !== JSON.stringify(mergedAmortRows)) {
+      if (
+        JSON.stringify(next.amortizationRows || []) !== JSON.stringify(mergedAmortRows)
+      ) {
         next.amortizationRows = mergedAmortRows;
         changed = true;
       }
 
-      if (!next.decoration) {
+      if (!next.decoration || Object.keys(next.decoration).length === 0) {
         next.decoration = {
           enabled: requestedDecorationType !== "No decoration",
           type:
@@ -925,7 +969,6 @@ function Pricing20PricingTab({
               : requestedDecorationType === "Hybrid cup"
               ? "Hybrid"
               : "Printing",
-
           printing: {
             inkConsumptionGPer1000:
               scenarioEngineering?.decorationEngineering?.print?.inkWeightPer1000Cups || "",
@@ -949,14 +992,23 @@ function Pricing20PricingTab({
         changed = true;
       }
 
-      if (!next.freight) {
+      if (!next.freight || Object.keys(next.freight).length === 0) {
         next.freight = {
+          selectedOption: engineeringRefs.freightOptions?.[0]?.key || "",
+        };
+        changed = true;
+      } else if (
+        !next.freight.selectedOption &&
+        (engineeringRefs.freightOptions?.[0]?.key || "")
+      ) {
+        next.freight = {
+          ...next.freight,
           selectedOption: engineeringRefs.freightOptions?.[0]?.key || "",
         };
         changed = true;
       }
 
-      if (!next.conversion) {
+      if (!next.conversion || Object.keys(next.conversion).length === 0) {
         next.conversion = isSheet
           ? {
               mode: "required_conversion_per_ton",
@@ -981,7 +1033,6 @@ function Pricing20PricingTab({
     isSheet,
     requestedDecorationType,
     engineeringRefs.requiredSheetKgPerDay,
-    engineeringRefs.pcsPerCarton,
     engineeringRefs.freightOptions,
   ]);
 
@@ -998,7 +1049,7 @@ function Pricing20PricingTab({
   const updateRowGroup = (groupKey, rowId, patch) => {
     setPricing20Data((prev) => ({
       ...(prev || {}),
-      [groupKey]: ((prev || {})[groupKey] || []).map((row) =>
+      [groupKey]: (((prev || {})[groupKey]) || []).map((row) =>
         row.id === rowId ? { ...row, ...patch } : row
       ),
     }));
@@ -1032,11 +1083,41 @@ function Pricing20PricingTab({
 
   const selectedFreightOption = useMemo(() => {
     return (
-      engineeringRefs.freightOptions.find(
-        (row) => row.key === freight.selectedOption
-      ) || null
+      engineeringRefs.freightOptions.find((row) => row.key === freight.selectedOption) ||
+      null
     );
   }, [engineeringRefs.freightOptions, freight.selectedOption]);
+
+  const derivedWeightPerPalletKg = useMemo(() => {
+    return n(operational.rollWeightKg) * n(operational.rollsPerPallet);
+  }, [operational.rollWeightKg, operational.rollsPerPallet]);
+
+  const derivedPcsPerCarton = useMemo(() => {
+    return (
+      n(operational.pcsPerStack) *
+      n(operational.stacksPerPrimary) *
+      n(operational.primariesPerCarton)
+    );
+  }, [
+    operational.pcsPerStack,
+    operational.stacksPerPrimary,
+    operational.primariesPerCarton,
+  ]);
+
+  const activeProductWeightG = n(operational.productWeightG) || engineeringRefs.productWeightG;
+  const activeSheetUtilPct =
+    n(operational.sheetUtilizationPct) || engineeringRefs.sheetUtilPct;
+  const activeRollWeightKg =
+    n(operational.rollWeightKg) || engineeringRefs.sheetRollWeightKg;
+  const activePcsPerCarton = n(operational.pcsPerCarton) || derivedPcsPerCarton || engineeringRefs.pcsPerCarton;
+  const activeProductivityTonsPerDay =
+    n(operational.productivityTonsPerDay) || engineeringRefs.extrusionTonsPerDay;
+  const activeExtrusionProductivityTonsPerDay =
+    n(operational.extrusionProductivityTonsPerDay) || engineeringRefs.extrusionTonsPerDay;
+  const activePcsProducedPerDay =
+    n(operational.pcsProducedPerDay) || engineeringRefs.thermoPcsPerDay;
+  const activeSheetRollConsumedPerDayKg =
+    n(operational.sheetRollConsumedPerDayKg) || engineeringRefs.requiredSheetKgPerDay;
 
   const materialComputedRows = useMemo(() => {
     return materialRows.map((row) => {
@@ -1050,22 +1131,15 @@ function Pricing20PricingTab({
       const totalCostPerTon = n(row.sourceConsumptionKgPerTon) * unitPriceEgp;
       const totalCostPer1000 = perTonToPer1000(
         totalCostPerTon,
-        engineeringRefs.productWeightG,
-        engineeringRefs.sheetUtilPct
+        activeProductWeightG,
+        activeSheetUtilPct
       );
-
-      const priceBase = isSheet ? n(commercialSummary.salesPriceEgp) : n(commercialSummary.salesPriceEgp);
-      const percentOfPrice =
-        priceBase > 0
-          ? ((isSheet ? totalCostPerTon : totalCostPer1000) / priceBase) * 100
-          : 0;
 
       return {
         ...row,
         unitPriceEgp,
         totalCostPerTon,
         totalCostPer1000,
-        percentOfPrice,
         totalCostUsd: isSheet
           ? egpToUsd(totalCostPerTon, assumptions.usdEgp)
           : egpToUsd(totalCostPer1000, assumptions.usdEgp),
@@ -1074,13 +1148,12 @@ function Pricing20PricingTab({
           : egpToEur(totalCostPer1000, assumptions.usdEgp, assumptions.eurUsd),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     materialRows,
     assumptions.usdEgp,
     assumptions.eurUsd,
-    engineeringRefs.productWeightG,
-    engineeringRefs.sheetUtilPct,
+    activeProductWeightG,
+    activeSheetUtilPct,
     isSheet,
   ]);
 
@@ -1095,9 +1168,6 @@ function Pricing20PricingTab({
   const sheetPackagingComputedRows = useMemo(() => {
     if (!isSheet) return [];
 
-    const rollWeightKg =
-      n(operational.rollWeightKg) || engineeringRefs.sheetRollWeightKg;
-
     return sheetPackagingRows.map((row) => {
       const unitPriceEgp = currencyToEgp(
         row.priceInCurrency,
@@ -1109,27 +1179,21 @@ function Pricing20PricingTab({
       const consumptionPerRoll = n(row.sourceConsumptionPerRoll);
       const noOfUses = n(row.sourceNoOfUses) || 1;
       const costPerRoll = (consumptionPerRoll * unitPriceEgp) / noOfUses;
-      const costPerTon = rollWeightKg > 0 ? costPerRoll / (rollWeightKg / 1000) : 0;
+      const costPerTon = activeRollWeightKg > 0 ? costPerRoll / (activeRollWeightKg / 1000) : 0;
 
       return {
         ...row,
         unitPriceEgp,
         costPerRoll,
         costPerTon,
-        percentOfPrice:
-          n(commercialSummary.salesPriceEgp) > 0
-            ? (costPerTon / n(commercialSummary.salesPriceEgp)) * 100
-            : 0,
         costUsd: egpToUsd(costPerTon, assumptions.usdEgp),
         costEur: egpToEur(costPerTon, assumptions.usdEgp, assumptions.eurUsd),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isSheet,
     sheetPackagingRows,
-    operational.rollWeightKg,
-    engineeringRefs.sheetRollWeightKg,
+    activeRollWeightKg,
     assumptions.usdEgp,
     assumptions.eurUsd,
   ]);
@@ -1143,9 +1207,6 @@ function Pricing20PricingTab({
   const intermediatePackagingComputedRows = useMemo(() => {
     if (isSheet) return [];
 
-    const rollWeightKg =
-      n(operational.rollWeightKg) || engineeringRefs.sheetRollWeightKg;
-
     return intermediatePackagingRows.map((row) => {
       const unitPriceEgp = currencyToEgp(
         row.priceInCurrency,
@@ -1157,11 +1218,11 @@ function Pricing20PricingTab({
       const consumptionPerRoll = n(row.sourceConsumptionPerRoll);
       const noOfUses = n(row.sourceNoOfUses) || 1;
       const costPerRoll = (consumptionPerRoll * unitPriceEgp) / noOfUses;
-      const costPerTon = rollWeightKg > 0 ? costPerRoll / (rollWeightKg / 1000) : 0;
+      const costPerTon = activeRollWeightKg > 0 ? costPerRoll / (activeRollWeightKg / 1000) : 0;
       const costPer1000 = perTonToPer1000(
         costPerTon,
-        operational.productWeightG || engineeringRefs.productWeightG,
-        operational.sheetUtilizationPct || engineeringRefs.sheetUtilPct
+        activeProductWeightG,
+        activeSheetUtilPct
       );
 
       return {
@@ -1170,24 +1231,16 @@ function Pricing20PricingTab({
         costPerRoll,
         costPerTon,
         costPer1000,
-        percentOfPrice:
-          n(commercialSummary.salesPriceEgp) > 0
-            ? (costPer1000 / n(commercialSummary.salesPriceEgp)) * 100
-            : 0,
         costUsd: egpToUsd(costPer1000, assumptions.usdEgp),
         costEur: egpToEur(costPer1000, assumptions.usdEgp, assumptions.eurUsd),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isSheet,
     intermediatePackagingRows,
-    operational.rollWeightKg,
-    operational.productWeightG,
-    operational.sheetUtilizationPct,
-    engineeringRefs.sheetRollWeightKg,
-    engineeringRefs.productWeightG,
-    engineeringRefs.sheetUtilPct,
+    activeRollWeightKg,
+    activeProductWeightG,
+    activeSheetUtilPct,
     assumptions.usdEgp,
     assumptions.eurUsd,
   ]);
@@ -1202,8 +1255,6 @@ function Pricing20PricingTab({
   const thermoPackagingComputedRows = useMemo(() => {
     if (isSheet) return [];
 
-    const pcsPerCarton = n(operational.pcsPerCarton) || engineeringRefs.pcsPerCarton;
-
     return thermoPackagingRows.map((row) => {
       const unitPriceEgp = currencyToEgp(
         row.priceInCurrency,
@@ -1215,28 +1266,22 @@ function Pricing20PricingTab({
       const consumptionPerCarton = n(row.sourceConsumptionPerCarton);
       const noOfUses = n(row.sourceNoOfUses) || 1;
       const costPer1000 =
-        pcsPerCarton > 0
-          ? ((consumptionPerCarton * unitPriceEgp) / noOfUses / pcsPerCarton) * 1000
+        activePcsPerCarton > 0
+          ? ((consumptionPerCarton * unitPriceEgp) / noOfUses / activePcsPerCarton) * 1000
           : 0;
 
       return {
         ...row,
         unitPriceEgp,
         costPer1000,
-        percentOfPrice:
-          n(commercialSummary.salesPriceEgp) > 0
-            ? (costPer1000 / n(commercialSummary.salesPriceEgp)) * 100
-            : 0,
         costUsd: egpToUsd(costPer1000, assumptions.usdEgp),
         costEur: egpToEur(costPer1000, assumptions.usdEgp, assumptions.eurUsd),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isSheet,
     thermoPackagingRows,
-    operational.pcsPerCarton,
-    engineeringRefs.pcsPerCarton,
+    activePcsPerCarton,
     assumptions.usdEgp,
     assumptions.eurUsd,
   ]);
@@ -1253,7 +1298,6 @@ function Pricing20PricingTab({
         egp: 0,
         usd: 0,
         eur: 0,
-        percentOfPrice: 0,
       };
     }
 
@@ -1309,12 +1353,7 @@ function Pricing20PricingTab({
       egp: totalEgp,
       usd: egpToUsd(totalEgp, assumptions.usdEgp),
       eur: egpToEur(totalEgp, assumptions.usdEgp, assumptions.eurUsd),
-      percentOfPrice:
-        n(commercialSummary.salesPriceEgp) > 0
-          ? (totalEgp / n(commercialSummary.salesPriceEgp)) * 100
-          : 0,
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSheet, decoration, assumptions.usdEgp, assumptions.eurUsd]);
 
   const wasteComputedRows = useMemo(() => {
@@ -1339,15 +1378,10 @@ function Pricing20PricingTab({
         ...row,
         baseCost,
         totalEgp,
-        percentOfPrice:
-          n(commercialSummary.salesPriceEgp) > 0
-            ? (totalEgp / n(commercialSummary.salesPriceEgp)) * 100
-            : 0,
         usd: egpToUsd(totalEgp, assumptions.usdEgp),
         eur: egpToEur(totalEgp, assumptions.usdEgp, assumptions.eurUsd),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     wasteRows,
     materialTotals.egp,
@@ -1366,9 +1400,7 @@ function Pricing20PricingTab({
   }, [wasteComputedRows]);
 
   const freightComputedRows = useMemo(() => {
-    const qtyPerTrip = isSheet
-      ? n(selectedFreightOption?.tons)
-      : n(selectedFreightOption?.pcs);
+    const qtyPerTrip = isSheet ? n(selectedFreightOption?.tons) : n(selectedFreightOption?.pcs);
 
     return freightRows.map((row) => {
       const priceInEgp = currencyToEgp(
@@ -1378,26 +1410,22 @@ function Pricing20PricingTab({
         assumptions.eurUsd
       );
 
-      const totalEgp = qtyPerTrip > 0
-        ? isSheet
-          ? priceInEgp / qtyPerTrip
-          : (priceInEgp / qtyPerTrip) * 1000
-        : 0;
+      const totalEgp =
+        qtyPerTrip > 0
+          ? isSheet
+            ? priceInEgp / qtyPerTrip
+            : (priceInEgp / qtyPerTrip) * 1000
+          : 0;
 
       return {
         ...row,
         priceInEgp,
         qtyPerTrip,
         totalEgp,
-        percentOfPrice:
-          n(commercialSummary.salesPriceEgp) > 0
-            ? (totalEgp / n(commercialSummary.salesPriceEgp)) * 100
-            : 0,
         usd: egpToUsd(totalEgp, assumptions.usdEgp),
         eur: egpToEur(totalEgp, assumptions.usdEgp, assumptions.eurUsd),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     freightRows,
     isSheet,
@@ -1439,15 +1467,10 @@ function Pricing20PricingTab({
         effectivePct,
         baseCost,
         totalEgp,
-        percentOfPrice:
-          n(commercialSummary.salesPriceEgp) > 0
-            ? (totalEgp / n(commercialSummary.salesPriceEgp)) * 100
-            : 0,
         usd: egpToUsd(totalEgp, assumptions.usdEgp),
         eur: egpToEur(totalEgp, assumptions.usdEgp, assumptions.eurUsd),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     workingCapitalRows,
     materialTotals.egp,
@@ -1457,6 +1480,7 @@ function Pricing20PricingTab({
     decorationSummary.egp,
     assumptions.usdEgp,
     assumptions.eurUsd,
+    isSheet,
   ]);
 
   const workingCapitalTotals = useMemo(() => {
@@ -1488,15 +1512,10 @@ function Pricing20PricingTab({
         ...row,
         valueInEgp,
         totalEgp,
-        percentOfPrice:
-          n(commercialSummary.salesPriceEgp) > 0
-            ? (totalEgp / n(commercialSummary.salesPriceEgp)) * 100
-            : 0,
         usd: egpToUsd(totalEgp, assumptions.usdEgp),
         eur: egpToEur(totalEgp, assumptions.usdEgp, assumptions.eurUsd),
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amortizationRows, assumptions.usdEgp, assumptions.eurUsd, isSheet]);
 
   const amortizationTotals = useMemo(() => {
@@ -1504,13 +1523,6 @@ function Pricing20PricingTab({
       egp: amortizationComputedRows.reduce((sum, row) => sum + row.totalEgp, 0),
     };
   }, [amortizationComputedRows]);
-
-  const salesPriceEgpManual = currencyToEgp(
-    conversion.salesPriceValueInCurrency,
-    conversion.salesPriceCurrency,
-    assumptions.usdEgp,
-    assumptions.eurUsd
-  );
 
   const conversionSummary = useMemo(() => {
     const valueEgp = currencyToEgp(
@@ -1536,21 +1548,17 @@ function Pricing20PricingTab({
 
       if (conversion.mode === "required_daily_extrusion_conversion") {
         conversionPriceEgp =
-          n(operational.productivityTonsPerDay) > 0
-            ? valueEgp / n(operational.productivityTonsPerDay)
-            : 0;
+          activeProductivityTonsPerDay > 0 ? valueEgp / activeProductivityTonsPerDay : 0;
         salesPriceEgp = totalOtherCosts + conversionPriceEgp;
         dailyExtrusionConversionEgp = valueEgp;
       } else if (conversion.mode === "required_sales_price_per_ton") {
         salesPriceEgp = valueEgp;
         conversionPriceEgp = salesPriceEgp - totalOtherCosts;
-        dailyExtrusionConversionEgp =
-          conversionPriceEgp * n(operational.productivityTonsPerDay || engineeringRefs.extrusionTonsPerDay);
+        dailyExtrusionConversionEgp = conversionPriceEgp * activeProductivityTonsPerDay;
       } else {
         conversionPriceEgp = valueEgp;
         salesPriceEgp = totalOtherCosts + conversionPriceEgp;
-        dailyExtrusionConversionEgp =
-          conversionPriceEgp * n(operational.productivityTonsPerDay || engineeringRefs.extrusionTonsPerDay);
+        dailyExtrusionConversionEgp = conversionPriceEgp * activeProductivityTonsPerDay;
       }
     } else {
       const totalOtherCosts =
@@ -1565,25 +1573,16 @@ function Pricing20PricingTab({
 
       if (conversion.mode === "required_daily_thermo_conversion") {
         conversionPriceEgp =
-          n(operational.pcsProducedPerDay) > 0
-            ? (valueEgp / n(operational.pcsProducedPerDay)) * 1000
-            : 0;
+          activePcsProducedPerDay > 0 ? (valueEgp / activePcsProducedPerDay) * 1000 : 0;
         salesPriceEgp = totalOtherCosts + conversionPriceEgp;
         dailyThermoConversionEgp = valueEgp;
       } else if (conversion.mode === "required_daily_extrusion_conversion") {
-        const tonsPerDay =
-          n(operational.extrusionProductivityTonsPerDay) ||
-          engineeringRefs.extrusionTonsPerDay;
-        const sheetKgPerDay =
-          n(operational.sheetRollConsumedPerDayKg) ||
-          engineeringRefs.requiredSheetKgPerDay;
-        const pcsPerDay =
-          n(operational.pcsProducedPerDay) ||
-          engineeringRefs.thermoPcsPerDay;
-
         conversionPriceEgp =
-          tonsPerDay > 0 && pcsPerDay > 0
-            ? (valueEgp / tonsPerDay) * (sheetKgPerDay / 1000) / pcsPerDay * 1000
+          activeExtrusionProductivityTonsPerDay > 0 && activePcsProducedPerDay > 0
+            ? (valueEgp / activeExtrusionProductivityTonsPerDay) *
+              (activeSheetRollConsumedPerDayKg / 1000) /
+              activePcsProducedPerDay *
+              1000
             : 0;
 
         salesPriceEgp = totalOtherCosts + conversionPriceEgp;
@@ -1592,41 +1591,42 @@ function Pricing20PricingTab({
         salesPriceEgp = valueEgp;
         conversionPriceEgp = salesPriceEgp - totalOtherCosts;
         dailyExtrusionConversionEgp =
-          conversionPriceEgp *
-          (n(operational.pcsProducedPerDay || engineeringRefs.thermoPcsPerDay) / 1000);
+          conversionPriceEgp * (activePcsProducedPerDay / 1000);
         dailyThermoConversionEgp =
-          conversionPriceEgp *
-          (n(operational.pcsProducedPerDay || engineeringRefs.thermoPcsPerDay) / 1000);
+          conversionPriceEgp * (activePcsProducedPerDay / 1000);
       } else {
         conversionPriceEgp = valueEgp;
         salesPriceEgp = totalOtherCosts + conversionPriceEgp;
         dailyExtrusionConversionEgp =
-          conversionPriceEgp *
-          (n(operational.pcsProducedPerDay || engineeringRefs.thermoPcsPerDay) / 1000);
+          conversionPriceEgp * (activePcsProducedPerDay / 1000);
         dailyThermoConversionEgp =
-          conversionPriceEgp *
-          (n(operational.pcsProducedPerDay || engineeringRefs.thermoPcsPerDay) / 1000);
+          conversionPriceEgp * (activePcsProducedPerDay / 1000);
       }
     }
 
     return {
       conversionPriceEgp,
       salesPriceEgp,
-      conversionPct:
-        salesPriceEgp > 0 ? (conversionPriceEgp / salesPriceEgp) * 100 : 0,
+      conversionPct: salesPriceEgp > 0 ? (conversionPriceEgp / salesPriceEgp) * 100 : 0,
       salesPriceUsd: egpToUsd(salesPriceEgp, assumptions.usdEgp),
       salesPriceEur: egpToEur(salesPriceEgp, assumptions.usdEgp, assumptions.eurUsd),
       conversionUsd: egpToUsd(conversionPriceEgp, assumptions.usdEgp),
       conversionEur: egpToEur(conversionPriceEgp, assumptions.usdEgp, assumptions.eurUsd),
       dailyExtrusionConversionEgp,
       dailyThermoConversionEgp,
-      dailyExtrusionConversionUsd: egpToUsd(dailyExtrusionConversionEgp, assumptions.usdEgp),
+      dailyExtrusionConversionUsd: egpToUsd(
+        dailyExtrusionConversionEgp,
+        assumptions.usdEgp
+      ),
       dailyExtrusionConversionEur: egpToEur(
         dailyExtrusionConversionEgp,
         assumptions.usdEgp,
         assumptions.eurUsd
       ),
-      dailyThermoConversionUsd: egpToUsd(dailyThermoConversionEgp, assumptions.usdEgp),
+      dailyThermoConversionUsd: egpToUsd(
+        dailyThermoConversionEgp,
+        assumptions.usdEgp
+      ),
       dailyThermoConversionEur: egpToEur(
         dailyThermoConversionEgp,
         assumptions.usdEgp,
@@ -1638,10 +1638,6 @@ function Pricing20PricingTab({
     assumptions.usdEgp,
     assumptions.eurUsd,
     isSheet,
-    operational,
-    engineeringRefs.extrusionTonsPerDay,
-    engineeringRefs.requiredSheetKgPerDay,
-    engineeringRefs.thermoPcsPerDay,
     materialTotals.egp,
     sheetPackagingTotals.egp,
     intermediatePackagingTotals.egp,
@@ -1651,9 +1647,13 @@ function Pricing20PricingTab({
     freightTotals.egp,
     workingCapitalTotals.egp,
     amortizationTotals.egp,
+    activeProductivityTonsPerDay,
+    activeExtrusionProductivityTonsPerDay,
+    activePcsProducedPerDay,
+    activeSheetRollConsumedPerDayKg,
   ]);
 
-  const commercialSummary = conversionSummary;
+  const salesPriceBaseEgp = n(conversionSummary.salesPriceEgp);
 
   const summarySplit = useMemo(() => {
     return isSheet
@@ -1668,7 +1668,11 @@ function Pricing20PricingTab({
         ]
       : [
           { label: "Material", value: materialTotals.egp, tone: "green" },
-          { label: "Intermediate Packaging", value: intermediatePackagingTotals.egp, tone: "orange" },
+          {
+            label: "Intermediate Packaging",
+            value: intermediatePackagingTotals.egp,
+            tone: "orange",
+          },
           { label: "Thermo Packaging", value: thermoPackagingTotals.egp, tone: "orange" },
           { label: "Decoration", value: decorationSummary.egp, tone: "blue" },
           { label: "Waste", value: wasteTotals.egp, tone: "red" },
@@ -1691,25 +1695,78 @@ function Pricing20PricingTab({
     conversionSummary.conversionPriceEgp,
   ]);
 
+  const conversionModeOptions = isSheet
+    ? [
+        {
+          value: "required_daily_extrusion_conversion",
+          label: "Required Daily Extrusion Conversion",
+        },
+        {
+          value: "required_conversion_per_ton",
+          label: "Required Conversion / Ton",
+        },
+        {
+          value: "required_sales_price_per_ton",
+          label: "Required Sales Price / Ton",
+        },
+      ]
+    : [
+        {
+          value: "required_daily_thermo_conversion",
+          label: "Required Daily Thermo Conversion",
+        },
+        {
+          value: "required_daily_extrusion_conversion",
+          label: "Required Daily Extrusion Conversion",
+        },
+        {
+          value: "required_conversion_per_1000",
+          label: "Required Conversion / 1000 pcs",
+        },
+        {
+          value: "required_sales_price_per_1000",
+          label: "Required Sales Price / 1000 pcs",
+        },
+      ];
+
   return (
     <div className="space-y-6">
-      <Section title={`Pricing 2.0 - ${isSheet ? "Case A Sheet Roll" : "Case B Not Sheet"}`} tone="blue">
+      <Section
+        title={`Pricing 2.0 - ${isSheet ? "Case A Sheet Roll" : "Case B Not Sheet"}`}
+        tone="blue"
+      >
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <StatCard title={isSheet ? "Sales Price / Ton" : "Sales Price / 1000 pcs"} value={`${fmt(commercialSummary.salesPriceEgp, 2)} EGP`} tone="blue" />
-          <StatCard title={isSheet ? "Conversion / Ton" : "Conversion / 1000 pcs"} value={`${fmt(commercialSummary.conversionPriceEgp, 2)} EGP`} tone="purple" />
-          <StatCard title="Conversion %" value={`${fmt(commercialSummary.conversionPct, 2)}%`} tone="green" />
-          <StatCard title="Freight Option" value={selectedFreightOption?.label || "—"} tone="teal" />
+          <StatCard
+            title={isSheet ? "Sales Price / Ton" : "Sales Price / 1000 pcs"}
+            value={`${fmt(conversionSummary.salesPriceEgp, 2)} EGP`}
+            tone="blue"
+          />
+          <StatCard
+            title={isSheet ? "Conversion / Ton" : "Conversion / 1000 pcs"}
+            value={`${fmt(conversionSummary.conversionPriceEgp, 2)} EGP`}
+            tone="purple"
+          />
+          <StatCard
+            title="Conversion %"
+            value={`${fmt(conversionSummary.conversionPct, 2)}%`}
+            tone="green"
+          />
+          <StatCard
+            title="Freight Option"
+            value={selectedFreightOption?.label || "—"}
+            tone="teal"
+          />
         </div>
       </Section>
 
       <Section title="1. Financial Assumptions" tone="blue">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <CompactInput
+          <CompactSelect
             label="Base Currency"
             value={assumptions.baseCurrency}
             onChange={(v) => updateRoot("assumptions", { baseCurrency: v })}
             mode="user"
-            placeholder="EGP / USD / EUR"
+            options={["EGP", "USD", "EUR"]}
           />
           <CompactInput
             label="EUR / USD Rate"
@@ -1786,8 +1843,8 @@ function Pricing20PricingTab({
             />
             <CompactInput
               label="Weight Per Pallet (kg)"
-              value={operational.weightPerPalletKg}
-              onChange={(v) => updateRoot("operational", { weightPerPalletKg: v })}
+              value={fmt(derivedWeightPerPalletKg, 3)}
+              onChange={() => {}}
               mode="calculated"
             />
             <CompactInput
@@ -1919,7 +1976,9 @@ function Pricing20PricingTab({
               value={operational.primariesPerCarton}
               onChange={(v) => updateRoot("operational", { primariesPerCarton: v })}
               mode="editable_from_engineering"
-              referenceValue={scenarioEngineering?.packaging?.secondary?.primariesPerSecondary || ""}
+              referenceValue={
+                scenarioEngineering?.packaging?.secondary?.primariesPerSecondary || ""
+              }
             />
             <CompactInput
               label="Cartons / Pallet"
@@ -1930,7 +1989,7 @@ function Pricing20PricingTab({
             />
             <CompactInput
               label="Pieces / Carton"
-              value={operational.pcsPerCarton}
+              value={operational.pcsPerCarton || fmt(derivedPcsPerCarton, 0)}
               onChange={(v) => updateRoot("operational", { pcsPerCarton: v })}
               mode="editable_from_engineering"
               referenceValue={engineeringRefs.pcsPerCarton || ""}
@@ -1949,7 +2008,9 @@ function Pricing20PricingTab({
                 <th className="text-left p-2">Currency</th>
                 <th className="text-left p-2">Price EGP</th>
                 <th className="text-left p-2">Consumption kg/ton</th>
-                <th className="text-left p-2">{isSheet ? "Cost / ton EGP" : "Cost / 1000 EGP"}</th>
+                <th className="text-left p-2">
+                  {isSheet ? "Cost / ton EGP" : "Cost / 1000 EGP"}
+                </th>
                 <th className="text-left p-2">% Price</th>
               </tr>
             </thead>
@@ -1988,7 +2049,16 @@ function Pricing20PricingTab({
                   <td className="p-2 bg-green-100">
                     {fmt(isSheet ? row.totalCostPerTon : row.totalCostPer1000, 3)}
                   </td>
-                  <td className="p-2 bg-green-100">{fmt(row.percentOfPrice, 2)}%</td>
+                  <td className="p-2 bg-green-100">
+                    {fmt(
+                      pctOfSales(
+                        isSheet ? row.totalCostPerTon : row.totalCostPer1000,
+                        salesPriceBaseEgp
+                      ),
+                      2
+                    )}
+                    %
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -2002,12 +2072,12 @@ function Pricing20PricingTab({
             tone="green"
           />
           <StatCard
-            title={isSheet ? "Total Material Cost USD" : "Total Material Cost USD"}
+            title="Total Material Cost USD"
             value={`${fmt(egpToUsd(materialTotals.egp, assumptions.usdEgp), 3)} USD`}
             tone="green"
           />
           <StatCard
-            title={isSheet ? "Total Material Cost EUR" : "Total Material Cost EUR"}
+            title="Total Material Cost EUR"
             value={`${fmt(egpToEur(materialTotals.egp, assumptions.usdEgp, assumptions.eurUsd), 3)} EUR`}
             tone="green"
           />
@@ -2028,6 +2098,7 @@ function Pricing20PricingTab({
                   <th className="text-left p-2">No. Uses</th>
                   <th className="text-left p-2">Cost / Roll</th>
                   <th className="text-left p-2">Cost / Ton</th>
+                  <th className="text-left p-2">% Price</th>
                 </tr>
               </thead>
               <tbody>
@@ -2065,6 +2136,9 @@ function Pricing20PricingTab({
                     <td className="p-2 bg-gray-100">{fmt(row.sourceNoOfUses, 3)}</td>
                     <td className="p-2 bg-green-100">{fmt(row.costPerRoll, 3)}</td>
                     <td className="p-2 bg-green-100">{fmt(row.costPerTon, 3)}</td>
+                    <td className="p-2 bg-green-100">
+                      {fmt(pctOfSales(row.costPerTon, salesPriceBaseEgp), 2)}%
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -2092,6 +2166,7 @@ function Pricing20PricingTab({
                     <th className="text-left p-2">Uses</th>
                     <th className="text-left p-2">Cost / Roll</th>
                     <th className="text-left p-2">Cost / 1000 pcs</th>
+                    <th className="text-left p-2">% Price</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2129,6 +2204,9 @@ function Pricing20PricingTab({
                       <td className="p-2 bg-gray-100">{fmt(row.sourceNoOfUses, 3)}</td>
                       <td className="p-2 bg-green-100">{fmt(row.costPerRoll, 3)}</td>
                       <td className="p-2 bg-green-100">{fmt(row.costPer1000, 3)}</td>
+                      <td className="p-2 bg-green-100">
+                        {fmt(pctOfSales(row.costPer1000, salesPriceBaseEgp), 2)}%
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2154,6 +2232,7 @@ function Pricing20PricingTab({
                     <th className="text-left p-2">Consumption / Carton</th>
                     <th className="text-left p-2">Uses</th>
                     <th className="text-left p-2">Cost / 1000 pcs</th>
+                    <th className="text-left p-2">% Price</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2190,6 +2269,9 @@ function Pricing20PricingTab({
                       <td className="p-2 bg-orange-100">{fmt(row.sourceConsumptionPerCarton, 3)}</td>
                       <td className="p-2 bg-gray-100">{fmt(row.sourceNoOfUses, 3)}</td>
                       <td className="p-2 bg-green-100">{fmt(row.costPer1000, 3)}</td>
+                      <td className="p-2 bg-green-100">
+                        {fmt(pctOfSales(row.costPer1000, salesPriceBaseEgp), 2)}%
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2205,17 +2287,15 @@ function Pricing20PricingTab({
 
           <Section title="6. Decoration Cost" tone="blue">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <CompactInput
+              <CompactSelect
                 label="Use Decoration"
                 value={decoration.enabled ? "Yes" : "No"}
-                onChange={(v) =>
-                  updateRoot("decoration", { enabled: String(v) === "Yes" })
-                }
+                onChange={(v) => updateRoot("decoration", { enabled: String(v) === "Yes" })}
                 mode="user"
-                placeholder="Yes / No"
+                options={["Yes", "No"]}
               />
 
-              <CompactInput
+              <CompactSelect
                 label="Decoration Type"
                 value={decoration.type || ""}
                 onChange={(v) => updateRoot("decoration", { type: v })}
@@ -2229,6 +2309,7 @@ function Pricing20PricingTab({
                     ? "Hybrid"
                     : ""
                 }
+                options={["Printing", "Shrink Sleeve", "Hybrid"]}
               />
             </div>
 
@@ -2263,7 +2344,7 @@ function Pricing20PricingTab({
                   }
                   mode="user"
                 />
-                <CompactInput
+                <CompactSelect
                   label="Currency"
                   value={decoration?.printing?.currency || "EGP"}
                   onChange={(v) =>
@@ -2275,6 +2356,7 @@ function Pricing20PricingTab({
                     })
                   }
                   mode="user"
+                  options={["EGP", "USD", "EUR"]}
                 />
               </div>
             ) : null}
@@ -2307,7 +2389,7 @@ function Pricing20PricingTab({
                   }
                   mode="user"
                 />
-                <CompactInput
+                <CompactSelect
                   label="Currency"
                   value={decoration?.sleeve?.currency || "EGP"}
                   onChange={(v) =>
@@ -2319,6 +2401,7 @@ function Pricing20PricingTab({
                     })
                   }
                   mode="user"
+                  options={["EGP", "USD", "EUR"]}
                 />
               </div>
             ) : null}
@@ -2351,7 +2434,7 @@ function Pricing20PricingTab({
                   }
                   mode="user"
                 />
-                <CompactInput
+                <CompactSelect
                   label="Blank Currency"
                   value={decoration?.hybrid?.blankCurrency || "EGP"}
                   onChange={(v) =>
@@ -2363,6 +2446,7 @@ function Pricing20PricingTab({
                     })
                   }
                   mode="user"
+                  options={["EGP", "USD", "EUR"]}
                 />
 
                 <CompactInput
@@ -2391,7 +2475,7 @@ function Pricing20PricingTab({
                   }
                   mode="user"
                 />
-                <CompactInput
+                <CompactSelect
                   label="Bottom Currency"
                   value={decoration?.hybrid?.bottomCurrency || "EGP"}
                   onChange={(v) =>
@@ -2403,15 +2487,32 @@ function Pricing20PricingTab({
                     })
                   }
                   mode="user"
+                  options={["EGP", "USD", "EUR"]}
                 />
               </div>
             ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <StatCard title="Decoration / 1000 pcs" value={`${fmt(decorationSummary.egp, 3)} EGP`} tone="blue" />
-              <StatCard title="% of Price" value={`${fmt(decorationSummary.percentOfPrice, 2)}%`} tone="blue" />
-              <StatCard title="USD" value={`${fmt(decorationSummary.usd, 3)} USD`} tone="blue" />
-              <StatCard title="EUR" value={`${fmt(decorationSummary.eur, 3)} EUR`} tone="blue" />
+              <StatCard
+                title="Decoration / 1000 pcs"
+                value={`${fmt(decorationSummary.egp, 3)} EGP`}
+                tone="blue"
+              />
+              <StatCard
+                title="% of Price"
+                value={`${fmt(pctOfSales(decorationSummary.egp, salesPriceBaseEgp), 2)}%`}
+                tone="blue"
+              />
+              <StatCard
+                title="USD"
+                value={`${fmt(decorationSummary.usd, 3)} USD`}
+                tone="blue"
+              />
+              <StatCard
+                title="EUR"
+                value={`${fmt(decorationSummary.eur, 3)} EUR`}
+                tone="blue"
+              />
             </div>
           </Section>
         </>
@@ -2429,7 +2530,11 @@ function Pricing20PricingTab({
                 mode="user"
               />
               <StatCard title="Base Cost EGP" value={`${fmt(row.baseCost, 3)} EGP`} tone="gray" />
-              <StatCard title={isSheet ? "Waste / ton" : "Waste / 1000 pcs"} value={`${fmt(row.totalEgp, 3)} EGP`} tone="red" />
+              <StatCard
+                title={isSheet ? "Waste / ton" : "Waste / 1000 pcs"}
+                value={`${fmt(row.totalEgp, 3)} EGP`}
+                tone="red"
+              />
             </div>
           ))}
         </div>
@@ -2443,12 +2548,15 @@ function Pricing20PricingTab({
 
       <Section title={isSheet ? "6. Freight Cost" : "8. Freight Cost"} tone="teal">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <CompactInput
+          <CompactSelect
             label="Freight Option"
             value={freight.selectedOption || ""}
             onChange={(v) => updateRoot("freight", { selectedOption: v })}
             mode="user"
-            placeholder="container40 / largeTruck ..."
+            options={engineeringRefs.freightOptions.map((row) => ({
+              value: row.key,
+              label: row.label,
+            }))}
           />
           <CompactInput
             label={isSheet ? "Qty / Truck or Container (tons)" : "Qty / Truck or Container (pcs)"}
@@ -2478,6 +2586,7 @@ function Pricing20PricingTab({
                 <th className="text-left p-2">Trip Cost EGP</th>
                 <th className="text-left p-2">Qty / Trip</th>
                 <th className="text-left p-2">{isSheet ? "Cost / ton" : "Cost / 1000 pcs"}</th>
+                <th className="text-left p-2">% Price</th>
               </tr>
             </thead>
             <tbody>
@@ -2513,6 +2622,9 @@ function Pricing20PricingTab({
                   <td className="p-2 bg-green-100">{fmt(row.priceInEgp, 3)}</td>
                   <td className="p-2 bg-orange-100">{fmt(row.qtyPerTrip, isSheet ? 3 : 0)}</td>
                   <td className="p-2 bg-green-100">{fmt(row.totalEgp, 3)}</td>
+                  <td className="p-2 bg-green-100">
+                    {fmt(pctOfSales(row.totalEgp, salesPriceBaseEgp), 2)}%
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -2567,8 +2679,16 @@ function Pricing20PricingTab({
                 />
               </div>
 
-              <StatCard title="Net Effective WC %" value={`${fmt(row.effectivePct, 3)}%`} tone="purple" />
-              <StatCard title={isSheet ? "WC / ton" : "WC / 1000 pcs"} value={`${fmt(row.totalEgp, 3)} EGP`} tone="purple" />
+              <StatCard
+                title="Net Effective WC %"
+                value={`${fmt(row.effectivePct, 3)}%`}
+                tone="purple"
+              />
+              <StatCard
+                title={isSheet ? "WC / ton" : "WC / 1000 pcs"}
+                value={`${fmt(row.totalEgp, 3)} EGP`}
+                tone="purple"
+              />
             </div>
           ))}
         </div>
@@ -2599,13 +2719,12 @@ function Pricing20PricingTab({
                   }
                   mode="editable_from_engineering"
                 />
-                <CompactInput
+                <CompactSelect
                   label="Currency"
                   value={row.currency || "EGP"}
-                  onChange={(v) =>
-                    updateRowGroup("amortizationRows", row.id, { currency: v })
-                  }
+                  onChange={(v) => updateRowGroup("amortizationRows", row.id, { currency: v })}
                   mode="editable_from_engineering"
+                  options={["EGP", "USD", "EUR"]}
                 />
                 <CompactInput
                   label="Value EGP"
@@ -2653,7 +2772,7 @@ function Pricing20PricingTab({
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button
             type="button"
             className="rounded-lg border px-3 py-2 text-sm bg-white"
@@ -2671,63 +2790,34 @@ function Pricing20PricingTab({
       </Section>
 
       <Section title={isSheet ? "9. Conversion Price" : "11. Conversion Price"} tone="gray">
-        {isSheet ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <CompactInput
-              label="Mode"
-              value={conversion.mode || ""}
-              onChange={(v) => updateRoot("conversion", { mode: v })}
-              mode="user"
-              placeholder="required_daily_extrusion_conversion / required_conversion_per_ton / required_sales_price_per_ton"
-            />
-            <CompactInput
-              label="Value in Currency"
-              value={conversion.valueInCurrency || ""}
-              onChange={(v) => updateRoot("conversion", { valueInCurrency: v })}
-              mode="user"
-            />
-            <CompactInput
-              label="Currency"
-              value={conversion.currency || "EGP"}
-              onChange={(v) => updateRoot("conversion", { currency: v })}
-              mode="user"
-            />
-            <CompactInput
-              label="Conversion Price / Ton EGP"
-              value={fmt(conversionSummary.conversionPriceEgp, 3)}
-              onChange={() => {}}
-              mode="calculated"
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <CompactInput
-              label="Mode"
-              value={conversion.mode || ""}
-              onChange={(v) => updateRoot("conversion", { mode: v })}
-              mode="user"
-              placeholder="required_daily_thermo_conversion / required_daily_extrusion_conversion / required_conversion_per_1000 / required_sales_price_per_1000"
-            />
-            <CompactInput
-              label="Value in Currency"
-              value={conversion.valueInCurrency || ""}
-              onChange={(v) => updateRoot("conversion", { valueInCurrency: v })}
-              mode="user"
-            />
-            <CompactInput
-              label="Currency"
-              value={conversion.currency || "EGP"}
-              onChange={(v) => updateRoot("conversion", { currency: v })}
-              mode="user"
-            />
-            <CompactInput
-              label="Conversion Price / 1000 pcs EGP"
-              value={fmt(conversionSummary.conversionPriceEgp, 3)}
-              onChange={() => {}}
-              mode="calculated"
-            />
-          </div>
-        )}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <CompactSelect
+            label="Mode"
+            value={conversion.mode || ""}
+            onChange={(v) => updateRoot("conversion", { mode: v })}
+            mode="user"
+            options={conversionModeOptions}
+          />
+          <CompactInput
+            label="Value in Currency"
+            value={conversion.valueInCurrency || ""}
+            onChange={(v) => updateRoot("conversion", { valueInCurrency: v })}
+            mode="user"
+          />
+          <CompactSelect
+            label="Currency"
+            value={conversion.currency || "EGP"}
+            onChange={(v) => updateRoot("conversion", { currency: v })}
+            mode="user"
+            options={["EGP", "USD", "EUR"]}
+          />
+          <CompactInput
+            label={isSheet ? "Conversion Price / Ton EGP" : "Conversion Price / 1000 pcs EGP"}
+            value={fmt(conversionSummary.conversionPriceEgp, 3)}
+            onChange={() => {}}
+            mode="calculated"
+          />
+        </div>
       </Section>
 
       <Section title="12. Results" tone="green">
@@ -2790,6 +2880,7 @@ function Pricing20PricingTab({
       </Section>
     </div>
   );
-} 
+}
+
 export { Pricing20PricingTab };
 export default Pricing20PricingTab;
