@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 function uid() {
   return `p20-${Math.random().toString(36).slice(2, 10)}`;
@@ -23,6 +23,7 @@ function sortByUpdatedDesc(rows) {
 
 export default function Pricing20Workspace() {
   const { requestId } = useParams();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [workspace, setWorkspace] = useState(null);
@@ -74,9 +75,11 @@ export default function Pricing20Workspace() {
               status: "Pending pricing",
               customerName: fallbackCustomer,
               projectName: fallbackProject.projectName || requestId,
-              productName: fallbackProject.projectName || fallbackProduct.productType || "",
+              productName:
+                fallbackProject.projectName || fallbackProduct.productType || "",
               productType: fallbackProduct.productType || "",
-              material: fallbackProduct.productMaterial || fallbackProduct.sheetMaterial || "",
+              material:
+                fallbackProduct.productMaterial || fallbackProduct.sheetMaterial || "",
               thumbnailUrl:
                 fallbackProduct.productThumbnailUrl ||
                 fallbackProduct.productThumbnailPreview ||
@@ -103,7 +106,7 @@ export default function Pricing20Workspace() {
     try {
       setCreating(true);
       const scenarioId = uid();
-      window.location.href = `/pricing20/${requestId}/scenario/${scenarioId}`;
+      navigate(`/pricing20/${requestId}/scenario/${scenarioId}`);
     } catch (err) {
       console.error(err);
       alert("Failed to create Pricing 2.0 scenario");
@@ -175,8 +178,8 @@ export default function Pricing20Workspace() {
                   {workspace.projectName || requestId}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {workspace.customerName || "—"} • {workspace.productType || "—"} • Request:{" "}
-                  {workspace.requestId || requestId}
+                  {workspace.customerName || "—"} • {workspace.productType || "—"} •
+                  {" "}Request: {workspace.requestId || requestId}
                 </div>
                 <div className="text-sm text-blue-600 mt-1">
                   Status: {workspace.status || "Pending pricing"}
@@ -204,7 +207,7 @@ export default function Pricing20Workspace() {
                 type="button"
                 onClick={createScenario}
                 disabled={creating}
-                className="rounded-lg bg-black text-white px-4 py-2 text-sm hover:bg-gray-800"
+                className="rounded-lg bg-black text-white px-4 py-2 text-sm hover:bg-gray-800 disabled:bg-gray-400"
               >
                 {creating ? "Creating..." : "+ New Scenario"}
               </button>
@@ -229,10 +232,12 @@ export default function Pricing20Workspace() {
                   <div className="font-semibold">
                     {row.scenarioName || row.scenarioId}
                   </div>
+
                   <div className="text-sm text-gray-500 mt-1">
                     By {row.createdBy || "—"} • {row.scenarioDate || "—"} •{" "}
                     {row.scenarioStatus || "Draft"}
                   </div>
+
                   <div className="text-xs text-gray-400 mt-1">
                     Updated: {row.updatedAt || row.createdAt || "—"}
                   </div>
