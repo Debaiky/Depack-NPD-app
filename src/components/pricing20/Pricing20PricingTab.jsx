@@ -648,7 +648,7 @@ function Section({ title, tone = "gray", children }) {
   );
 }
 
-export default function Pricing20PricingTab({
+function Pricing20PricingTab({
   requestData,
   scenarioEngineering,
   pricing20Data,
@@ -2790,4 +2790,6 @@ export default function Pricing20PricingTab({
       </Section>
     </div>
   );
-} export default Pricing20PricingTab;
+} 
+export { Pricing20PricingTab };
+export default Pricing20PricingTab;
