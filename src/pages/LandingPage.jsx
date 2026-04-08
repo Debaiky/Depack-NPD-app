@@ -4,7 +4,7 @@ import { FolderKanban, FlaskConical, Calculator, ArrowRight } from "lucide-react
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-6">
-      <div className="max-w-6xl mx-auto min-h-screen flex flex-col items-center justify-center">
+      <div className="max-w-7xl mx-auto min-h-screen flex flex-col items-center justify-center">
         <div className="w-full flex flex-col items-center text-center mb-12 space-y-6">
           <img
             src="/Depack_cup.png"
@@ -29,7 +29,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 w-full">
           <NavCard
             title="Projects"
             description="Create and manage requests"
@@ -53,6 +53,14 @@ export default function LandingPage() {
             color="green"
             icon={Calculator}
           />
+
+          <NavCard
+            title="Pricing 2.0"
+            description="New pricing workspace and scenarios"
+            to="/pricing20-dashboard"
+            color="emerald"
+            icon={Calculator}
+          />
         </div>
       </div>
     </div>
@@ -64,6 +72,7 @@ function NavCard({ title, description, to, color, icon: Icon }) {
     blue: "from-blue-600 to-cyan-500",
     purple: "from-purple-600 to-fuchsia-500",
     green: "from-green-600 to-emerald-500",
+    emerald: "from-emerald-600 to-teal-500",
   };
 
   return (
