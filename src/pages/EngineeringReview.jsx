@@ -672,6 +672,51 @@ const removeInvestmentRow = (id) => {
     };
   });
 };
+const createPricingWorkspace = async () => {
+  const res = await fetch("/.netlify/functions/save-pricing-workspace", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requestId,
+      status: "Pending pricing",
+      customerName: primaryCustomer.customerName || "",
+      projectName: project.projectName || "",
+      productName: project.projectName || product.productType || "",
+      productType: product.productType || "",
+      material: product.productMaterial || product.sheetMaterial || "",
+      thumbnailUrl:
+        product.productThumbnailUrl || product.productThumbnailPreview || "",
+      thumbnailBase64: product.productThumbnailBase64 || "",
+    }),
+  });
+
+  return await res.json();
+};
+const createPricing20Workspace = async () => {
+  const res = await fetch("/.netlify/functions/save-pricing20-workspace", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requestId,
+      status: "Pending pricing",
+      customerName: primaryCustomer.customerName || "",
+      projectName: project.projectName || "",
+      productName: project.projectName || product.productType || "",
+      productType: product.productType || "",
+      material: product.productMaterial || product.sheetMaterial || "",
+      thumbnailUrl:
+        product.productThumbnailUrl || product.productThumbnailPreview || "",
+      thumbnailBase64: product.productThumbnailBase64 || "",
+      engineeringSnapshot: engineering,
+    }),
+  });
+
+  return await res.json();
+};
   const saveMasterStatus = async (statusValue) => {
     const updatedPayload = {
       ...payload,
@@ -763,26 +808,39 @@ const removeInvestmentRow = (id) => {
 
 const sendToPricing = async () => {
   try {
-    const engJson = await saveEngineeringOnly("Sent to Pricing");
+    const pricingStatus = "Pending pricing";
+
+    const engJson = await saveEngineeringOnly(pricingStatus);
     if (!engJson.success) {
       alert("Failed to save engineering data");
       return;
     }
 
-    const reqJson = await saveMasterStatus("Pending pricing");
+    const workspaceJson = await createPricingWorkspace();
+    if (!workspaceJson.success) {
+      alert(workspaceJson.error || "Failed to create pricing workspace");
+      return;
+    }
+
+    const workspace20Json = await createPricing20Workspace();
+    if (!workspace20Json.success) {
+      alert(workspace20Json.error || "Failed to create Pricing 2.0 workspace");
+      return;
+    }
+
+    const reqJson = await saveMasterStatus(pricingStatus);
     if (!reqJson.success) {
-      alert("Engineering saved, but failed to update project status");
+      alert("Pricing workspaces created, but failed to update project status");
       return;
     }
 
     alert("Sent to Pricing");
-    window.location.href = `/pricing/${requestId}`;
+    window.location.href = `/pricing-2/${requestId}`;
   } catch (err) {
     console.error(err);
     alert("Error sending to pricing");
   }
 };
-
 
 
 const customerBlock = payload?.customer || {};
