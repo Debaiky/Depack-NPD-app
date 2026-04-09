@@ -624,6 +624,20 @@ function buildTextRow(label, baseValue, compValue, bold = false) {
   };
 }
 
+function getSectionRowClass(label) {
+  const map = {
+    Overview: "bg-slate-100",
+    Assumptions: "bg-blue-50",
+    "Price Breakdown": "bg-green-50",
+    Investment: "bg-indigo-50",
+    Payback: "bg-purple-50",
+    Annual: "bg-amber-50",
+    "Conversion Detail": "bg-teal-50",
+  };
+
+  return map[label] || "bg-gray-50";
+}
+
 function buildSectionRow(label) {
   return {
     type: "section",
@@ -1028,40 +1042,46 @@ function Pricing20ComparisonPage() {
           <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
             <div className="overflow-auto">
               <table className="w-full text-sm border-collapse min-w-[1200px]">
-                <thead>
-                  <tr className="bg-gray-100 border-b">
-                    <th className="text-left p-3 font-semibold">Item</th>
-                    <th className="text-left p-3 font-semibold">
-                      {baseMetrics.scenarioName || "Base Scenario"}
-                    </th>
-                    <th className="text-left p-3 font-semibold">
-                      {comparisonMetrics.scenarioName || "Comparison Scenario"}
-                    </th>
-                    <th className="text-left p-3 font-semibold">Difference</th>
-                    <th className="text-left p-3 font-semibold">% change</th>
-                    <th className="text-left p-3 font-semibold">Notes</th>
-                  </tr>
-                </thead>
+              <thead>
+  <tr className="bg-gray-200 border-b">
+    <th className="text-left p-3 font-bold text-gray-900">Item</th>
+    <th className="text-left p-3 font-bold text-blue-800 bg-blue-50">
+      {baseMetrics.scenarioName || "Base Scenario"}
+    </th>
+    <th className="text-left p-3 font-bold text-green-800 bg-green-50">
+      {comparisonMetrics.scenarioName || "Comparison Scenario"}
+    </th>
+    <th className="text-left p-3 font-bold text-gray-900">Difference</th>
+    <th className="text-left p-3 font-bold text-gray-900">% change</th>
+    <th className="text-left p-3 font-bold text-gray-900">Notes</th>
+  </tr>
+</thead>
                 <tbody>
                   {rows.map((row, idx) =>
                     row.type === "section" ? (
-                      <tr key={`${row.label}-${idx}`} className="bg-blue-50 border-b">
-                        <td colSpan={6} className="p-3 font-semibold text-blue-900">
-                          {row.label}
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr
-                        key={`${row.label}-${idx}`}
-                        className={`border-b ${row.bold ? "font-semibold bg-gray-50" : ""}`}
-                      >
-                        <td className="p-3">{row.label}</td>
-                        <td className="p-3">{row.base}</td>
-                        <td className="p-3">{row.comparison}</td>
-                        <td className="p-3">{row.difference}</td>
-                        <td className="p-3">{row.pct}</td>
-                        <td className="p-3 text-gray-600">{row.notes}</td>
-                      </tr>
+  <tr
+    key={`${row.label}-${idx}`}
+    className={`${getSectionRowClass(row.label)} border-b`}
+  >
+    <td
+      colSpan={6}
+      className="p-3 font-bold text-gray-900 text-sm uppercase tracking-wide"
+    >
+      {row.label}
+    </td>
+  </tr>
+) : (
+                    <tr
+  key={`${row.label}-${idx}`}
+  className={`border-b ${row.bold ? "font-bold" : "bg-white"}`}
+>
+  <td className="p-3">{row.label}</td>
+  <td className="p-3 text-blue-800 bg-blue-50/60">{row.base}</td>
+  <td className="p-3 text-green-800 bg-green-50/60">{row.comparison}</td>
+  <td className="p-3">{row.difference}</td>
+  <td className="p-3">{row.pct}</td>
+  <td className="p-3 text-gray-600">{row.notes}</td>
+</tr>
                     )
                   )}
                 </tbody>
