@@ -741,7 +741,8 @@ const removeInvestmentRow = (id) => {
       }),
     });
 
-  
+    return await res.json();
+  };
 
   const saveEngineering = async () => {
     try {
@@ -1862,16 +1863,12 @@ const grossWidthPlusCalc =
   netWidthValue > 0
     ? netWidthValue + widthTolPlusValue + 2 * edgeTrimValue
     : 0;
-    const extrusionNetVsGrossPct =
+  const extrusionNetVsGrossPct =
   n(engineering.extrusion.totalGrossSpeed_kg_hr) > 0
-    ? (n(engineering.extrusion.netSpeed_kg_hr) /
-        n(engineering.extrusion.totalGrossSpeed_kg_hr)) *
-      100
-    : 0;const extrusionNetVsGrossPct =
-  n(engineering.extrusion.totalGrossSpeed_kg_hr) > 0
-    ? (n(engineering.extrusion.netSpeed_kg_hr) /
-        n(engineering.extrusion.totalGrossSpeed_kg_hr)) *
-      100
+    ? (
+        n(engineering.extrusion.netSpeed_kg_hr) /
+        n(engineering.extrusion.totalGrossSpeed_kg_hr)
+      ) * 100
     : 0;
 if (!payload) {
   return <div className="p-6">Loading...</div>;
