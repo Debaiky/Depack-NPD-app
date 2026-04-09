@@ -233,7 +233,7 @@ const blankInvestmentRow = () => ({
   supplier: "",
   leadTimeWeeks: "",
 });
-const SHEET_SPEC_IMAGE = "/public/sheet-roll-guide.jpg";
+const SHEET_SPEC_IMAGE = "/images/sheet-roll-guide.jpg";
 export default function EngineeringReview() {
   const { requestId } = useParams();
 
@@ -2319,10 +2319,10 @@ if (!payload) {
   <div className="grid grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)] gap-5 items-start">
     <div className="rounded-xl border bg-gray-50 p-3">
       <img
-        src={SHEET_SPEC_IMAGE}
-        alt="Sheet roll specification guide"
-        className="w-full rounded-lg bg-white object-contain"
-      />
+  src={SHEET_SPEC_IMAGE}
+  alt="Sheet roll specification guide"
+  className="w-full rounded-lg bg-white object-contain"
+/>
     </div>
 
     <div className="space-y-3">
