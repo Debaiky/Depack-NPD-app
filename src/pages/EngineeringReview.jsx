@@ -1,3 +1,4 @@
+
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -107,336 +108,6 @@ function RefRow({ label, value }) {
     <div className="rounded-lg border bg-white p-3">
       <div className="text-xs text-gray-500">{label}</div>
       <div className="font-medium break-words">{value || "—"}</div>
-    </div>
-  );
-}
-function SketchFieldCard({
-  label,
-  requestValue = "",
-  currentValue = "",
-  style = {},
-  children,
-}) {
-  const hasRequestValue =
-    requestValue !== undefined &&
-    requestValue !== null &&
-    String(requestValue).trim() !== "";
-
-  const isChanged =
-    hasRequestValue &&
-    String(currentValue ?? "").trim() !== String(requestValue ?? "").trim();
-
-  return (
-    <div className="absolute z-10 w-[220px]" style={style}>
-      <div className="rounded-xl border bg-white/95 shadow-md p-3 backdrop-blur-sm">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">
-          {label}
-        </div>
-
-        <div className="mt-2">{children}</div>
-
-        {hasRequestValue ? (
-          <div
-            className={`mt-2 text-[10px] ${
-              isChanged ? "text-red-600 font-medium" : "text-gray-400"
-            }`}
-          >
-            Request value: {String(requestValue)}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function TolerancePair({
-  plusValue,
-  minusValue,
-  onPlusChange,
-  onMinusChange,
-  plusPlaceholder = "+ Tol",
-  minusPlaceholder = "- Tol",
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      <Input
-        value={plusValue}
-        onChange={onPlusChange}
-        placeholder={plusPlaceholder}
-      />
-      <Input
-        value={minusValue}
-        onChange={onMinusChange}
-        placeholder={minusPlaceholder}
-      />
-    </div>
-  );
-}
-
-function SheetRollDimensionsDiagram({
-  engineering,
-  updateSection,
-  product,
-  sheetDerived,
-}) {
-  const widthRequest = String(product?.sheetWidthMm ?? "");
-  const thicknessRequest = String(product?.sheetThicknessMicron ?? "");
-  const weightRequest = String(product?.rollWeightKg ?? "");
-
-  return (
-    <div className="space-y-4">
-      <div className="text-sm text-gray-500">
-        Enter the sheet roll dimensions directly on the sketch.
-      </div>
-
-      <div className="relative overflow-x-auto rounded-2xl border bg-slate-50">
-        <div className="relative h-[560px] min-w-[1100px]">
-          <svg
-            viewBox="0 0 1100 560"
-            className="absolute inset-0 h-full w-full"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="rollBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#e5e7eb" />
-                <stop offset="100%" stopColor="#cbd5e1" />
-              </linearGradient>
-
-              <linearGradient id="sheetGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#e5e7eb" />
-                <stop offset="100%" stopColor="#f8fafc" />
-              </linearGradient>
-            </defs>
-
-            {/* Unwound sheet */}
-            <path
-              d="M250 310 L930 360 L825 438 L145 386 Z"
-              fill="url(#sheetGrad)"
-              stroke="#374151"
-              strokeWidth="3"
-            />
-
-            {/* Roll body */}
-            <path
-              d="M170 126 Q300 106 388 152 L388 294 Q298 348 170 336"
-              fill="url(#rollBodyGrad)"
-              stroke="#374151"
-              strokeWidth="4"
-            />
-
-            {/* Roll face */}
-            <ellipse
-              cx="170"
-              cy="231"
-              rx="122"
-              ry="126"
-              fill="#e5e7eb"
-              stroke="#374151"
-              strokeWidth="4"
-            />
-            <ellipse
-              cx="170"
-              cy="231"
-              rx="96"
-              ry="100"
-              fill="none"
-              stroke="#64748b"
-              strokeWidth="3"
-            />
-            <ellipse
-              cx="170"
-              cy="231"
-              rx="76"
-              ry="80"
-              fill="none"
-              stroke="#94a3b8"
-              strokeWidth="3"
-            />
-            <ellipse
-              cx="170"
-              cy="231"
-              rx="58"
-              ry="61"
-              fill="none"
-              stroke="#64748b"
-              strokeWidth="3"
-            />
-            <ellipse
-              cx="170"
-              cy="231"
-              rx="30"
-              ry="32"
-              fill="#475569"
-            />
-
-            {/* Width indicator */}
-            <line x1="255" y1="356" x2="780" y2="403" stroke="#2563eb" strokeWidth="4" />
-            <line x1="255" y1="336" x2="255" y2="374" stroke="#2563eb" strokeWidth="4" />
-            <line x1="780" y1="383" x2="780" y2="421" stroke="#2563eb" strokeWidth="4" />
-            <text x="500" y="338" fill="#1d4ed8" fontSize="28" fontWeight="700">
-              Width
-            </text>
-
-            {/* Thickness marker */}
-            <line x1="700" y1="416" x2="700" y2="392" stroke="#2563eb" strokeWidth="4" />
-            <line x1="700" y1="392" x2="735" y2="382" stroke="#2563eb" strokeWidth="4" />
-            <text x="625" y="450" fill="#1d4ed8" fontSize="24" fontWeight="700">
-              Thickness
-            </text>
-
-            {/* Roll diameter marker */}
-            <line x1="52" y1="108" x2="52" y2="356" stroke="#2563eb" strokeWidth="4" />
-            <line x1="52" y1="108" x2="84" y2="108" stroke="#2563eb" strokeWidth="4" />
-            <line x1="52" y1="356" x2="84" y2="356" stroke="#2563eb" strokeWidth="4" />
-            <text x="18" y="94" fill="#1d4ed8" fontSize="24" fontWeight="700">
-              OD
-            </text>
-
-            {/* Core marker */}
-            <line x1="300" y1="230" x2="214" y2="230" stroke="#2563eb" strokeWidth="4" />
-            <text x="308" y="220" fill="#1d4ed8" fontSize="24" fontWeight="700">
-              Core
-            </text>
-          </svg>
-
-          <SketchFieldCard
-            label="Sheet Width / Roll Width (mm)"
-            requestValue={widthRequest}
-            currentValue={engineering.sheetSpecs.netWidth_mm}
-            style={{ left: 70, top: 20 }}
-          >
-            <Input
-              value={engineering.sheetSpecs.netWidth_mm}
-              onChange={(v) => updateSection("sheetSpecs", { netWidth_mm: v })}
-            />
-          </SketchFieldCard>
-
-          <SketchFieldCard
-            label="Width Tolerance (mm)"
-            currentValue={`${engineering.sheetSpecs.widthTolPlus_mm}|${engineering.sheetSpecs.widthTolMinus_mm}`}
-            style={{ left: 320, top: 20 }}
-          >
-            <TolerancePair
-              plusValue={engineering.sheetSpecs.widthTolPlus_mm}
-              minusValue={engineering.sheetSpecs.widthTolMinus_mm}
-              onPlusChange={(v) =>
-                updateSection("sheetSpecs", { widthTolPlus_mm: v })
-              }
-              onMinusChange={(v) =>
-                updateSection("sheetSpecs", { widthTolMinus_mm: v })
-              }
-              plusPlaceholder="+ Tol"
-              minusPlaceholder="- Tol"
-            />
-          </SketchFieldCard>
-
-          <SketchFieldCard
-            label="Core Diameter"
-            currentValue={engineering.sheetSpecs.coreSize}
-            style={{ left: 610, top: 55 }}
-          >
-            <SelectField
-              value={engineering.sheetSpecs.coreSize}
-              onChange={(v) => updateSection("sheetSpecs", { coreSize: v })}
-              options={["3 inch", "6 inch", "8 inch"]}
-            />
-          </SketchFieldCard>
-
-          <SketchFieldCard
-            label="Roll Diameter (mm)"
-            currentValue={engineering.sheetSpecs.rollDiameter_mm}
-            style={{ left: 840, top: 85 }}
-          >
-            <Input
-              value={engineering.sheetSpecs.rollDiameter_mm}
-              onChange={(v) => updateSection("sheetSpecs", { rollDiameter_mm: v })}
-            />
-          </SketchFieldCard>
-
-          <SketchFieldCard
-            label="Thickness (micron)"
-            requestValue={thicknessRequest}
-            currentValue={engineering.sheetSpecs.thickness_mic}
-            style={{ left: 80, top: 405 }}
-          >
-            <Input
-              value={engineering.sheetSpecs.thickness_mic}
-              onChange={(v) => updateSection("sheetSpecs", { thickness_mic: v })}
-            />
-          </SketchFieldCard>
-
-          <SketchFieldCard
-            label="Thickness Tolerance (micron)"
-            currentValue={`${engineering.sheetSpecs.thicknessTolPlus_mic}|${engineering.sheetSpecs.thicknessTolMinus_mic}`}
-            style={{ left: 330, top: 405 }}
-          >
-            <TolerancePair
-              plusValue={engineering.sheetSpecs.thicknessTolPlus_mic}
-              minusValue={engineering.sheetSpecs.thicknessTolMinus_mic}
-              onPlusChange={(v) =>
-                updateSection("sheetSpecs", { thicknessTolPlus_mic: v })
-              }
-              onMinusChange={(v) =>
-                updateSection("sheetSpecs", { thicknessTolMinus_mic: v })
-              }
-              plusPlaceholder="+ Tol"
-              minusPlaceholder="- Tol"
-            />
-          </SketchFieldCard>
-
-          <SketchFieldCard
-            label="Roll Weight (kg)"
-            requestValue={weightRequest}
-            currentValue={engineering.sheetSpecs.rollTargetWeight_kg}
-            style={{ left: 840, top: 395 }}
-          >
-            <Input
-              value={engineering.sheetSpecs.rollTargetWeight_kg}
-              onChange={(v) =>
-                updateSection("sheetSpecs", { rollTargetWeight_kg: v })
-              }
-            />
-          </SketchFieldCard>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <Field label="Edge Trim / Side (mm)">
-          <Input
-            value={engineering.sheetSpecs.edgeTrimPerSide_mm}
-            onChange={(v) =>
-              updateSection("sheetSpecs", { edgeTrimPerSide_mm: v })
-            }
-          />
-        </Field>
-
-        <Field label="Gross Width (mm)">
-          <Input
-            value={engineering.sheetSpecs.grossWidth_mm || fmt(sheetDerived.grossWidth, 2)}
-            onChange={() => {}}
-            disabled
-          />
-        </Field>
-
-        <Field label="Trim Loss %">
-          <Input
-            value={engineering.sheetSpecs.trimLossPct || fmt(sheetDerived.trimLossPct, 2)}
-            onChange={() => {}}
-            disabled
-          />
-        </Field>
-
-        <RefRow
-          label="Core Diameter (mm)"
-          value={engineering.sheetSpecs.coreDiameter_mm || "—"}
-        />
-      </div>
-
-      {sheetDerived.trimLossPct > 15 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
-          Width trim loss exceeds 15%.
-        </div>
-      )}
     </div>
   );
 }
@@ -562,6 +233,7 @@ const blankInvestmentRow = () => ({
   supplier: "",
   leadTimeWeeks: "",
 });
+const SHEET_SPEC_IMAGE = "/images/sheet-roll-guide.jpg";
 export default function EngineeringReview() {
   const { requestId } = useParams();
 
@@ -1002,51 +674,8 @@ const removeInvestmentRow = (id) => {
     };
   });
 };
-const createPricingWorkspace = async () => {
-  const res = await fetch("/.netlify/functions/save-pricing-workspace", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      requestId,
-      status: "Pending pricing",
-      customerName: primaryCustomer.customerName || "",
-      projectName: project.projectName || "",
-      productName: project.projectName || product.productType || "",
-      productType: product.productType || "",
-      material: product.productMaterial || product.sheetMaterial || "",
-      thumbnailUrl:
-        product.productThumbnailUrl || product.productThumbnailPreview || "",
-      thumbnailBase64: product.productThumbnailBase64 || "",
-    }),
-  });
 
-  return await res.json();
-};
-const createPricing20Workspace = async () => {
-  const res = await fetch("/.netlify/functions/save-pricing20-workspace", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      requestId,
-      status: "Pending pricing",
-      customerName: primaryCustomer.customerName || "",
-      projectName: project.projectName || "",
-      productName: project.projectName || product.productType || "",
-      productType: product.productType || "",
-      material: product.productMaterial || product.sheetMaterial || "",
-      thumbnailUrl:
-        product.productThumbnailUrl || product.productThumbnailPreview || "",
-      thumbnailBase64: product.productThumbnailBase64 || "",
-      engineeringSnapshot: engineering || {},
-    }),
-  });
 
-  return await res.json();
-};
   const saveMasterStatus = async (statusValue) => {
     const updatedPayload = {
       ...payload,
@@ -1137,6 +766,30 @@ const createPricing20Workspace = async () => {
   };
 
 
+const createPricing20Workspace = async () => {
+  const res = await fetch("/.netlify/functions/save-pricing20-workspace", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      requestId,
+      status: "Pending pricing",
+      customerName: primaryCustomer.customerName || "",
+      projectName: project.projectName || "",
+      productName: project.projectName || product.productType || "",
+      productType: product.productType || "",
+      material: product.productMaterial || product.sheetMaterial || "",
+      thumbnailUrl:
+        product.productThumbnailUrl || product.productThumbnailPreview || "",
+      thumbnailBase64: product.productThumbnailBase64 || "",
+      engineeringData: engineering || {},
+    }),
+  });
+
+  return await res.json();
+};
+
 const sendToPricing = async () => {
   try {
     const pricingStatus = "Pending pricing";
@@ -1147,14 +800,7 @@ const sendToPricing = async () => {
       return;
     }
 
-    const oldPricingJson = await createPricingWorkspace();
-    if (!oldPricingJson.success) {
-      alert(oldPricingJson.error || "Failed to create pricing workspace");
-      return;
-    }
-
     const pricing20Json = await createPricing20Workspace();
-
     if (!pricing20Json.success) {
       console.error("Pricing 2.0 workspace creation failed:", pricing20Json);
       alert(pricing20Json.error || "Failed to open Pricing 2.0");
@@ -1163,7 +809,7 @@ const sendToPricing = async () => {
 
     const reqJson = await saveMasterStatus(pricingStatus);
     if (!reqJson.success) {
-      alert("Pricing workspaces created, but failed to update project status");
+      alert("Pricing workspace created, but failed to update project status");
       return;
     }
 
@@ -2203,6 +1849,20 @@ const investmentTotalEGP = (engineering.investments || []).reduce((sum, row) => 
 
   return sum;
 }, 0);
+const netWidthValue = n(engineering.sheetSpecs.netWidth_mm);
+const edgeTrimValue = n(engineering.sheetSpecs.edgeTrimPerSide_mm);
+const widthTolMinusValue = n(engineering.sheetSpecs.widthTolMinus_mm);
+const widthTolPlusValue = n(engineering.sheetSpecs.widthTolPlus_mm);
+
+const grossWidthMinusCalc =
+  netWidthValue > 0
+    ? Math.max(netWidthValue - widthTolMinusValue, 0) + 2 * edgeTrimValue
+    : 0;
+
+const grossWidthPlusCalc =
+  netWidthValue > 0
+    ? netWidthValue + widthTolPlusValue + 2 * edgeTrimValue
+    : 0;
 if (!payload) {
   return <div className="p-6">Loading...</div>;
 }
@@ -2656,188 +2316,239 @@ if (!payload) {
             <div className="rounded-xl border p-4 space-y-4">
   <div className="font-medium">Sheet Specifications</div>
 
-  <SheetRollDimensionsDiagram
-    engineering={engineering}
-    updateSection={updateSection}
-    product={product}
-    sheetDerived={sheetDerived}
-  />
+  <div className="grid grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)] gap-5 items-start">
+    <div className="rounded-xl border bg-gray-50 p-3">
+      <img
+        src={SHEET_SPEC_IMAGE}
+        alt="Sheet roll specification guide"
+        className="w-full rounded-lg bg-white object-contain"
+      />
+    </div>
 
-  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-    <RefRow
-      label="Plastic Weight / m²"
-      value={
-        sheetDerived.plasticWeightPerM2_g
-          ? `${fmt(sheetDerived.plasticWeightPerM2_g, 3)} g/m²`
-          : "—"
-      }
-    />
-    <RefRow
-      label="Total Weight / m²"
-      value={
-        sheetDerived.totalWeightPerM2_g
-          ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
-          : "—"
-      }
-    />
-    <RefRow
-      label="Auto Roll Weight from Diameter"
-      value={
-        sheetDerived.calcRollWeight
-          ? `${fmt(sheetDerived.calcRollWeight, 3)} kg`
-          : "—"
-      }
-    />
-    <RefRow
-      label="Auto Roll Diameter from Weight"
-      value={
-        sheetDerived.calcRollDiameter
-          ? `${fmt(sheetDerived.calcRollDiameter, 2)} mm`
-          : "—"
-      }
-    />
+    <div className="space-y-3">
+      <div className="overflow-auto rounded-xl border">
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="text-left p-3 font-medium w-[220px]">Dimension</th>
+              <th className="text-left p-3 font-medium min-w-[170px]">Value</th>
+              <th className="text-left p-3 font-medium min-w-[140px]">- tol</th>
+              <th className="text-left p-3 font-medium min-w-[140px]">+ tol</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr className="border-t">
+              <td className="p-3 font-medium">Net Width (mm)</td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.netWidth_mm}
+                  onChange={(v) => updateSection("sheetSpecs", { netWidth_mm: v })}
+                />
+                {product.sheetWidthMm ? (
+                  <div className="mt-1 text-xs text-gray-400">
+                    Request: {product.sheetWidthMm}
+                  </div>
+                ) : null}
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.widthTolMinus_mm}
+                  onChange={(v) => updateSection("sheetSpecs", { widthTolMinus_mm: v })}
+                />
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.widthTolPlus_mm}
+                  onChange={(v) => updateSection("sheetSpecs", { widthTolPlus_mm: v })}
+                />
+              </td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-medium">Edge Trim Width (one side)</td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.edgeTrimPerSide_mm}
+                  onChange={(v) =>
+                    updateSection("sheetSpecs", { edgeTrimPerSide_mm: v })
+                  }
+                />
+              </td>
+              <td className="p-2">
+                <Input value="" onChange={() => {}} disabled />
+              </td>
+              <td className="p-2">
+                <Input value="" onChange={() => {}} disabled />
+              </td>
+            </tr>
+
+            <tr className="border-t bg-yellow-50">
+              <td className="p-3 font-medium">Gross Width (mm)</td>
+              <td className="p-2">
+                <Input
+                  value={sheetDerived.grossWidth ? fmt(sheetDerived.grossWidth, 2) : ""}
+                  onChange={() => {}}
+                  disabled
+                />
+              </td>
+              <td className="p-2">
+                <Input
+                  value={grossWidthMinusCalc ? fmt(grossWidthMinusCalc, 2) : ""}
+                  onChange={() => {}}
+                  disabled
+                />
+              </td>
+              <td className="p-2">
+                <Input
+                  value={grossWidthPlusCalc ? fmt(grossWidthPlusCalc, 2) : ""}
+                  onChange={() => {}}
+                  disabled
+                />
+              </td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-medium">Thickness (microns)</td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.thickness_mic}
+                  onChange={(v) => updateSection("sheetSpecs", { thickness_mic: v })}
+                />
+                {product.sheetThicknessMicron ? (
+                  <div className="mt-1 text-xs text-gray-400">
+                    Request: {product.sheetThicknessMicron}
+                  </div>
+                ) : null}
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.thicknessTolMinus_mic}
+                  onChange={(v) =>
+                    updateSection("sheetSpecs", { thicknessTolMinus_mic: v })
+                  }
+                />
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.thicknessTolPlus_mic}
+                  onChange={(v) =>
+                    updateSection("sheetSpecs", { thicknessTolPlus_mic: v })
+                  }
+                />
+              </td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-medium">Core Diameter</td>
+              <td className="p-2">
+                <SelectField
+                  value={engineering.sheetSpecs.coreSize}
+                  onChange={(v) => updateSection("sheetSpecs", { coreSize: v })}
+                  options={["3 inch", "6 inch", "8 inch"]}
+                />
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.coreDiameter_mm}
+                  onChange={() => {}}
+                  disabled
+                />
+              </td>
+              <td className="p-3 text-xs text-gray-500 align-middle">
+                Calculated in mm
+              </td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-medium">Roll Diameter (mm)</td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.rollDiameter_mm}
+                  onChange={(v) => updateSection("sheetSpecs", { rollDiameter_mm: v })}
+                />
+              </td>
+              <td className="p-3 text-xs text-gray-500" colSpan={2}>
+                Auto from roll weight if left blank:{" "}
+                {sheetDerived.calcRollDiameter
+                  ? `${fmt(sheetDerived.calcRollDiameter, 2)} mm`
+                  : "—"}
+              </td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-medium">Roll Weight (kg)</td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetSpecs.rollTargetWeight_kg}
+                  onChange={(v) =>
+                    updateSection("sheetSpecs", { rollTargetWeight_kg: v })
+                  }
+                />
+                {product.rollWeightKg ? (
+                  <div className="mt-1 text-xs text-gray-400">
+                    Request: {product.rollWeightKg}
+                  </div>
+                ) : null}
+              </td>
+              <td className="p-3 text-xs text-gray-500" colSpan={2}>
+                Auto from roll diameter if left blank:{" "}
+                {sheetDerived.calcRollWeight
+                  ? `${fmt(sheetDerived.calcRollWeight, 3)} kg`
+                  : "—"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="rounded-lg border bg-gray-50 p-3 text-xs text-gray-600">
+        Gross width = net width + 2 × edge trim width. You can enter either roll
+        diameter or roll weight; the other value is automatically calculated.
+      </div>
+
+      {sheetDerived.trimLossPct > 15 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
+          Width trim loss exceeds 15%.
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <RefRow
+          label="Plastic Weight / m²"
+          value={
+            sheetDerived.plasticWeightPerM2_g
+              ? `${fmt(sheetDerived.plasticWeightPerM2_g, 3)} g/m²`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Total Weight / m²"
+          value={
+            sheetDerived.totalWeightPerM2_g
+              ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Trim Loss %"
+          value={
+            sheetDerived.trimLossPct
+              ? `${fmt(sheetDerived.trimLossPct, 2)}%`
+              : "—"
+          }
+        />
+        <RefRow
+          label="Core Diameter (mm)"
+          value={engineering.sheetSpecs.coreDiameter_mm || "—"}
+        />
+      </div>
+    </div>
   </div>
 </div>
-
-<div className="rounded-xl border p-4 space-y-4">
-  <div className="font-medium">
-    {isSheet ? "Sheet Roll Packaging Data" : "Internal Sheet Roll Packaging"}
-  </div>
-
-  <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-    <Field label="Core Material">
-      <Input
-        value={engineering.sheetPackaging.coreMaterial}
-        onChange={(v) => updateSection("sheetPackaging", { coreMaterial: v })}
-      />
-    </Field>
-
-    <Field label="Core Size">
-      <SelectField
-        value={engineering.sheetPackaging.coreSize}
-        onChange={(v) => updateSection("sheetPackaging", { coreSize: v })}
-        options={["3 inch", "6 inch", "8 inch"]}
-      />
-    </Field>
-
-    <Field label="Core Uses" requestValue="" currentValue={engineering.sheetPackaging.coreUses}>
-      <Input
-        value={engineering.sheetPackaging.coreUses}
-        onChange={(v) => updateSection("sheetPackaging", { coreUses: v })}
-      />
-    </Field>
-
-    <Field label="Roll Weight (kg)">
-      <Input
-        value={engineering.sheetPackaging.rollWeight_kg || engineering.sheetSpecs.rollTargetWeight_kg}
-        onChange={(v) => updateSection("sheetPackaging", { rollWeight_kg: v })}
-      />
-    </Field>
-
-    <Field label="Labels per Roll">
-      <Input
-        value={engineering.sheetPackaging.labelsPerRoll}
-        onChange={(v) => updateSection("sheetPackaging", { labelsPerRoll: v })}
-      />
-    </Field>
-
-    <Field label="Labels per Pallet">
-      <Input
-        value={engineering.sheetPackaging.labelsPerPallet}
-        onChange={(v) => updateSection("sheetPackaging", { labelsPerPallet: v })}
-      />
-    </Field>
-  </div>
-
-  <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-    <Field label="Pallet Type">
-      <SelectField
-        value={engineering.sheetPackaging.palletType}
-        onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
-        options={[
-          { value: "UK", label: "UK Standard Pallet" },
-          { value: "EURO", label: "EURO Pallet" },
-        ]}
-      />
-    </Field>
-
-    <Field label="Pallet Uses" requestValue="" currentValue={engineering.sheetPackaging.palletUses}>
-      <Input
-        value={engineering.sheetPackaging.palletUses}
-        onChange={(v) => updateSection("sheetPackaging", { palletUses: v })}
-      />
-    </Field>
-
-    <Field label="Pallet Length (mm)">
-      <Input
-        value={engineering.sheetPackaging.palletLength_mm}
-        onChange={(v) => updateSection("sheetPackaging", { palletLength_mm: v })}
-      />
-    </Field>
-
-    <Field label="Pallet Width (mm)">
-      <Input
-        value={engineering.sheetPackaging.palletWidth_mm}
-        onChange={(v) => updateSection("sheetPackaging", { palletWidth_mm: v })}
-      />
-    </Field>
-
-    <Field label="Pallet Height (mm)">
-      <Input
-        value={engineering.sheetPackaging.palletHeight_mm}
-        onChange={(v) => updateSection("sheetPackaging", { palletHeight_mm: v })}
-      />
-    </Field>
-
-    <Field label="Rolls per Pallet">
-      <Input
-        value={engineering.sheetPackaging.rollsPerPallet}
-        onChange={(v) => updateSection("sheetPackaging", { rollsPerPallet: v })}
-      />
-    </Field>
-
-    <Field label="Strap Length / Pallet (m)">
-      <Input
-        value={engineering.sheetPackaging.strapLength_m}
-        onChange={(v) => updateSection("sheetPackaging", { strapLength_m: v })}
-      />
-    </Field>
-
-    <Field label="Separators / Pallet">
-      <Input
-        value={engineering.sheetPackaging.separatorsPerPallet}
-        onChange={(v) => updateSection("sheetPackaging", { separatorsPerPallet: v })}
-      />
-    </Field>
-
-    <Field label="Foam Sheet Length / Pallet (m)">
-      <Input
-        value={engineering.sheetPackaging.foamLength_m}
-        onChange={(v) => updateSection("sheetPackaging", { foamLength_m: v })}
-      />
-    </Field>
-
-    <Field label="Stretch Film / Pallet (kg)">
-      <Input
-        value={engineering.sheetPackaging.stretchKgPerPallet}
-        onChange={(v) => updateSection("sheetPackaging", { stretchKgPerPallet: v })}
-      />
-    </Field>
-  </div>
-
-  <div className="grid grid-cols-1 gap-3">
-    <Field label="Packaging Instructions">
-      <TextArea
-        value={engineering.sheetPackaging.instructionText}
-        onChange={(v) => updateSection("sheetPackaging", { instructionText: v })}
-        rows={3}
-      />
-    </Field>
-  </div>
-</div>
-
-</div>
+                   </div>
 </Section>
+
    <Section title="2. Extrusion Process Data">
   <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
        
@@ -4384,4 +4095,4 @@ if (!payload) {
 </Section>
     </div>
   );
-}
+} 

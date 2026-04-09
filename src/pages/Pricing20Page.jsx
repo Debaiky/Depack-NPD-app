@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import PricingEngineeringTab from "../components/pricing/PricingEngineeringTab";
 import Pricing20PricingTab from "../components/pricing20/Pricing20PricingTab";
 import Pricing20SummaryTab from "../components/pricing20/Pricing20SummaryTab";
+
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj || {}));
 }
@@ -95,6 +96,7 @@ export default function Pricing20Page() {
   const [scenarioSetup, setScenarioSetup] = useState({
     scenarioName: "",
     createdBy: "",
+    scenarioDescription: "",
     scenarioDate: new Date().toISOString().slice(0, 10),
   });
 
@@ -158,6 +160,7 @@ export default function Pricing20Page() {
             saved?.scenarioSetup?.createdBy ||
             localStorage.getItem("pricing20_created_by") ||
             "",
+          scenarioDescription: saved?.scenarioSetup?.scenarioDescription || "",
           scenarioDate:
             saved?.scenarioSetup?.scenarioDate ||
             new Date().toISOString().slice(0, 10),
@@ -193,16 +196,51 @@ export default function Pricing20Page() {
     load();
   }, [requestId, pricing20Id]);
 
+  const assumptions = pricing20Data?.assumptions || {};
+
+  const missingScenarioSetup =
+    !scenarioSetup.createdBy?.trim() ||
+    !scenarioSetup.scenarioName?.trim() ||
+    !scenarioSetup.scenarioDescription?.trim() ||
+    !scenarioSetup.scenarioDate?.trim();
+
+  const missingFinancialAssumptions =
+    !String(assumptions.baseCurrency || "").trim() ||
+    !String(assumptions.eurUsd || "").trim() ||
+    !String(assumptions.usdEgp || "").trim() ||
+    !String(assumptions.interestRatePct || "").trim() ||
+    !String(assumptions.dso || "").trim() ||
+    !String(assumptions.dio || "").trim() ||
+    !String(assumptions.dpo || "").trim();
+
   const saveScenario = async () => {
     try {
-      if (!scenarioSetup.createdBy.trim() || !scenarioSetup.scenarioName.trim()) {
-        alert("Please enter scenario name and your name.");
+      if (missingScenarioSetup) {
+        alert(
+          "Please complete scenario name, your name, short description, and scenario date."
+        );
+        return;
+      }
+
+      if (missingFinancialAssumptions) {
+        alert("Please complete all Financial Assumptions fields before saving.");
         return;
       }
 
       localStorage.setItem("pricing20_created_by", scenarioSetup.createdBy.trim());
 
-      const res = await fetch("/.netlify/functions/save-pricing20-scenario", {
+   console.log("SAVING DATA", {
+  requestId,
+  scenarioId: pricing20Id,
+  scenarioData: {
+    scenarioSetup,
+    scenarioEngineering,
+    engineeringChangeSummary,
+    pricing20Data,
+  },
+});
+
+const res = await fetch("/.netlify/functions/save-pricing20-scenario", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -234,7 +272,9 @@ export default function Pricing20Page() {
   };
 
   if (loading) return <div className="p-6">Loading Pricing 2.0 scenario...</div>;
-  if (!requestData || !scenarioEngineering) return <div className="p-6">Failed to load scenario.</div>;
+  if (!requestData || !scenarioEngineering) {
+    return <div className="p-6">Failed to load scenario.</div>;
+  }
 
   const product = requestData?.product || {};
   const project = requestData?.project || {};
@@ -274,7 +314,8 @@ export default function Pricing20Page() {
                   {project.projectName || requestId}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {primaryCustomer.customerName || "—"} • {product.productType || "—"} • {pricing20Id}
+                  {primaryCustomer.customerName || "—"} • {product.productType || "—"} •{" "}
+                  {pricing20Id}
                 </div>
               </div>
             </div>
@@ -304,37 +345,62 @@ export default function Pricing20Page() {
         </div>
 
         <div className="rounded-2xl border bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <div className="text-xs text-gray-500 mb-1">Scenario Name</div>
+              <div className="text-xs text-gray-500 mb-1">Scenario Name *</div>
               <input
                 className="w-full border rounded-lg p-2"
                 value={scenarioSetup.scenarioName}
                 onChange={(e) =>
-                  setScenarioSetup((prev) => ({ ...prev, scenarioName: e.target.value }))
+                  setScenarioSetup((prev) => ({
+                    ...prev,
+                    scenarioName: e.target.value,
+                  }))
                 }
               />
             </div>
 
             <div>
-              <div className="text-xs text-gray-500 mb-1">Your Name</div>
+              <div className="text-xs text-gray-500 mb-1">Your Name *</div>
               <input
                 className="w-full border rounded-lg p-2"
                 value={scenarioSetup.createdBy}
                 onChange={(e) =>
-                  setScenarioSetup((prev) => ({ ...prev, createdBy: e.target.value }))
+                  setScenarioSetup((prev) => ({
+                    ...prev,
+                    createdBy: e.target.value,
+                  }))
                 }
               />
             </div>
 
+            <div className="md:col-span-2">
+              <div className="text-xs text-gray-500 mb-1">Short Description *</div>
+              <textarea
+                rows={3}
+                className="w-full border rounded-lg p-2"
+                value={scenarioSetup.scenarioDescription}
+                onChange={(e) =>
+                  setScenarioSetup((prev) => ({
+                    ...prev,
+                    scenarioDescription: e.target.value,
+                  }))
+                }
+                placeholder="Short summary of this pricing scenario"
+              />
+            </div>
+
             <div>
-              <div className="text-xs text-gray-500 mb-1">Scenario Date</div>
+              <div className="text-xs text-gray-500 mb-1">Scenario Date *</div>
               <input
                 type="date"
                 className="w-full border rounded-lg p-2"
                 value={scenarioSetup.scenarioDate}
                 onChange={(e) =>
-                  setScenarioSetup((prev) => ({ ...prev, scenarioDate: e.target.value }))
+                  setScenarioSetup((prev) => ({
+                    ...prev,
+                    scenarioDate: e.target.value,
+                  }))
                 }
               />
             </div>
@@ -356,12 +422,13 @@ export default function Pricing20Page() {
             >
               Pricing Tab
             </TabButton>
+
             <TabButton
-  active={activeTab === "summary"}
-  onClick={() => setActiveTab("summary")}
->
-  Summary Tab
-</TabButton>
+              active={activeTab === "summary"}
+              onClick={() => setActiveTab("summary")}
+            >
+              Summary Tab
+            </TabButton>
           </div>
         </div>
 
@@ -384,13 +451,14 @@ export default function Pricing20Page() {
             setPricing20Data={setPricing20Data}
           />
         )}
+
         {activeTab === "summary" && (
-  <Pricing20SummaryTab
-    requestData={requestData}
-    scenarioEngineering={scenarioEngineering}
-    pricing20Data={pricing20Data}
-  />
-)}
+          <Pricing20SummaryTab
+            requestData={requestData}
+            scenarioEngineering={scenarioEngineering}
+            pricing20Data={pricing20Data}
+          />
+        )}
       </div>
     </div>
   );
