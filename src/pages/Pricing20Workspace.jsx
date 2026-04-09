@@ -241,30 +241,37 @@ export default function Pricing20Workspace() {
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
-              <Link
-                to="/pricing20-dashboard"
-                className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
-              >
-                ← Dashboard
-              </Link>
+  <Link
+    to="/pricing20-dashboard"
+    className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
+  >
+    ← Dashboard
+  </Link>
 
-              <button
-                type="button"
-                onClick={loadData}
-                className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
-              >
-                Refresh
-              </button>
+  <button
+    type="button"
+    onClick={loadData}
+    className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
+  >
+    Refresh
+  </button>
 
-              <button
-                type="button"
-                onClick={createScenario}
-                disabled={creating}
-                className="rounded-lg bg-black text-white px-4 py-2 text-sm hover:bg-gray-800"
-              >
-                {creating ? "Creating..." : "+ New Scenario"}
-              </button>
-            </div>
+  <Link
+    to={`/pricing20/${requestId}/compare`}
+    className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-100 bg-white"
+  >
+    Compare Scenarios
+  </Link>
+
+  <button
+    type="button"
+    onClick={createScenario}
+    disabled={creating}
+    className="rounded-lg bg-black text-white px-4 py-2 text-sm hover:bg-gray-800"
+  >
+    {creating ? "Creating..." : "+ New Scenario"}
+  </button>
+</div>
           </div>
         </div>
 
