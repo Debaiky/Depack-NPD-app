@@ -2316,8 +2316,8 @@ if (!payload) {
             <div className="rounded-xl border p-4 space-y-4">
   <div className="font-medium">Sheet Specifications</div>
 
-  <div className="grid grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)] gap-5 items-start">
-    <div className="rounded-xl border bg-gray-50 p-3">
+ <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+    <div className="rounded-xl border bg-gray-50 p-3 xl:sticky xl:top-4">
       <img
   src={SHEET_SPEC_IMAGE}
   alt="Sheet roll specification guide"
