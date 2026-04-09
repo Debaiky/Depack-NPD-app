@@ -741,8 +741,7 @@ const removeInvestmentRow = (id) => {
       }),
     });
 
-    return await res.json();
-  };
+  
 
   const saveEngineering = async () => {
     try {
