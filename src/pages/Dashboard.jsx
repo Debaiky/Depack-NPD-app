@@ -96,9 +96,7 @@ export default function Dashboard() {
   }, [normalizedRequests, search, requester]);
 
   const groupedSections = useMemo(() => {
-    const drafts = filtered.filter((r) =>
-      isOneOf(r.Status, ["Draft"])
-    );
+    const drafts = filtered.filter((r) => isOneOf(r.Status, ["Draft"]));
 
     const engineering = filtered.filter((r) =>
       isOneOf(r.Status, ["Waiting for Engineering", "Under Engineering Review"])
@@ -113,14 +111,7 @@ export default function Dashboard() {
     );
 
     const pricingCompleted = filtered.filter((r) =>
-      isOneOf(r.Status, [
-        "Completed pricing",
-        "Pricing completed",
-      ])
-    );
-
-    const completed = filtered.filter((r) =>
-      isOneOf(r.Status, ["Completed", "Project Completed"])
+      isOneOf(r.Status, ["Completed pricing", "Pricing completed"])
     );
 
     return [
@@ -128,7 +119,6 @@ export default function Dashboard() {
       { key: "engineering", title: "In Engineering Review", rows: engineering },
       { key: "pricingPending", title: "Pending / In Pricing", rows: pricingPending },
       { key: "pricingCompleted", title: "Pricing Completed", rows: pricingCompleted },
-      { key: "completed", title: "Completed", rows: completed },
     ];
   }, [filtered]);
 
