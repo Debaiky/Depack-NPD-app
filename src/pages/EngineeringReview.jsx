@@ -233,7 +233,7 @@ const blankInvestmentRow = () => ({
   supplier: "",
   leadTimeWeeks: "",
 });
-const SHEET_SPEC_IMAGE = "/images/sheet-roll-guide.jpg";
+const SHEET_SPEC_IMAGE = "/public/sheet-roll-guide.jpg";
 export default function EngineeringReview() {
   const { requestId } = useParams();
 
