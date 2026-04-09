@@ -12,6 +12,15 @@ const fmtNumber = (v, digits = 0) => {
   }).format(n);
 };
 
+function normalizeStatus(status) {
+  return String(status || "").trim().toLowerCase();
+}
+
+function isOneOf(status, list) {
+  const s = normalizeStatus(status);
+  return list.map((x) => normalizeStatus(x)).includes(s);
+}
+
 export default function Dashboard() {
   const [requests, setRequests] = useState([]);
   const [search, setSearch] = useState("");
@@ -87,24 +96,38 @@ export default function Dashboard() {
   }, [normalizedRequests, search, requester]);
 
   const groupedSections = useMemo(() => {
-    const drafts = filtered.filter((r) => r.Status === "Draft");
-
-    const engineering = filtered.filter((r) =>
-      ["Waiting for Engineering", "Under Engineering Review"].includes(r.Status)
+    const drafts = filtered.filter((r) =>
+      isOneOf(r.Status, ["Draft"])
     );
 
-    const pricing = filtered.filter((r) =>
-      ["Sent to Pricing", "Under Pricing Review"].includes(r.Status)
+    const engineering = filtered.filter((r) =>
+      isOneOf(r.Status, ["Waiting for Engineering", "Under Engineering Review"])
+    );
+
+    const pricingPending = filtered.filter((r) =>
+      isOneOf(r.Status, [
+        "Pending pricing",
+        "Sent to Pricing",
+        "Under Pricing Review",
+      ])
+    );
+
+    const pricingCompleted = filtered.filter((r) =>
+      isOneOf(r.Status, [
+        "Completed pricing",
+        "Pricing completed",
+      ])
     );
 
     const completed = filtered.filter((r) =>
-      ["Completed", "Project Completed"].includes(r.Status)
+      isOneOf(r.Status, ["Completed", "Project Completed"])
     );
 
     return [
       { key: "drafts", title: "Drafts", rows: drafts },
       { key: "engineering", title: "In Engineering Review", rows: engineering },
-      { key: "pricing", title: "In Pricing Review", rows: pricing },
+      { key: "pricingPending", title: "Pending / In Pricing", rows: pricingPending },
+      { key: "pricingCompleted", title: "Pricing Completed", rows: pricingCompleted },
       { key: "completed", title: "Completed", rows: completed },
     ];
   }, [filtered]);
@@ -266,9 +289,9 @@ function DashboardSection({ title, rows }) {
                         </Link>
 
                         <Link
-                          to={`/pricing/${r.RequestID}`}
+                          to={`/pricing20/${r.RequestID}`}
                           className="inline-flex items-center justify-center rounded-lg border p-2 hover:bg-gray-50"
-                          title="Go to pricing"
+                          title="Go to Pricing 2.0"
                         >
                           <Calculator className="h-4 w-4" />
                         </Link>
@@ -290,8 +313,11 @@ function StatusBadge({ status }) {
     Draft: "bg-gray-100 text-gray-800",
     "Waiting for Engineering": "bg-yellow-100 text-yellow-800",
     "Under Engineering Review": "bg-blue-100 text-blue-800",
+    "Pending pricing": "bg-purple-100 text-purple-800",
     "Sent to Pricing": "bg-purple-100 text-purple-800",
     "Under Pricing Review": "bg-indigo-100 text-indigo-800",
+    "Completed pricing": "bg-emerald-100 text-emerald-800",
+    "Pricing completed": "bg-emerald-100 text-emerald-800",
     Completed: "bg-green-100 text-green-800",
     "Project Completed": "bg-green-100 text-green-800",
   };
