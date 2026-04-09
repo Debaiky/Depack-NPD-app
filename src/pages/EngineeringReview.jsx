@@ -1863,6 +1863,17 @@ const grossWidthPlusCalc =
   netWidthValue > 0
     ? netWidthValue + widthTolPlusValue + 2 * edgeTrimValue
     : 0;
+    const extrusionNetVsGrossPct =
+  n(engineering.extrusion.totalGrossSpeed_kg_hr) > 0
+    ? (n(engineering.extrusion.netSpeed_kg_hr) /
+        n(engineering.extrusion.totalGrossSpeed_kg_hr)) *
+      100
+    : 0;const extrusionNetVsGrossPct =
+  n(engineering.extrusion.totalGrossSpeed_kg_hr) > 0
+    ? (n(engineering.extrusion.netSpeed_kg_hr) /
+        n(engineering.extrusion.totalGrossSpeed_kg_hr)) *
+      100
+    : 0;
 if (!payload) {
   return <div className="p-6">Loading...</div>;
 }
@@ -2549,155 +2560,197 @@ if (!payload) {
                    </div>
 </Section>
 
-   <Section title="2. Extrusion Process Data">
-  <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-       
+  <Section title="2. Extrusion Process Data">
+  <div className="grid grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)] gap-4">
+    <div className="rounded-xl border overflow-hidden">
+      <div className="bg-gray-100 px-4 py-3 font-medium">Input Box</div>
 
-   <div className="space-y-4 xl:col-span-3">
-  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field
-  label="Line Name"
-  requestValue="Breyer"
-  currentValue={engineering.extrusion.lineName}
->
-  <Input
-    value={engineering.extrusion.lineName}
-    onChange={(v) => updateSection("extrusion", { lineName: v })}
-  />
-</Field>
-              <Field
-  label="Scrap Rate %"
-  requestValue=""
-  currentValue={engineering.extrusion.scrapRatePct}
->
-  <Input
-    value={engineering.extrusion.scrapRatePct}
-    onChange={(v) => updateSection("extrusion", { scrapRatePct: v })}
-  />
-</Field>
-              <Field label="Non Recoverable Changeover Waste (kg)">
+      <div className="overflow-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left p-3 font-medium w-[180px]">Input</th>
+              <th className="text-left p-3 font-medium">Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-t">
+              <td className="p-3 font-medium">Line Name</td>
+              <td className="p-2">
                 <Input
-                  value={engineering.extrusion.changeoverWasteKg}
-                  onChange={(v) => updateSection("extrusion", { changeoverWasteKg: v })}
+                  value={engineering.extrusion.lineName}
+                  onChange={(v) => updateSection("extrusion", { lineName: v })}
                 />
-              </Field>
-              <Field label="Startup Waste % (ignored)">
+              </td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-medium">Scrap Rate %</td>
+              <td className="p-2">
                 <Input
-                  value={engineering.extrusion.startupWastePct}
-                  onChange={(v) => updateSection("extrusion", { startupWastePct: v })}
+                  value={engineering.extrusion.scrapRatePct}
+                  onChange={(v) =>
+                    updateSection("extrusion", { scrapRatePct: v })
+                  }
                 />
-              </Field>
-              <Field
-  label="Efficiency %"
-  requestValue=""
-  currentValue={engineering.extrusion.efficiencyPct}
->
-  <Input
-    value={engineering.extrusion.efficiencyPct}
-    onChange={(v) => updateSection("extrusion", { efficiencyPct: v })}
-  />
-</Field>
-            </div>
+              </td>
+            </tr>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field
-  label={`Gross Speed Extruder A (optimum ${OPT_SPEED_MAP[baseMaterial]?.A || 0} kg/hr)`}
-  requestValue={requestValueOrBlank(OPT_SPEED_MAP[baseMaterial]?.A || "")}
-  currentValue={engineering.extrusion.grossSpeedA_kg_hr}
->
-  <Input
-    value={engineering.extrusion.grossSpeedA_kg_hr}
-    onChange={(v) => updateSection("extrusion", { grossSpeedA_kg_hr: v })}
-  />
-</Field>
+            <tr className="border-t">
+              <td className="p-3 font-medium">Efficiency %</td>
+              <td className="p-2">
+                <Input
+                  value={engineering.extrusion.efficiencyPct}
+                  onChange={(v) =>
+                    updateSection("extrusion", { efficiencyPct: v })
+                  }
+                />
+              </td>
+            </tr>
 
-              <Field
-  label={`Gross Speed Extruder B (optimum ${OPT_SPEED_MAP[baseMaterial]?.B || 0} kg/hr)`}
-  requestValue={requestValueOrBlank(OPT_SPEED_MAP[baseMaterial]?.B || "")}
-  currentValue={engineering.extrusion.grossSpeedB_kg_hr}
->
-  <Input
-    value={engineering.extrusion.grossSpeedB_kg_hr}
-    onChange={(v) => updateSection("extrusion", { grossSpeedB_kg_hr: v })}
-  />
-</Field>
+            <tr className="border-t">
+              <td className="p-3 font-medium">
+                Gross Speed Extruder A (kg/hr)
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.extrusion.grossSpeedA_kg_hr}
+                  onChange={(v) =>
+                    updateSection("extrusion", { grossSpeedA_kg_hr: v })
+                  }
+                />
+                <div className="mt-1 text-xs text-gray-400">
+                  Auto calculated but editable
+                  {OPT_SPEED_MAP[baseMaterial]?.A
+                    ? ` • optimum ${OPT_SPEED_MAP[baseMaterial].A} kg/hr`
+                    : ""}
+                </div>
+              </td>
+            </tr>
 
-              <Field label="Total Gross Speed (kg/hr)">
-                <Input value={engineering.extrusion.totalGrossSpeed_kg_hr} onChange={() => {}} disabled />
-              </Field>
+            <tr className="border-t">
+              <td className="p-3 font-medium">
+                Gross Speed Extruder B (kg/hr)
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.extrusion.grossSpeedB_kg_hr}
+                  onChange={(v) =>
+                    updateSection("extrusion", { grossSpeedB_kg_hr: v })
+                  }
+                />
+                <div className="mt-1 text-xs text-gray-400">
+                  Auto calculated but editable
+                  {OPT_SPEED_MAP[baseMaterial]?.B
+                    ? ` • optimum ${OPT_SPEED_MAP[baseMaterial].B} kg/hr`
+                    : ""}
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-              <Field label="Gross / Optimum %">
-                <Input value={engineering.extrusion.grossVsOptimalPct} onChange={() => {}} disabled />
-              </Field>
+    <div className="space-y-4">
+      <div className="rounded-xl border overflow-hidden">
+        <div className="bg-gray-100 px-4 py-3 font-medium">Results Box</div>
 
-              <div className="flex items-end text-sm">
-                {extrusionDerived.totalGross > 0 && (
-                  <div
-                    className={`rounded-lg px-3 py-2 w-full ${
-                      extrusionDerived.totalGross <= totalOptGross
-                        ? "bg-red-50 text-red-700 border border-red-200"
-                        : "bg-green-50 text-green-700 border border-green-200"
-                    }`}
-                  >
-                    {extrusionDerived.totalGross <= totalOptGross
-                      ? "Below optimum gross speed"
-                      : "Above optimum gross speed"}
-                  </div>
-                )}
-              </div>
-            </div>
-            {extrusionDerived.warningMessage ? (
-  <div className="rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 p-3 text-sm">
-    {extrusionDerived.warningMessage}
+        <div className="overflow-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left p-3 font-medium w-[240px]"></th>
+                <th className="text-left p-3 font-medium">Value</th>
+                <th className="text-left p-3 font-medium w-[140px]">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t bg-yellow-50">
+                <td className="p-3 font-medium">Total Gross Speed (kg/hr)</td>
+                <td className="p-3">
+                  {engineering.extrusion.totalGrossSpeed_kg_hr
+                    ? fmt(engineering.extrusion.totalGrossSpeed_kg_hr, 2)
+                    : "—"}
+                </td>
+                <td className="p-3">—</td>
+              </tr>
+
+              <tr className="border-t bg-yellow-50">
+                <td className="p-3 font-medium">Net Speed (kg/hr)</td>
+                <td className="p-3">
+                  {engineering.extrusion.netSpeed_kg_hr
+                    ? fmt(engineering.extrusion.netSpeed_kg_hr, 2)
+                    : "—"}
+                </td>
+                <td className="p-3">
+                  {extrusionNetVsGrossPct
+                    ? `${fmt(extrusionNetVsGrossPct, 2)}%`
+                    : "—"}
+                </td>
+              </tr>
+
+              <tr className="border-t">
+                <td className="p-3 font-medium">Net Speed (tons/shift)</td>
+                <td className="p-3">
+                  {engineering.extrusion.tonsPerShift12h
+                    ? fmt(engineering.extrusion.tonsPerShift12h, 3)
+                    : "—"}
+                </td>
+                <td className="p-3">—</td>
+              </tr>
+
+              <tr className="border-t">
+                <td className="p-3 font-medium">Net Speed (tons/day)</td>
+                <td className="p-3">
+                  {engineering.extrusion.tonsPerDay24h
+                    ? fmt(engineering.extrusion.tonsPerDay24h, 3)
+                    : "—"}
+                </td>
+                <td className="p-3">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {extrusionDerived.totalGross > 0 && (
+        <div
+          className={`rounded-lg px-3 py-2 text-sm ${
+            extrusionDerived.totalGross <= totalOptGross
+              ? "bg-red-50 text-red-700 border border-red-200"
+              : "bg-green-50 text-green-700 border border-green-200"
+          }`}
+        >
+          {extrusionDerived.totalGross <= totalOptGross
+            ? "Below optimum gross speed"
+            : "Above optimum gross speed"}
+        </div>
+      )}
+
+      {extrusionDerived.warningMessage ? (
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 p-3 text-sm">
+          {extrusionDerived.warningMessage}
+        </div>
+      ) : null}
+
+      {recommendedSpeedA > 0 && recommendedSpeedB > 0 && (
+        <div
+          className={`rounded-lg border p-3 text-sm ${
+            extrusionSpeedMismatch
+              ? "border-yellow-200 bg-yellow-50 text-yellow-700"
+              : "border-green-200 bg-green-50 text-green-700"
+          }`}
+        >
+          Recommended matched speeds for current layer split: A ={" "}
+          {fmt(recommendedSpeedA, 2)} kg/hr, B = {fmt(recommendedSpeedB, 2)} kg/hr.
+          {extrusionSpeedMismatch
+            ? " Entered speeds differ from the matched optimum for this layer ratio."
+            : " Entered speeds match the recommended ratio."}
+        </div>
+      )}
+    </div>
   </div>
-) : null}
-{recommendedSpeedA > 0 && recommendedSpeedB > 0 && (
-  <div
-    className={`rounded-lg border p-3 text-sm ${
-      extrusionSpeedMismatch
-        ? "border-yellow-200 bg-yellow-50 text-yellow-700"
-        : "border-green-200 bg-green-50 text-green-700"
-    }`}
-  >
-    Recommended matched speeds for current layer split:
-    {" "}A = {fmt(recommendedSpeedA, 2)} kg/hr, B = {fmt(recommendedSpeedB, 2)} kg/hr.
-    {extrusionSpeedMismatch
-      ? " Entered speeds differ from the matched optimum for this layer ratio."
-      : " Entered speeds match the recommended ratio."}
-  </div>
-)}
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Net Speed (kg/hr)">
-                <Input value={engineering.extrusion.netSpeed_kg_hr} onChange={() => {}} disabled />
-              </Field>
-              <Field label="Net / Optimum %">
-                <Input value={engineering.extrusion.netVsOptimalPct} onChange={() => {}} disabled />
-              </Field>
-              <Field label="Tons / Hr">
-                <Input value={engineering.extrusion.tonsPerHour} onChange={() => {}} disabled />
-              </Field>
-              <Field label="Tons / Shift (12h)">
-                <Input value={engineering.extrusion.tonsPerShift12h} onChange={() => {}} disabled />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Tons / Day (24h)">
-                <Input value={engineering.extrusion.tonsPerDay24h} onChange={() => {}} disabled />
-              </Field>
-              <Field label="Tons / Week">
-                <Input value={engineering.extrusion.tonsPerWeek} onChange={() => {}} disabled />
-              </Field>
-              <Field label="Tons / Month">
-                <Input value={engineering.extrusion.tonsPerMonth} onChange={() => {}} disabled />
-              </Field>
-              <Field label="Tons / Year (330d)">
-                <Input value={engineering.extrusion.tonsPerYear330d} onChange={() => {}} disabled />
-              </Field>
-            </div>
-             </div>
-                  </div>
 </Section>
 
 {!isSheet && (
