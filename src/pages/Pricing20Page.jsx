@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import PricingEngineeringTab from "../components/pricing/PricingEngineeringTab";
 import Pricing20PricingTab from "../components/pricing20/Pricing20PricingTab";
+import Pricing20SummaryTab from "../components/pricing20/Pricing20SummaryTab";
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj || {}));
 }
@@ -355,6 +356,12 @@ export default function Pricing20Page() {
             >
               Pricing Tab
             </TabButton>
+            <TabButton
+  active={activeTab === "summary"}
+  onClick={() => setActiveTab("summary")}
+>
+  Summary Tab
+</TabButton>
           </div>
         </div>
 
@@ -377,6 +384,13 @@ export default function Pricing20Page() {
             setPricing20Data={setPricing20Data}
           />
         )}
+        {activeTab === "summary" && (
+  <Pricing20SummaryTab
+    requestData={requestData}
+    scenarioEngineering={scenarioEngineering}
+    pricing20Data={pricing20Data}
+  />
+)}
       </div>
     </div>
   );
