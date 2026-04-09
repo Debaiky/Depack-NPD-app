@@ -18,6 +18,7 @@ import Pricing20Dashboard from "./pages/Pricing20Dashboard.jsx";
 import Pricing20Workspace from "./pages/Pricing20Workspace.jsx";
 import Pricing20Page from "./pages/Pricing20Page.jsx";
 import Pricing20AccessGate from "./components/pricing20/Pricing20AccessGate.jsx";
+import Pricing20ComparisonPage from "./pages/Pricing20ComparisonPage.jsx";
 
 export default function App() {
   return (
@@ -91,6 +92,15 @@ export default function App() {
           element={
             <Pricing20AccessGate>
               <Pricing20Workspace />
+            </Pricing20AccessGate>
+          }
+        />
+
+        <Route
+          path="/pricing20/:requestId/compare"
+          element={
+            <Pricing20AccessGate>
+              <Pricing20ComparisonPage />
             </Pricing20AccessGate>
           }
         />
