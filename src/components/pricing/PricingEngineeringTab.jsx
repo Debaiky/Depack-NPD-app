@@ -56,7 +56,7 @@ function Section({ title, children }) {
   return (
     <div className="rounded-2xl border bg-white shadow-sm p-5 space-y-4">
       <h2 className="font-semibold text-lg">{title}</h2>
-      {validChildren}
+      {children}
     </div>
   );
 }
@@ -89,13 +89,20 @@ function RefHints({ engineeringValue, requestValue, currentValue }) {
   );
 }
 
-function Input({ value, onChange, placeholder = "", type = "text", disabled = false }) {
+function Input({
+  value,
+  onChange,
+  placeholder = "",
+  type = "text",
+  disabled = false,
+  className = "",
+}) {
   return (
     <input
       type={type}
       className={`w-full border rounded-lg p-2 ${
         disabled ? "bg-gray-100 text-gray-500" : ""
-      }`}
+      } ${className}`}
       value={value || ""}
       placeholder={placeholder}
       disabled={disabled}
@@ -212,6 +219,8 @@ const PALLETS_PER_CONTAINER = {
   },
 };
 
+const SHEET_SPEC_IMAGE = "/images/sheet-roll-guide.jpg";
+
 const blankMaterialRow = () => ({ id: uid(), name: "", pct: "" });
 
 function getBalancedExtruderSpeeds(baseMaterial, layerAPct) {
@@ -281,12 +290,6 @@ const TRACKED_FIELDS = [
   { section: "Sheet Specs", label: "Core Diameter", path: "sheetSpecs.coreDiameter_mm" },
   { section: "Sheet Specs", label: "Roll Diameter", path: "sheetSpecs.rollDiameter_mm" },
   { section: "Sheet Specs", label: "Roll Weight", path: "sheetSpecs.rollTargetWeight_kg" },
-  { section: "Sheet Specs", label: "Surface Mode", path: "sheetSpecs.surfaceMode" },
-  { section: "Sheet Specs", label: "Product Diameter", path: "sheetSpecs.productDiameter_mm" },
-  { section: "Sheet Specs", label: "Manual Surface Area", path: "sheetSpecs.manualSurfaceArea_cm2" },
-  { section: "Sheet Specs", label: "Thickness Calc", path: "sheetSpecs.thicknessCalc_mic" },
-  { section: "Sheet Specs", label: "Weight Calc", path: "sheetSpecs.weightCalc_g" },
-  { section: "Sheet Specs", label: "Thickness Calc Mode", path: "sheetSpecs.thicknessCalcMode" },
 
   { section: "Sheet Packaging", label: "Core Material", path: "sheetPackaging.coreMaterial" },
   { section: "Sheet Packaging", label: "Core Size", path: "sheetPackaging.coreSize" },
@@ -308,8 +311,6 @@ const TRACKED_FIELDS = [
 
   { section: "Extrusion", label: "Line Name", path: "extrusion.lineName" },
   { section: "Extrusion", label: "Scrap Rate %", path: "extrusion.scrapRatePct" },
-  { section: "Extrusion", label: "Changeover Waste Kg", path: "extrusion.changeoverWasteKg" },
-  { section: "Extrusion", label: "Startup Waste %", path: "extrusion.startupWastePct" },
   { section: "Extrusion", label: "Gross Speed A", path: "extrusion.grossSpeedA_kg_hr" },
   { section: "Extrusion", label: "Gross Speed B", path: "extrusion.grossSpeedB_kg_hr" },
   { section: "Extrusion", label: "Efficiency %", path: "extrusion.efficiencyPct" },
@@ -429,7 +430,8 @@ export default function PricingEngineeringTab({
 
   const requestedBaseMaterial = product.sheetMaterial || product.productMaterial || "";
   const baseMaterial = scenarioEngineering?.materialSheet?.baseMaterial || requestedBaseMaterial;
-  const density = n(scenarioEngineering?.materialSheet?.density) || DENSITY_MAP[baseMaterial] || 0;
+  const density =
+    n(scenarioEngineering?.materialSheet?.density) || DENSITY_MAP[baseMaterial] || 0;
 
   const updateSection = (section, patch) => {
     setScenarioEngineering((prev) => ({
@@ -457,7 +459,6 @@ export default function PricingEngineeringTab({
   const updateMaterialRow = (side, id, patch) => {
     setScenarioEngineering((prev) => {
       const next = deepClone(prev);
-
       next.materialSheet[side] = (next.materialSheet?.[side] || []).map((r) =>
         r.id === id ? { ...r, ...patch } : r
       );
@@ -515,7 +516,11 @@ export default function PricingEngineeringTab({
         layerB: (prev?.materialSheet?.layerA || []).map((r) => ({ ...r })),
       },
     }));
-  }, [scenarioEngineering?.materialSheet?.syncLayerBWithA, scenarioEngineering?.materialSheet?.layerA, setScenarioEngineering]);
+  }, [
+    scenarioEngineering?.materialSheet?.syncLayerBWithA,
+    scenarioEngineering?.materialSheet?.layerA,
+    setScenarioEngineering,
+  ]);
 
   useEffect(() => {
     const balanced = getBalancedExtruderSpeeds(
@@ -538,14 +543,12 @@ export default function PricingEngineeringTab({
             : scenarioEngineering?.extrusion?.grossSpeedB_kg_hr || "",
       });
     }
-  }, [
-    baseMaterial,
-    scenarioEngineering?.materialSheet?.layerAPct,
-  ]);
+  }, [baseMaterial, scenarioEngineering?.materialSheet?.layerAPct]);
 
   useEffect(() => {
     const coreSize = scenarioEngineering?.sheetSpecs?.coreSize || "6 inch";
-    const coreDia = CORE_MAP_MM[coreSize] || n(scenarioEngineering?.sheetSpecs?.coreDiameter_mm);
+    const coreDia =
+      CORE_MAP_MM[coreSize] || n(scenarioEngineering?.sheetSpecs?.coreDiameter_mm);
 
     if (String(coreDia) !== String(scenarioEngineering?.sheetSpecs?.coreDiameter_mm || "")) {
       updateSection("sheetSpecs", { coreDiameter_mm: String(coreDia) });
@@ -604,33 +607,6 @@ export default function PricingEngineeringTab({
         2 * Math.sqrt(ringArea_mm2 / Math.PI + (coreDiameter / 2) ** 2);
     }
 
-    const isRound = scenarioEngineering?.sheetSpecs?.surfaceMode !== "Manual";
-    const productDiameter = n(
-      scenarioEngineering?.sheetSpecs?.productDiameter_mm || product?.topDiameterMm
-    );
-    const manualArea = n(scenarioEngineering?.sheetSpecs?.manualSurfaceArea_cm2);
-
-    const surfaceArea_cm2 = isRound
-      ? productDiameter > 0
-        ? Math.PI * (productDiameter / 20) ** 2
-        : 0
-      : manualArea;
-
-    const thicknessCalc_mic = n(scenarioEngineering?.sheetSpecs?.thicknessCalc_mic);
-    const weightCalc_g = n(
-      scenarioEngineering?.sheetSpecs?.weightCalc_g || product?.productWeightG
-    );
-
-    const calcWeightFromThickness =
-      surfaceArea_cm2 > 0 && thicknessCalc_mic > 0 && density > 0
-        ? surfaceArea_cm2 * (thicknessCalc_mic / 10000) * density
-        : 0;
-
-    const calcThicknessFromWeight =
-      surfaceArea_cm2 > 0 && weightCalc_g > 0 && density > 0
-        ? (weightCalc_g / (surfaceArea_cm2 * density)) * 10000
-        : 0;
-
     const materialPerTonRows = [];
     const layerAShare = n(scenarioEngineering?.materialSheet?.layerAPct) / 100;
     const layerBShare = 1 - layerAShare;
@@ -640,7 +616,6 @@ export default function PricingEngineeringTab({
       const name = String(row.name || "").trim();
       const pct = n(row.pct) / 100;
       if (!name || pct <= 0) return;
-
       if (!grouped[name]) grouped[name] = { pctLayerA: 0, pctLayerB: 0 };
       grouped[name].pctLayerA += pct;
     });
@@ -649,7 +624,6 @@ export default function PricingEngineeringTab({
       const name = String(row.name || "").trim();
       const pct = n(row.pct) / 100;
       if (!name || pct <= 0) return;
-
       if (!grouped[name]) grouped[name] = { pctLayerA: 0, pctLayerB: 0 };
       grouped[name].pctLayerB += pct;
     });
@@ -682,11 +656,8 @@ export default function PricingEngineeringTab({
       materialPerTonRows,
       calcRollWeight,
       calcRollDiameter,
-      surfaceArea_cm2,
-      calcWeightFromThickness,
-      calcThicknessFromWeight,
     };
-  }, [scenarioEngineering, density, product?.topDiameterMm, product?.productWeightG]);
+  }, [scenarioEngineering, density]);
 
   useEffect(() => {
     const nextGrossWidth = sheetDerived.grossWidth
@@ -814,10 +785,8 @@ export default function PricingEngineeringTab({
     }
 
     return {
-      opt,
       totalMax,
       optimumLayerAPct,
-      actualLayerAFromSpeedsPct,
       recommendedA,
       recommendedB,
       limitingExtruder,
@@ -833,7 +802,6 @@ export default function PricingEngineeringTab({
       tonsPerYear330d,
       warningMessage,
       isLayerAOptimum,
-      isSpeedRatioMatchingLayer,
     };
   }, [scenarioEngineering, sheetDerived.grossWidth, baseMaterial]);
 
@@ -1071,7 +1039,6 @@ export default function PricingEngineeringTab({
         : 0;
 
     let palletWeight_kg = 0;
-    let pcsPerPallet = 0;
     let cartonsPerPallet = 0;
     let rollsPerPallet = 0;
 
@@ -1084,7 +1051,6 @@ export default function PricingEngineeringTab({
       palletWeight_kg = rollsPerPallet * rollWeight;
     } else {
       cartonsPerPallet = n(scenarioEngineering?.packaging?.pallet?.boxesPerPallet);
-      pcsPerPallet = n(thermoPackagingDerived.pcsPerPallet);
       palletWeight_kg = cartonsPerPallet * cartonWeight_kg;
     }
 
@@ -1121,7 +1087,7 @@ export default function PricingEngineeringTab({
           pallets,
           cartons: pallets * cartonsPerPallet,
           cartonsRange: "",
-          pcs: pallets * pcsPerPallet,
+          pcs: pallets * thermoPackagingDerived.pcsPerPallet,
           rolls: 0,
           netWeight_kg: pallets * palletWeight_kg,
         };
@@ -1143,7 +1109,7 @@ export default function PricingEngineeringTab({
         cartons: avgCartons,
         cartonsRange:
           maxCartonsByVolume > 0 ? `${minCartonsByVolume} - ${maxCartonsByVolume}` : "",
-        pcs: avgCartons * pcsPerCarton,
+        pcs: avgCartons * thermoPackagingDerived.pcsPerCarton,
         rolls: 0,
         netWeight_kg: avgCartons * cartonWeight_kg,
       };
@@ -1174,15 +1140,11 @@ export default function PricingEngineeringTab({
       return {
         pallets,
         cartons: effectiveCartons,
-        pcs: effectiveCartons * pcsPerCarton,
+        pcs: effectiveCartons * thermoPackagingDerived.pcsPerCarton,
         rolls: 0,
         netWeight_kg: effectiveCartons * cartonWeight_kg,
       };
     };
-
-    const c20 = makeContainerRow("20ft Dry");
-    const c40 = makeContainerRow("40ft Dry");
-    const c40hc = makeContainerRow("40ft High Cube");
 
     return {
       cartonVolume_m3,
@@ -1192,9 +1154,9 @@ export default function PricingEngineeringTab({
       palletHeight_mm,
       palletVolume_m3,
       palletWeight_kg,
-      c20,
-      c40,
-      c40hc,
+      c20: makeContainerRow("20ft Dry"),
+      c40: makeContainerRow("40ft Dry"),
+      c40hc: makeContainerRow("40ft High Cube"),
       smallTruck: buildTruckRow(
         scenarioEngineering?.freight?.smallTruck_pallets,
         scenarioEngineering?.freight?.smallTruck_cartons
@@ -1432,6 +1394,26 @@ export default function PricingEngineeringTab({
   const showDecorationSection =
     !isSheet && (hasRequestDecoration || scenarioEngineering?.decorationEngineering?.enabled);
 
+  const netWidthValue = n(scenarioEngineering?.sheetSpecs?.netWidth_mm);
+  const edgeTrimValue = n(scenarioEngineering?.sheetSpecs?.edgeTrimPerSide_mm);
+  const widthTolMinusValue = n(scenarioEngineering?.sheetSpecs?.widthTolMinus_mm);
+  const widthTolPlusValue = n(scenarioEngineering?.sheetSpecs?.widthTolPlus_mm);
+
+  const grossWidthMinusCalc =
+    netWidthValue > 0
+      ? Math.max(netWidthValue - widthTolMinusValue, 0) + 2 * edgeTrimValue
+      : 0;
+
+  const grossWidthPlusCalc =
+    netWidthValue > 0 ? netWidthValue + widthTolPlusValue + 2 * edgeTrimValue : 0;
+
+  const extrusionNetVsGrossPct =
+    n(scenarioEngineering?.extrusion?.totalGrossSpeed_kg_hr) > 0
+      ? (n(scenarioEngineering?.extrusion?.netSpeed_kg_hr) /
+          n(scenarioEngineering?.extrusion?.totalGrossSpeed_kg_hr)) *
+        100
+      : 0;
+
   return (
     <div className="space-y-6">
       <Section title="Scenario Engineering Override Summary">
@@ -1453,7 +1435,9 @@ export default function PricingEngineeringTab({
 
         {engineeringChangeSummary?.changedFields?.length > 0 ? (
           <div className="rounded-xl border bg-white overflow-hidden">
-            <div className="px-4 py-3 border-b font-medium text-sm">Changed Fields vs Engineering Review</div>
+            <div className="px-4 py-3 border-b font-medium text-sm">
+              Changed Fields vs Engineering Review
+            </div>
             <div className="max-h-72 overflow-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-left">
@@ -1578,6 +1562,13 @@ export default function PricingEngineeringTab({
                   requestValue=""
                   currentValue={scenarioEngineering?.materialSheet?.layerAPct}
                 />
+
+                {!extrusionDerived.isLayerAOptimum && baseMaterial ? (
+                  <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 p-2 text-xs">
+                    This Layer A % is not optimum for {baseMaterial}. Recommended:{" "}
+                    {fmt(extrusionDerived.optimumLayerAPct, 3)}%
+                  </div>
+                ) : null}
 
                 {(n(scenarioEngineering?.materialSheet?.layerAPct) < 0 ||
                   n(scenarioEngineering?.materialSheet?.layerAPct) > 100) && (
@@ -1805,8 +1796,7 @@ export default function PricingEngineeringTab({
                 <div className="space-y-2">
                   <div className="font-medium text-sm">Layer A</div>
                   {(scenarioEngineering?.materialSheet?.layerA || []).map((row, idx) => {
-                    const refRow =
-                      engineeringReviewData?.materialSheet?.layerA?.[idx] || {};
+                    const refRow = engineeringReviewData?.materialSheet?.layerA?.[idx] || {};
                     return (
                       <div key={row.id || idx} className="grid grid-cols-12 gap-2">
                         <div className="col-span-7">
@@ -1866,8 +1856,7 @@ export default function PricingEngineeringTab({
                 <div className="space-y-2">
                   <div className="font-medium text-sm">Layer B</div>
                   {(scenarioEngineering?.materialSheet?.layerB || []).map((row, idx) => {
-                    const refRow =
-                      engineeringReviewData?.materialSheet?.layerB?.[idx] || {};
+                    const refRow = engineeringReviewData?.materialSheet?.layerB?.[idx] || {};
                     return (
                       <div key={row.id || idx} className="grid grid-cols-12 gap-2">
                         <div className="col-span-7">
@@ -1935,624 +1924,666 @@ export default function PricingEngineeringTab({
           <div className="rounded-xl border p-4 space-y-4">
             <div className="font-medium">Sheet Specifications</div>
 
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-              <Field label="Net Width (mm)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.netWidth_mm}
-                  onChange={(v) => updateSection("sheetSpecs", { netWidth_mm: v })}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+              <div className="rounded-xl border bg-gray-50 p-3 xl:sticky xl:top-4">
+                <img
+                  src={SHEET_SPEC_IMAGE}
+                  alt="Sheet roll specification guide"
+                  className="w-full rounded-lg bg-white object-contain"
                 />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.netWidth_mm}
-                  requestValue={requestValueOrBlank(product?.sheetWidthMm)}
-                  currentValue={scenarioEngineering?.sheetSpecs?.netWidth_mm}
-                />
-              </Field>
-
-              <Field label="Edge Trim / Side (mm)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.edgeTrimPerSide_mm}
-                  onChange={(v) =>
-                    updateSection("sheetSpecs", { edgeTrimPerSide_mm: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.edgeTrimPerSide_mm}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.edgeTrimPerSide_mm}
-                />
-              </Field>
-
-              <Field label="Gross Width (mm)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.grossWidth_mm || fmt(sheetDerived.grossWidth, 2)}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-
-              <Field label="Width + Tol (mm)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.widthTolPlus_mm}
-                  onChange={(v) =>
-                    updateSection("sheetSpecs", { widthTolPlus_mm: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.widthTolPlus_mm}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.widthTolPlus_mm}
-                />
-              </Field>
-
-              <Field label="Width - Tol (mm)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.widthTolMinus_mm}
-                  onChange={(v) =>
-                    updateSection("sheetSpecs", { widthTolMinus_mm: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.widthTolMinus_mm}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.widthTolMinus_mm}
-                />
-              </Field>
-
-              <Field label="1 - (Net/Gross) %">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.trimLossPct || fmt(sheetDerived.trimLossPct, 2)}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-            </div>
-
-            {sheetDerived.trimLossPct > 15 && (
-              <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
-                Width trim loss exceeds 15%.
               </div>
-            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Field label="Thickness (micron)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.thickness_mic}
-                  onChange={(v) => updateSection("sheetSpecs", { thickness_mic: v })}
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.thickness_mic}
-                  requestValue={requestValueOrBlank(product?.sheetThicknessMicron)}
-                  currentValue={scenarioEngineering?.sheetSpecs?.thickness_mic}
-                />
-              </Field>
+              <div className="space-y-3">
+                <div className="overflow-auto rounded-xl border">
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="text-left p-3 font-medium w-[220px]">Dimension</th>
+                        <th className="text-left p-3 font-medium min-w-[170px]">Value</th>
+                        <th className="text-left p-3 font-medium min-w-[140px]">- tol</th>
+                        <th className="text-left p-3 font-medium min-w-[140px]">+ tol</th>
+                      </tr>
+                    </thead>
 
-              <Field label="Thickness + Tol (micron)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.thicknessTolPlus_mic}
-                  onChange={(v) =>
-                    updateSection("sheetSpecs", { thicknessTolPlus_mic: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.thicknessTolPlus_mic}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.thicknessTolPlus_mic}
-                />
-              </Field>
+                    <tbody>
+                      <tr className="border-t">
+                        <td className="p-3 font-medium">Net Width (mm)</td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.netWidth_mm}
+                            onChange={(v) => updateSection("sheetSpecs", { netWidth_mm: v })}
+                          />
+                          <RefHints
+                            engineeringValue={engineeringReviewData?.sheetSpecs?.netWidth_mm}
+                            requestValue={requestValueOrBlank(product?.sheetWidthMm)}
+                            currentValue={scenarioEngineering?.sheetSpecs?.netWidth_mm}
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.widthTolMinus_mm}
+                            onChange={(v) =>
+                              updateSection("sheetSpecs", { widthTolMinus_mm: v })
+                            }
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.widthTolPlus_mm}
+                            onChange={(v) =>
+                              updateSection("sheetSpecs", { widthTolPlus_mm: v })
+                            }
+                          />
+                        </td>
+                      </tr>
 
-              <Field label="Thickness - Tol (micron)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.thicknessTolMinus_mic}
-                  onChange={(v) =>
-                    updateSection("sheetSpecs", { thicknessTolMinus_mic: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.thicknessTolMinus_mic}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.thicknessTolMinus_mic}
-                />
-              </Field>
+                      <tr className="border-t">
+                        <td className="p-3 font-medium">Edge Trim Width (one side)</td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.edgeTrimPerSide_mm}
+                            onChange={(v) =>
+                              updateSection("sheetSpecs", { edgeTrimPerSide_mm: v })
+                            }
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input value="" onChange={() => {}} disabled />
+                        </td>
+                        <td className="p-2">
+                          <Input value="" onChange={() => {}} disabled />
+                        </td>
+                      </tr>
+
+                      <tr className="border-t bg-yellow-50">
+                        <td className="p-3 font-medium">Gross Width (mm)</td>
+                        <td className="p-2">
+                          <Input
+                            value={sheetDerived.grossWidth ? fmt(sheetDerived.grossWidth, 2) : ""}
+                            onChange={() => {}}
+                            disabled
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            value={grossWidthMinusCalc ? fmt(grossWidthMinusCalc, 2) : ""}
+                            onChange={() => {}}
+                            disabled
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            value={grossWidthPlusCalc ? fmt(grossWidthPlusCalc, 2) : ""}
+                            onChange={() => {}}
+                            disabled
+                          />
+                        </td>
+                      </tr>
+
+                      <tr className="border-t">
+                        <td className="p-3 font-medium">Thickness (microns)</td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.thickness_mic}
+                            onChange={(v) => updateSection("sheetSpecs", { thickness_mic: v })}
+                          />
+                          <RefHints
+                            engineeringValue={engineeringReviewData?.sheetSpecs?.thickness_mic}
+                            requestValue={requestValueOrBlank(product?.sheetThicknessMicron)}
+                            currentValue={scenarioEngineering?.sheetSpecs?.thickness_mic}
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.thicknessTolMinus_mic}
+                            onChange={(v) =>
+                              updateSection("sheetSpecs", { thicknessTolMinus_mic: v })
+                            }
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.thicknessTolPlus_mic}
+                            onChange={(v) =>
+                              updateSection("sheetSpecs", { thicknessTolPlus_mic: v })
+                            }
+                          />
+                        </td>
+                      </tr>
+
+                      <tr className="border-t">
+                        <td className="p-3 font-medium">Core Diameter</td>
+                        <td className="p-2">
+                          <SelectField
+                            value={scenarioEngineering?.sheetSpecs?.coreSize}
+                            onChange={(v) => updateSection("sheetSpecs", { coreSize: v })}
+                            options={["3 inch", "6 inch", "8 inch"]}
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.coreDiameter_mm}
+                            onChange={() => {}}
+                            disabled
+                          />
+                        </td>
+                        <td className="p-3 text-xs text-gray-500 align-middle">
+                          Calculated in mm
+                        </td>
+                      </tr>
+
+                      <tr className="border-t">
+                        <td className="p-3 font-medium">Roll Diameter (mm)</td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.rollDiameter_mm}
+                            onChange={(v) =>
+                              updateSection("sheetSpecs", { rollDiameter_mm: v })
+                            }
+                          />
+                        </td>
+                        <td className="p-3 text-xs text-gray-500" colSpan={2}>
+                          Auto from roll weight if left blank:{" "}
+                          {sheetDerived.calcRollDiameter
+                            ? `${fmt(sheetDerived.calcRollDiameter, 2)} mm`
+                            : "—"}
+                        </td>
+                      </tr>
+
+                      <tr className="border-t">
+                        <td className="p-3 font-medium">Roll Weight (kg)</td>
+                        <td className="p-2">
+                          <Input
+                            value={scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg}
+                            onChange={(v) =>
+                              updateSection("sheetSpecs", { rollTargetWeight_kg: v })
+                            }
+                          />
+                          {product?.rollWeightKg ? (
+                            <div className="mt-1 text-xs text-gray-400">
+                              Request: {product.rollWeightKg}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="p-3 text-xs text-gray-500" colSpan={2}>
+                          Auto from roll diameter if left blank:{" "}
+                          {sheetDerived.calcRollWeight
+                            ? `${fmt(sheetDerived.calcRollWeight, 3)} kg`
+                            : "—"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="rounded-lg border bg-gray-50 p-3 text-xs text-gray-600">
+                  Gross width = net width + 2 × edge trim width. You can enter either roll
+                  diameter or roll weight; the other value is automatically calculated.
+                </div>
+
+                {sheetDerived.trimLossPct > 15 && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 p-3 text-sm">
+                    Width trim loss exceeds 15%.
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <RefRow
+                    label="Plastic Weight / m²"
+                    value={
+                      sheetDerived.plasticWeightPerM2_g
+                        ? `${fmt(sheetDerived.plasticWeightPerM2_g, 3)} g/m²`
+                        : "—"
+                    }
+                  />
+                  <RefRow
+                    label="Total Weight / m²"
+                    value={
+                      sheetDerived.totalWeightPerM2_g
+                        ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
+                        : "—"
+                    }
+                  />
+                  <RefRow
+                    label="Trim Loss %"
+                    value={
+                      sheetDerived.trimLossPct
+                        ? `${fmt(sheetDerived.trimLossPct, 2)}%`
+                        : "—"
+                    }
+                  />
+                  <RefRow
+                    label="Core Diameter (mm)"
+                    value={scenarioEngineering?.sheetSpecs?.coreDiameter_mm || "—"}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border p-4 space-y-4">
+            <div className="font-medium">
+              {isSheet ? "Sheet Roll Packaging Data" : "Internal Sheet Roll Packaging"}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field label="Core Type">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+              <Field label="Core Material">
                 <Input
-                  value={scenarioEngineering?.sheetSpecs?.coreType}
-                  onChange={(v) => updateSection("sheetSpecs", { coreType: v })}
+                  value={scenarioEngineering?.sheetPackaging?.coreMaterial}
+                  onChange={(v) => updateSection("sheetPackaging", { coreMaterial: v })}
                 />
                 <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.coreType}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.coreType}
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.coreMaterial}
+                  requestValue={requestValueOrBlank(product?.coreMaterial)}
+                  currentValue={scenarioEngineering?.sheetPackaging?.coreMaterial}
                 />
               </Field>
 
-              <Field label="Core Diameter">
+              <Field label="Core Size">
                 <SelectField
-                  value={scenarioEngineering?.sheetSpecs?.coreSize}
-                  onChange={(v) => updateSection("sheetSpecs", { coreSize: v })}
+                  value={scenarioEngineering?.sheetPackaging?.coreSize}
+                  onChange={(v) => updateSection("sheetPackaging", { coreSize: v })}
                   options={["3 inch", "6 inch", "8 inch"]}
                 />
                 <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.coreSize}
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.coreSize}
                   requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.coreSize}
+                  currentValue={scenarioEngineering?.sheetPackaging?.coreSize}
                 />
               </Field>
 
-              <Field label="Core Diameter (mm)">
+              <Field label="Core Uses">
                 <Input
-                  value={scenarioEngineering?.sheetSpecs?.coreDiameter_mm}
-                  onChange={(v) =>
-                    updateSection("sheetSpecs", { coreDiameter_mm: v })
-                  }
+                  value={scenarioEngineering?.sheetPackaging?.coreUses}
+                  onChange={(v) => updateSection("sheetPackaging", { coreUses: v })}
                 />
                 <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.coreDiameter_mm}
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.coreUses}
                   requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.coreDiameter_mm}
-                />
-              </Field>
-
-              <Field label="Roll Diameter (mm)">
-                <Input
-                  value={scenarioEngineering?.sheetSpecs?.rollDiameter_mm}
-                  onChange={(v) =>
-                    updateSection("sheetSpecs", { rollDiameter_mm: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.rollDiameter_mm}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.sheetSpecs?.rollDiameter_mm}
+                  currentValue={scenarioEngineering?.sheetPackaging?.coreUses}
                 />
               </Field>
 
               <Field label="Roll Weight (kg)">
                 <Input
-                  value={scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg}
-                  onChange={(v) =>
-                    updateSection("sheetSpecs", { rollTargetWeight_kg: v })
+                  value={
+                    scenarioEngineering?.sheetPackaging?.rollWeight_kg ||
+                    scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg
                   }
+                  onChange={(v) => updateSection("sheetPackaging", { rollWeight_kg: v })}
                 />
                 <RefHints
-                  engineeringValue={engineeringReviewData?.sheetSpecs?.rollTargetWeight_kg}
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.rollWeight_kg}
                   requestValue={requestValueOrBlank(product?.rollWeightKg)}
-                  currentValue={scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg}
+                  currentValue={scenarioEngineering?.sheetPackaging?.rollWeight_kg}
                 />
               </Field>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <RefRow
-                label="Plastic Weight / m²"
-                value={
-                  sheetDerived.plasticWeightPerM2_g
-                    ? `${fmt(sheetDerived.plasticWeightPerM2_g, 3)} g/m²`
-                    : "—"
-                }
-              />
-              <RefRow
-                label="Total Weight / m²"
-                value={
-                  sheetDerived.totalWeightPerM2_g
-                    ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
-                    : "—"
-                }
-              />
-              <RefRow
-                label="Auto Roll Weight from Diameter"
-                value={
-                  sheetDerived.calcRollWeight
-                    ? `${fmt(sheetDerived.calcRollWeight, 3)} kg`
-                    : "—"
-                }
-              />
-              <RefRow
-                label="Auto Roll Diameter from Weight"
-                value={
-                  sheetDerived.calcRollDiameter
-                    ? `${fmt(sheetDerived.calcRollDiameter, 2)} mm`
-                    : "—"
-                }
-              />
-            </div>
-
-            <div className="rounded-xl border p-4 space-y-4">
-              <div className="font-medium">
-                {isSheet ? "Sheet Roll Packaging Data" : "Internal Sheet Roll Packaging"}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                <Field label="Core Material">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.coreMaterial}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { coreMaterial: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.coreMaterial}
-                    requestValue={requestValueOrBlank(product?.coreMaterial)}
-                    currentValue={scenarioEngineering?.sheetPackaging?.coreMaterial}
-                  />
-                </Field>
-
-                <Field label="Core Size">
-                  <SelectField
-                    value={scenarioEngineering?.sheetPackaging?.coreSize}
-                    onChange={(v) => updateSection("sheetPackaging", { coreSize: v })}
-                    options={["3 inch", "6 inch", "8 inch"]}
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.coreSize}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.coreSize}
-                  />
-                </Field>
-
-                <Field label="Core Uses">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.coreUses}
-                    onChange={(v) => updateSection("sheetPackaging", { coreUses: v })}
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.coreUses}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.coreUses}
-                  />
-                </Field>
-
-                <Field label="Roll Weight (kg)">
-                  <Input
-                    value={
-                      scenarioEngineering?.sheetPackaging?.rollWeight_kg ||
-                      scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg
-                    }
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { rollWeight_kg: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.rollWeight_kg}
-                    requestValue={requestValueOrBlank(product?.rollWeightKg)}
-                    currentValue={scenarioEngineering?.sheetPackaging?.rollWeight_kg}
-                  />
-                </Field>
-
-                <Field label="Labels per Roll">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.labelsPerRoll}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { labelsPerRoll: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.labelsPerRoll}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.labelsPerRoll}
-                  />
-                </Field>
-
-                <Field label="Labels per Pallet">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.labelsPerPallet}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { labelsPerPallet: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.labelsPerPallet}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.labelsPerPallet}
-                  />
-                </Field>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-                <Field label="Pallet Type">
-                  <SelectField
-                    value={scenarioEngineering?.sheetPackaging?.palletType}
-                    onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
-                    options={[
-                      { value: "UK", label: "UK Standard Pallet" },
-                      { value: "EURO", label: "EURO Pallet" },
-                    ]}
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.palletType}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.palletType}
-                  />
-                </Field>
-
-                <Field label="Pallet Uses">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.palletUses}
-                    onChange={(v) => updateSection("sheetPackaging", { palletUses: v })}
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.palletUses}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.palletUses}
-                  />
-                </Field>
-
-                <Field label="Pallet Length (mm)">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.palletLength_mm}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { palletLength_mm: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.palletLength_mm}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.palletLength_mm}
-                  />
-                </Field>
-
-                <Field label="Pallet Width (mm)">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.palletWidth_mm}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { palletWidth_mm: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.palletWidth_mm}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.palletWidth_mm}
-                  />
-                </Field>
-
-                <Field label="Pallet Height (mm)">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.palletHeight_mm}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { palletHeight_mm: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.palletHeight_mm}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.palletHeight_mm}
-                  />
-                </Field>
-
-                <Field label="Rolls per Pallet">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.rollsPerPallet}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { rollsPerPallet: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.rollsPerPallet}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.rollsPerPallet}
-                  />
-                </Field>
-
-                <Field label="Strap Length / Pallet (m)">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.strapLength_m}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { strapLength_m: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.strapLength_m}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.strapLength_m}
-                  />
-                </Field>
-
-                <Field label="Separators / Pallet">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.separatorsPerPallet}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { separatorsPerPallet: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.separatorsPerPallet}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.separatorsPerPallet}
-                  />
-                </Field>
-
-                <Field label="Foam Sheet Length / Pallet (m)">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.foamLength_m}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { foamLength_m: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.foamLength_m}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.foamLength_m}
-                  />
-                </Field>
-
-                <Field label="Stretch Film / Pallet (kg)">
-                  <Input
-                    value={scenarioEngineering?.sheetPackaging?.stretchKgPerPallet}
-                    onChange={(v) =>
-                      updateSection("sheetPackaging", { stretchKgPerPallet: v })
-                    }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.sheetPackaging?.stretchKgPerPallet}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.sheetPackaging?.stretchKgPerPallet}
-                  />
-                </Field>
-              </div>
-
-              <Field label="Packaging Instructions">
-                <TextArea
-                  value={scenarioEngineering?.sheetPackaging?.instructionText}
-                  onChange={(v) =>
-                    updateSection("sheetPackaging", { instructionText: v })
-                  }
-                  rows={3}
+              <Field label="Labels per Roll">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.labelsPerRoll}
+                  onChange={(v) => updateSection("sheetPackaging", { labelsPerRoll: v })}
                 />
                 <RefHints
-                  engineeringValue={engineeringReviewData?.sheetPackaging?.instructionText}
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.labelsPerRoll}
                   requestValue=""
-                  currentValue={scenarioEngineering?.sheetPackaging?.instructionText}
+                  currentValue={scenarioEngineering?.sheetPackaging?.labelsPerRoll}
+                />
+              </Field>
+
+              <Field label="Labels per Pallet">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.labelsPerPallet}
+                  onChange={(v) => updateSection("sheetPackaging", { labelsPerPallet: v })}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.labelsPerPallet}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.labelsPerPallet}
                 />
               </Field>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+              <Field label="Pallet Type">
+                <SelectField
+                  value={scenarioEngineering?.sheetPackaging?.palletType}
+                  onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
+                  options={[
+                    { value: "UK", label: "UK Standard Pallet" },
+                    { value: "EURO", label: "EURO Pallet" },
+                  ]}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.palletType}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.palletType}
+                />
+              </Field>
+
+              <Field label="Pallet Uses">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.palletUses}
+                  onChange={(v) => updateSection("sheetPackaging", { palletUses: v })}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.palletUses}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.palletUses}
+                />
+              </Field>
+
+              <Field label="Pallet Length (mm)">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.palletLength_mm}
+                  onChange={(v) => updateSection("sheetPackaging", { palletLength_mm: v })}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.palletLength_mm}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.palletLength_mm}
+                />
+              </Field>
+
+              <Field label="Pallet Width (mm)">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.palletWidth_mm}
+                  onChange={(v) => updateSection("sheetPackaging", { palletWidth_mm: v })}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.palletWidth_mm}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.palletWidth_mm}
+                />
+              </Field>
+
+              <Field label="Pallet Height (mm)">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.palletHeight_mm}
+                  onChange={(v) => updateSection("sheetPackaging", { palletHeight_mm: v })}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.palletHeight_mm}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.palletHeight_mm}
+                />
+              </Field>
+
+              <Field label="Rolls per Pallet">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.rollsPerPallet}
+                  onChange={(v) => updateSection("sheetPackaging", { rollsPerPallet: v })}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.rollsPerPallet}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.rollsPerPallet}
+                />
+              </Field>
+
+              <Field label="Strap Length / Pallet (m)">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.strapLength_m}
+                  onChange={(v) => updateSection("sheetPackaging", { strapLength_m: v })}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.strapLength_m}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.strapLength_m}
+                />
+              </Field>
+
+              <Field label="Separators / Pallet">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.separatorsPerPallet}
+                  onChange={(v) =>
+                    updateSection("sheetPackaging", { separatorsPerPallet: v })
+                  }
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.separatorsPerPallet}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.separatorsPerPallet}
+                />
+              </Field>
+
+              <Field label="Foam Sheet Length / Pallet (m)">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.foamLength_m}
+                  onChange={(v) => updateSection("sheetPackaging", { foamLength_m: v })}
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.foamLength_m}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.foamLength_m}
+                />
+              </Field>
+
+              <Field label="Stretch Film / Pallet (kg)">
+                <Input
+                  value={scenarioEngineering?.sheetPackaging?.stretchKgPerPallet}
+                  onChange={(v) =>
+                    updateSection("sheetPackaging", { stretchKgPerPallet: v })
+                  }
+                />
+                <RefHints
+                  engineeringValue={engineeringReviewData?.sheetPackaging?.stretchKgPerPallet}
+                  requestValue=""
+                  currentValue={scenarioEngineering?.sheetPackaging?.stretchKgPerPallet}
+                />
+              </Field>
+            </div>
+
+            <Field label="Packaging Instructions">
+              <TextArea
+                value={scenarioEngineering?.sheetPackaging?.instructionText}
+                onChange={(v) => updateSection("sheetPackaging", { instructionText: v })}
+                rows={3}
+              />
+              <RefHints
+                engineeringValue={engineeringReviewData?.sheetPackaging?.instructionText}
+                requestValue=""
+                currentValue={scenarioEngineering?.sheetPackaging?.instructionText}
+              />
+            </Field>
           </div>
         </div>
       </Section>
 
       <Section title="2. Extrusion Process Data">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <div className="space-y-4 xl:col-span-3">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field label="Line Name">
-                <Input
-                  value={scenarioEngineering?.extrusion?.lineName}
-                  onChange={(v) => updateSection("extrusion", { lineName: v })}
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.extrusion?.lineName}
-                  requestValue="Breyer"
-                  currentValue={scenarioEngineering?.extrusion?.lineName}
-                />
-              </Field>
+        <div className="grid grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)] gap-4">
+          <div className="rounded-xl border overflow-hidden">
+            <div className="bg-gray-100 px-4 py-3 font-medium">Input Box</div>
 
-              <Field label="Scrap Rate %">
-                <Input
-                  value={scenarioEngineering?.extrusion?.scrapRatePct}
-                  onChange={(v) =>
-                    updateSection("extrusion", { scrapRatePct: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.extrusion?.scrapRatePct}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.extrusion?.scrapRatePct}
-                />
-              </Field>
+            <div className="overflow-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-3 font-medium w-[180px]">Input</th>
+                    <th className="text-left p-3 font-medium">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t">
+                    <td className="p-3 font-medium">Line Name</td>
+                    <td className="p-2">
+                      <Input
+                        value={scenarioEngineering?.extrusion?.lineName}
+                        onChange={(v) => updateSection("extrusion", { lineName: v })}
+                      />
+                      <RefHints
+                        engineeringValue={engineeringReviewData?.extrusion?.lineName}
+                        requestValue="Breyer"
+                        currentValue={scenarioEngineering?.extrusion?.lineName}
+                      />
+                    </td>
+                  </tr>
 
-              <Field label="Non Recoverable Changeover Waste (kg)">
-                <Input
-                  value={scenarioEngineering?.extrusion?.changeoverWasteKg}
-                  onChange={(v) =>
-                    updateSection("extrusion", { changeoverWasteKg: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.extrusion?.changeoverWasteKg}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.extrusion?.changeoverWasteKg}
-                />
-              </Field>
+                  <tr className="border-t">
+                    <td className="p-3 font-medium">Scrap Rate %</td>
+                    <td className="p-2">
+                      <Input
+                        value={scenarioEngineering?.extrusion?.scrapRatePct}
+                        onChange={(v) => updateSection("extrusion", { scrapRatePct: v })}
+                      />
+                      <RefHints
+                        engineeringValue={engineeringReviewData?.extrusion?.scrapRatePct}
+                        requestValue=""
+                        currentValue={scenarioEngineering?.extrusion?.scrapRatePct}
+                      />
+                    </td>
+                  </tr>
 
-              <Field label="Startup Waste % (ignored)">
-                <Input
-                  value={scenarioEngineering?.extrusion?.startupWastePct}
-                  onChange={(v) =>
-                    updateSection("extrusion", { startupWastePct: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.extrusion?.startupWastePct}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.extrusion?.startupWastePct}
-                />
-              </Field>
+                  <tr className="border-t">
+                    <td className="p-3 font-medium">Efficiency %</td>
+                    <td className="p-2">
+                      <Input
+                        value={scenarioEngineering?.extrusion?.efficiencyPct}
+                        onChange={(v) => updateSection("extrusion", { efficiencyPct: v })}
+                      />
+                      <RefHints
+                        engineeringValue={engineeringReviewData?.extrusion?.efficiencyPct}
+                        requestValue=""
+                        currentValue={scenarioEngineering?.extrusion?.efficiencyPct}
+                      />
+                    </td>
+                  </tr>
 
-              <Field label="Efficiency %">
-                <Input
-                  value={scenarioEngineering?.extrusion?.efficiencyPct}
-                  onChange={(v) =>
-                    updateSection("extrusion", { efficiencyPct: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.extrusion?.efficiencyPct}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.extrusion?.efficiencyPct}
-                />
-              </Field>
+                  <tr className="border-t">
+                    <td className="p-3 font-medium">Gross Speed Extruder A (kg/hr)</td>
+                    <td className="p-2">
+                      <Input
+                        value={scenarioEngineering?.extrusion?.grossSpeedA_kg_hr}
+                        onChange={(v) => updateSection("extrusion", { grossSpeedA_kg_hr: v })}
+                      />
+                      <div className="mt-1 text-xs text-gray-400">
+                        Auto calculated but editable
+                        {OPT_SPEED_MAP[baseMaterial]?.A
+                          ? ` • optimum ${OPT_SPEED_MAP[baseMaterial].A} kg/hr`
+                          : ""}
+                      </div>
+                      <div
+                        className={`mt-1 text-[11px] ${
+                          !valuesEqual(
+                            scenarioEngineering?.extrusion?.grossSpeedA_kg_hr,
+                            engineeringReviewData?.extrusion?.grossSpeedA_kg_hr
+                          )
+                            ? "text-red-600 font-medium"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        Engineering Review:{" "}
+                        {formatRefValue(engineeringReviewData?.extrusion?.grossSpeedA_kg_hr)}
+                      </div>
+                    </td>
+                  </tr>
+
+                  <tr className="border-t">
+                    <td className="p-3 font-medium">Gross Speed Extruder B (kg/hr)</td>
+                    <td className="p-2">
+                      <Input
+                        value={scenarioEngineering?.extrusion?.grossSpeedB_kg_hr}
+                        onChange={(v) => updateSection("extrusion", { grossSpeedB_kg_hr: v })}
+                      />
+                      <div className="mt-1 text-xs text-gray-400">
+                        Auto calculated but editable
+                        {OPT_SPEED_MAP[baseMaterial]?.B
+                          ? ` • optimum ${OPT_SPEED_MAP[baseMaterial].B} kg/hr`
+                          : ""}
+                      </div>
+                      <div
+                        className={`mt-1 text-[11px] ${
+                          !valuesEqual(
+                            scenarioEngineering?.extrusion?.grossSpeedB_kg_hr,
+                            engineeringReviewData?.extrusion?.grossSpeedB_kg_hr
+                          )
+                            ? "text-red-600 font-medium"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        Engineering Review:{" "}
+                        {formatRefValue(engineeringReviewData?.extrusion?.grossSpeedB_kg_hr)}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <Field
-                label={`Gross Speed Extruder A (optimum ${
-                  OPT_SPEED_MAP[baseMaterial]?.A || 0
-                } kg/hr)`}
-              >
-                <Input
-                  value={scenarioEngineering?.extrusion?.grossSpeedA_kg_hr}
-                  onChange={(v) =>
-                    updateSection("extrusion", { grossSpeedA_kg_hr: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.extrusion?.grossSpeedA_kg_hr}
-                  requestValue={requestValueOrBlank(OPT_SPEED_MAP[baseMaterial]?.A || "")}
-                  currentValue={scenarioEngineering?.extrusion?.grossSpeedA_kg_hr}
-                />
-              </Field>
+          <div className="space-y-4">
+            <div className="rounded-xl border overflow-hidden">
+              <div className="bg-gray-100 px-4 py-3 font-medium">Results Box</div>
 
-              <Field
-                label={`Gross Speed Extruder B (optimum ${
-                  OPT_SPEED_MAP[baseMaterial]?.B || 0
-                } kg/hr)`}
-              >
-                <Input
-                  value={scenarioEngineering?.extrusion?.grossSpeedB_kg_hr}
-                  onChange={(v) =>
-                    updateSection("extrusion", { grossSpeedB_kg_hr: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.extrusion?.grossSpeedB_kg_hr}
-                  requestValue={requestValueOrBlank(OPT_SPEED_MAP[baseMaterial]?.B || "")}
-                  currentValue={scenarioEngineering?.extrusion?.grossSpeedB_kg_hr}
-                />
-              </Field>
+              <div className="overflow-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left p-3 font-medium w-[240px]"></th>
+                      <th className="text-left p-3 font-medium">Value</th>
+                      <th className="text-left p-3 font-medium w-[140px]">%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t bg-yellow-50">
+                      <td className="p-3 font-medium">Total Gross Speed (kg/hr)</td>
+                      <td className="p-3">
+                        {scenarioEngineering?.extrusion?.totalGrossSpeed_kg_hr
+                          ? fmt(scenarioEngineering.extrusion.totalGrossSpeed_kg_hr, 2)
+                          : "—"}
+                      </td>
+                      <td className="p-3">—</td>
+                    </tr>
 
-              <Field label="Total Gross Speed (kg/hr)">
-                <Input
-                  value={scenarioEngineering?.extrusion?.totalGrossSpeed_kg_hr}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
+                    <tr className="border-t bg-yellow-50">
+                      <td className="p-3 font-medium">Net Speed (kg/hr)</td>
+                      <td className="p-3">
+                        {scenarioEngineering?.extrusion?.netSpeed_kg_hr
+                          ? fmt(scenarioEngineering.extrusion.netSpeed_kg_hr, 2)
+                          : "—"}
+                      </td>
+                      <td className="p-3">
+                        {extrusionNetVsGrossPct ? `${fmt(extrusionNetVsGrossPct, 2)}%` : "—"}
+                      </td>
+                    </tr>
 
-              <Field label="Gross / Optimum %">
-                <Input
-                  value={scenarioEngineering?.extrusion?.grossVsOptimalPct}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Net Speed (tons/shift)</td>
+                      <td className="p-3">
+                        {scenarioEngineering?.extrusion?.tonsPerShift12h
+                          ? fmt(scenarioEngineering.extrusion.tonsPerShift12h, 3)
+                          : "—"}
+                      </td>
+                      <td className="p-3">—</td>
+                    </tr>
 
-              <div className="flex items-end text-sm">
-                {extrusionDerived.totalGross > 0 && (
-                  <div
-                    className={`rounded-lg px-3 py-2 w-full ${
-                      extrusionDerived.totalGross <= totalOptGross
-                        ? "bg-red-50 text-red-700 border border-red-200"
-                        : "bg-green-50 text-green-700 border border-green-200"
-                    }`}
-                  >
-                    {extrusionDerived.totalGross <= totalOptGross
-                      ? "Below optimum gross speed"
-                      : "Above optimum gross speed"}
-                  </div>
-                )}
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Net Speed (tons/day)</td>
+                      <td className="p-3">
+                        {scenarioEngineering?.extrusion?.tonsPerDay24h
+                          ? fmt(scenarioEngineering.extrusion.tonsPerDay24h, 3)
+                          : "—"}
+                      </td>
+                      <td className="p-3">—</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
+
+            {extrusionDerived.totalGross > 0 && (
+              <div
+                className={`rounded-lg px-3 py-2 text-sm ${
+                  extrusionDerived.totalGross <= totalOptGross
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-green-50 text-green-700 border border-green-200"
+                }`}
+              >
+                {extrusionDerived.totalGross <= totalOptGross
+                  ? "Below optimum gross speed"
+                  : "Above optimum gross speed"}
+              </div>
+            )}
 
             {extrusionDerived.warningMessage ? (
               <div className="rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 p-3 text-sm">
@@ -2568,201 +2599,196 @@ export default function PricingEngineeringTab({
                     : "border-green-200 bg-green-50 text-green-700"
                 }`}
               >
-                Recommended matched speeds for current layer split: A = {fmt(
-                  recommendedSpeedA,
-                  2
-                )} kg/hr, B = {fmt(recommendedSpeedB, 2)} kg/hr.
+                Recommended matched speeds for current layer split: A ={" "}
+                {fmt(recommendedSpeedA, 2)} kg/hr, B = {fmt(recommendedSpeedB, 2)} kg/hr.
                 {extrusionSpeedMismatch
                   ? " Entered speeds differ from the matched optimum for this layer ratio."
                   : " Entered speeds match the recommended ratio."}
               </div>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Net Speed (kg/hr)">
-                <Input
-                  value={scenarioEngineering?.extrusion?.netSpeed_kg_hr}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-
-              <Field label="Net / Optimum %">
-                <Input
-                  value={scenarioEngineering?.extrusion?.netVsOptimalPct}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-
-              <Field label="Tons / Hr">
-                <Input
-                  value={scenarioEngineering?.extrusion?.tonsPerHour}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-
-              <Field label="Tons / Shift (12h)">
-                <Input
-                  value={scenarioEngineering?.extrusion?.tonsPerShift12h}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Field label="Tons / Day (24h)">
-                <Input
-                  value={scenarioEngineering?.extrusion?.tonsPerDay24h}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-
-              <Field label="Tons / Week">
-                <Input
-                  value={scenarioEngineering?.extrusion?.tonsPerWeek}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-
-              <Field label="Tons / Month">
-                <Input
-                  value={scenarioEngineering?.extrusion?.tonsPerMonth}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-
-              <Field label="Tons / Year (330d)">
-                <Input
-                  value={scenarioEngineering?.extrusion?.tonsPerYear330d}
-                  onChange={() => {}}
-                  disabled
-                />
-              </Field>
-            </div>
           </div>
         </div>
       </Section>
 
       {!isSheet && (
-        <Section title="3. Thermoforming Data">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-              <Field label="Machine">
-                <SelectField
-                  value={scenarioEngineering?.thermo?.machineName}
-                  onChange={(v) => updateSection("thermo", { machineName: v })}
-                  options={["RDM73K", "RDK80"]}
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.thermo?.machineName}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.thermo?.machineName}
-                />
-              </Field>
+        <Section title="3. Thermoforming Process Data">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            <div className="rounded-xl border p-4 space-y-4">
+              <div className="font-medium">Data Input</div>
 
-              <Field label="Product Weight (g)">
-                <Input
-                  value={scenarioEngineering?.thermo?.unitWeight_g}
-                  onChange={(v) => updateSection("thermo", { unitWeight_g: v })}
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.thermo?.unitWeight_g}
-                  requestValue={requestValueOrBlank(product?.productWeightG)}
-                  currentValue={scenarioEngineering?.thermo?.unitWeight_g}
-                />
-              </Field>
+              <div className="overflow-auto rounded-xl border">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Item</th>
+                      <th className="text-left p-3 font-medium">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Product Weight (g)</td>
+                      <td className="p-2">
+                        <Input
+                          value={scenarioEngineering?.thermo?.unitWeight_g}
+                          onChange={(v) => updateSection("thermo", { unitWeight_g: v })}
+                          className="text-lg font-semibold"
+                        />
+                        <RefHints
+                          engineeringValue={engineeringReviewData?.thermo?.unitWeight_g}
+                          requestValue={requestValueOrBlank(product?.productWeightG)}
+                          currentValue={scenarioEngineering?.thermo?.unitWeight_g}
+                        />
+                      </td>
+                    </tr>
 
-              <Field label="Cavities">
-                <Input
-                  value={scenarioEngineering?.thermo?.cavities}
-                  onChange={(v) => updateSection("thermo", { cavities: v })}
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.thermo?.cavities}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.thermo?.cavities}
-                />
-              </Field>
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Machine</td>
+                      <td className="p-2">
+                        <SelectField
+                          value={scenarioEngineering?.thermo?.machineName}
+                          onChange={(v) => updateSection("thermo", { machineName: v })}
+                          options={["RDM73K", "RDK80"]}
+                        />
+                        <RefHints
+                          engineeringValue={engineeringReviewData?.thermo?.machineName}
+                          requestValue=""
+                          currentValue={scenarioEngineering?.thermo?.machineName}
+                        />
+                      </td>
+                    </tr>
 
-              <Field label="CPM">
-                <Input
-                  value={scenarioEngineering?.thermo?.cpm}
-                  onChange={(v) => updateSection("thermo", { cpm: v })}
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.thermo?.cpm}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.thermo?.cpm}
-                />
-              </Field>
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Number of Cavities</td>
+                      <td className="p-2">
+                        <Input
+                          value={scenarioEngineering?.thermo?.cavities}
+                          onChange={(v) => updateSection("thermo", { cavities: v })}
+                          className="text-lg font-semibold"
+                        />
+                        <RefHints
+                          engineeringValue={engineeringReviewData?.thermo?.cavities}
+                          requestValue=""
+                          currentValue={scenarioEngineering?.thermo?.cavities}
+                        />
+                      </td>
+                    </tr>
 
-              <Field label="Efficiency %">
-                <Input
-                  value={scenarioEngineering?.thermo?.efficiencyPct}
-                  onChange={(v) => updateSection("thermo", { efficiencyPct: v })}
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.thermo?.efficiencyPct}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.thermo?.efficiencyPct}
-                />
-              </Field>
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Cycles Per Minute (CPM)</td>
+                      <td className="p-2">
+                        <Input
+                          value={scenarioEngineering?.thermo?.cpm}
+                          onChange={(v) => updateSection("thermo", { cpm: v })}
+                          className="text-lg font-semibold"
+                        />
+                        <RefHints
+                          engineeringValue={engineeringReviewData?.thermo?.cpm}
+                          requestValue=""
+                          currentValue={scenarioEngineering?.thermo?.cpm}
+                        />
+                      </td>
+                    </tr>
 
-              <Field label="Sheet Utilization %">
-                <Input
-                  value={scenarioEngineering?.thermo?.sheetUtilizationPct}
-                  onChange={(v) =>
-                    updateSection("thermo", { sheetUtilizationPct: v })
-                  }
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.thermo?.sheetUtilizationPct}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.thermo?.sheetUtilizationPct}
-                />
-              </Field>
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Thermo Efficiency %</td>
+                      <td className="p-2">
+                        <Input
+                          value={scenarioEngineering?.thermo?.efficiencyPct}
+                          onChange={(v) => updateSection("thermo", { efficiencyPct: v })}
+                          className="text-lg font-semibold"
+                        />
+                        <RefHints
+                          engineeringValue={engineeringReviewData?.thermo?.efficiencyPct}
+                          requestValue=""
+                          currentValue={scenarioEngineering?.thermo?.efficiencyPct}
+                        />
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Sheet Utilization %</td>
+                      <td className="p-2">
+                        <Input
+                          value={scenarioEngineering?.thermo?.sheetUtilizationPct}
+                          onChange={(v) =>
+                            updateSection("thermo", { sheetUtilizationPct: v })
+                          }
+                          className="text-lg font-semibold"
+                        />
+                        <RefHints
+                          engineeringValue={engineeringReviewData?.thermo?.sheetUtilizationPct}
+                          requestValue=""
+                          currentValue={scenarioEngineering?.thermo?.sheetUtilizationPct}
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-              <RefRow label="Pcs / Hr" value={scenarioEngineering?.thermo?.pcsPerHour} />
-              <RefRow label="Pcs / Shift (12h)" value={scenarioEngineering?.thermo?.pcsPerShift12h} />
-              <RefRow label="Pcs / Day" value={scenarioEngineering?.thermo?.pcsPerDay24h} />
-              <RefRow label="Pcs / Week" value={scenarioEngineering?.thermo?.pcsPerWeek} />
-              <RefRow label="Pcs / Month" value={scenarioEngineering?.thermo?.pcsPerMonth} />
-              <RefRow label="Pcs / Year" value={scenarioEngineering?.thermo?.pcsPerYear330d} />
-            </div>
+            <div className="rounded-xl border p-4 space-y-4">
+              <div className="font-medium">Results</div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <RefRow
-                label="Required Sheet Weight / Hr"
-                value={
-                  thermoDerived.requiredSheetKgPerHour
-                    ? `${fmt(thermoDerived.requiredSheetKgPerHour, 3)} kg`
-                    : "—"
-                }
-              />
-              <RefRow
-                label="Required Sheet Weight / Shift (12h)"
-                value={
-                  thermoDerived.requiredSheetKgPerShift12h
-                    ? `${fmt(thermoDerived.requiredSheetKgPerShift12h, 3)} kg`
-                    : "—"
-                }
-              />
-              <RefRow
-                label="Required Sheet Weight / Day (24h)"
-                value={
-                  thermoDerived.requiredSheetKgPerDay24h
-                    ? `${fmt(thermoDerived.requiredSheetKgPerDay24h, 3)} kg`
-                    : "—"
-                }
-              />
+              <div className="overflow-auto rounded-xl border">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Item</th>
+                      <th className="text-left p-3 font-medium">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Pcs/Hr</td>
+                      <td className="p-3 bg-yellow-50 font-semibold">
+                        {scenarioEngineering?.thermo?.pcsPerHour || "—"}
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Pcs/Shift</td>
+                      <td className="p-3 bg-yellow-50 font-semibold">
+                        {scenarioEngineering?.thermo?.pcsPerShift12h || "—"}
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Pcs/Day</td>
+                      <td className="p-3 bg-yellow-50 font-semibold">
+                        {scenarioEngineering?.thermo?.pcsPerDay24h || "—"}
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Sheet Consumption per hr (kg/hr)</td>
+                      <td className="p-3 bg-yellow-50 font-semibold">
+                        {thermoDerived.requiredSheetKgPerHour
+                          ? fmt(thermoDerived.requiredSheetKgPerHour, 3)
+                          : "—"}
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Sheet Consumption per shift</td>
+                      <td className="p-3 bg-yellow-50 font-semibold">
+                        {thermoDerived.requiredSheetKgPerShift12h
+                          ? fmt(thermoDerived.requiredSheetKgPerShift12h, 3)
+                          : "—"}
+                      </td>
+                    </tr>
+
+                    <tr className="border-t">
+                      <td className="p-3 font-medium">Sheet Consumption per day</td>
+                      <td className="p-3 bg-yellow-50 font-semibold">
+                        {thermoDerived.requiredSheetKgPerDay24h
+                          ? fmt(thermoDerived.requiredSheetKgPerDay24h, 3)
+                          : "—"}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </Section>
@@ -2785,173 +2811,34 @@ export default function PricingEngineeringTab({
             {scenarioEngineering?.thermo?.enterToolData && (
               <div className="rounded-xl border p-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <Field label="Base Mold Name">
-                    <Input
-                      value={scenarioEngineering?.tooling?.moldBaseName}
-                      onChange={(v) =>
-                        updateSection("tooling", { moldBaseName: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.moldBaseName}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.moldBaseName}
-                    />
-                  </Field>
-
-                  <Field label="Base Mold Code">
-                    <Input
-                      value={scenarioEngineering?.tooling?.moldBaseCode}
-                      onChange={(v) =>
-                        updateSection("tooling", { moldBaseCode: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.moldBaseCode}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.moldBaseCode}
-                    />
-                  </Field>
-
-                  <Field label="Mold Insert Name">
-                    <Input
-                      value={scenarioEngineering?.tooling?.moldInsertName}
-                      onChange={(v) =>
-                        updateSection("tooling", { moldInsertName: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.moldInsertName}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.moldInsertName}
-                    />
-                  </Field>
-
-                  <Field label="Mold Insert Code">
-                    <Input
-                      value={scenarioEngineering?.tooling?.moldInsertCode}
-                      onChange={(v) =>
-                        updateSection("tooling", { moldInsertCode: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.moldInsertCode}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.moldInsertCode}
-                    />
-                  </Field>
-
-                  <Field label="Mold Bottom / Engraving Name">
-                    <Input
-                      value={scenarioEngineering?.tooling?.moldBottomName}
-                      onChange={(v) =>
-                        updateSection("tooling", { moldBottomName: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.moldBottomName}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.moldBottomName}
-                    />
-                  </Field>
-
-                  <Field label="Mold Bottom / Engraving Code">
-                    <Input
-                      value={scenarioEngineering?.tooling?.moldBottomCode}
-                      onChange={(v) =>
-                        updateSection("tooling", { moldBottomCode: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.moldBottomCode}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.moldBottomCode}
-                    />
-                  </Field>
-
-                  <Field label="Cutting Plate Name">
-                    <Input
-                      value={scenarioEngineering?.tooling?.cuttingPlateName}
-                      onChange={(v) =>
-                        updateSection("tooling", { cuttingPlateName: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.cuttingPlateName}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.cuttingPlateName}
-                    />
-                  </Field>
-
-                  <Field label="Cutting Plate Code">
-                    <Input
-                      value={scenarioEngineering?.tooling?.cuttingPlateCode}
-                      onChange={(v) =>
-                        updateSection("tooling", { cuttingPlateCode: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.cuttingPlateCode}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.cuttingPlateCode}
-                    />
-                  </Field>
-
-                  <Field label="Stacking Unit Name">
-                    <Input
-                      value={scenarioEngineering?.tooling?.stackingUnitName}
-                      onChange={(v) =>
-                        updateSection("tooling", { stackingUnitName: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.stackingUnitName}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.stackingUnitName}
-                    />
-                  </Field>
-
-                  <Field label="Stacking Unit Code">
-                    <Input
-                      value={scenarioEngineering?.tooling?.stackingUnitCode}
-                      onChange={(v) =>
-                        updateSection("tooling", { stackingUnitCode: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.stackingUnitCode}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.stackingUnitCode}
-                    />
-                  </Field>
-
-                  <Field label="Plug Assist Name">
-                    <Input
-                      value={scenarioEngineering?.tooling?.plugAssistName}
-                      onChange={(v) =>
-                        updateSection("tooling", { plugAssistName: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.plugAssistName}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.plugAssistName}
-                    />
-                  </Field>
-
-                  <Field label="Plug Assist Code">
-                    <Input
-                      value={scenarioEngineering?.tooling?.plugAssistCode}
-                      onChange={(v) =>
-                        updateSection("tooling", { plugAssistCode: v, enabled: true })
-                      }
-                    />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.tooling?.plugAssistCode}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.tooling?.plugAssistCode}
-                    />
-                  </Field>
+                  {[
+                    ["Base Mold Name", "moldBaseName"],
+                    ["Base Mold Code", "moldBaseCode"],
+                    ["Mold Insert Name", "moldInsertName"],
+                    ["Mold Insert Code", "moldInsertCode"],
+                    ["Mold Bottom / Engraving Name", "moldBottomName"],
+                    ["Mold Bottom / Engraving Code", "moldBottomCode"],
+                    ["Cutting Plate Name", "cuttingPlateName"],
+                    ["Cutting Plate Code", "cuttingPlateCode"],
+                    ["Stacking Unit Name", "stackingUnitName"],
+                    ["Stacking Unit Code", "stackingUnitCode"],
+                    ["Plug Assist Name", "plugAssistName"],
+                    ["Plug Assist Code", "plugAssistCode"],
+                  ].map(([label, key]) => (
+                    <Field key={key} label={label}>
+                      <Input
+                        value={scenarioEngineering?.tooling?.[key]}
+                        onChange={(v) =>
+                          updateSection("tooling", { [key]: v, enabled: true })
+                        }
+                      />
+                      <RefHints
+                        engineeringValue={engineeringReviewData?.tooling?.[key]}
+                        requestValue=""
+                        currentValue={scenarioEngineering?.tooling?.[key]}
+                      />
+                    </Field>
+                  ))}
                 </div>
               </div>
             )}
@@ -2995,15 +2882,6 @@ export default function PricingEngineeringTab({
                           })
                         }
                       />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.print?.coverageAreaPct
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.print?.coverageAreaPct
-                        }
-                      />
                     </Field>
 
                     <Field label="Ink Weight / 1000 Cups">
@@ -3016,17 +2894,6 @@ export default function PricingEngineeringTab({
                           updateNested("decorationEngineering", "print", {
                             inkWeightPer1000Cups: v,
                           })
-                        }
-                      />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.print
-                            ?.inkWeightPer1000Cups
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.print
-                            ?.inkWeightPer1000Cups
                         }
                       />
                     </Field>
@@ -3044,15 +2911,6 @@ export default function PricingEngineeringTab({
                           })
                         }
                       />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.print?.numberOfColors
-                        }
-                        requestValue={requestData?.decoration?.dryOffset?.printColors || ""}
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.print?.numberOfColors
-                        }
-                      />
                     </Field>
 
                     <Field label="Print Area Length (mm)">
@@ -3066,15 +2924,6 @@ export default function PricingEngineeringTab({
                           })
                         }
                       />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.print?.printAreaLengthMm
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.print?.printAreaLengthMm
-                        }
-                      />
                     </Field>
 
                     <Field label="Print Area Width (mm)">
@@ -3086,15 +2935,6 @@ export default function PricingEngineeringTab({
                           updateNested("decorationEngineering", "print", {
                             printAreaWidthMm: v,
                           })
-                        }
-                      />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.print?.printAreaWidthMm
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.print?.printAreaWidthMm
                         }
                       />
                     </Field>
@@ -3120,18 +2960,7 @@ export default function PricingEngineeringTab({
                         <Input
                           value={scenarioEngineering?.decorationEngineering?.sleeve?.[key]}
                           onChange={(v) =>
-                            updateNested("decorationEngineering", "sleeve", {
-                              [key]: v,
-                            })
-                          }
-                        />
-                        <RefHints
-                          engineeringValue={
-                            engineeringReviewData?.decorationEngineering?.sleeve?.[key]
-                          }
-                          requestValue=""
-                          currentValue={
-                            scenarioEngineering?.decorationEngineering?.sleeve?.[key]
+                            updateNested("decorationEngineering", "sleeve", { [key]: v })
                           }
                         />
                       </Field>
@@ -3146,15 +2975,6 @@ export default function PricingEngineeringTab({
                           })
                         }
                         rows={3}
-                      />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.sleeve?.shrinkCurve
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.sleeve?.shrinkCurve
-                        }
                       />
                     </Field>
                   </div>
@@ -3171,15 +2991,6 @@ export default function PricingEngineeringTab({
                           })
                         }
                       />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.hybrid?.blankMaterial
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.hybrid?.blankMaterial
-                        }
-                      />
                     </Field>
 
                     <Field label="GSM">
@@ -3187,15 +2998,6 @@ export default function PricingEngineeringTab({
                         value={scenarioEngineering?.decorationEngineering?.hybrid?.gsm}
                         onChange={(v) =>
                           updateNested("decorationEngineering", "hybrid", { gsm: v })
-                        }
-                      />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.hybrid?.gsm
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.hybrid?.gsm
                         }
                       />
                     </Field>
@@ -3209,15 +3011,6 @@ export default function PricingEngineeringTab({
                           })
                         }
                       />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.hybrid?.printColors
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.hybrid?.printColors
-                        }
-                      />
                     </Field>
 
                     <Field label="Coating">
@@ -3225,15 +3018,6 @@ export default function PricingEngineeringTab({
                         value={scenarioEngineering?.decorationEngineering?.hybrid?.coating}
                         onChange={(v) =>
                           updateNested("decorationEngineering", "hybrid", { coating: v })
-                        }
-                      />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.hybrid?.coating
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.hybrid?.coating
                         }
                       />
                     </Field>
@@ -3249,17 +3033,6 @@ export default function PricingEngineeringTab({
                           })
                         }
                         options={["Yes", "No"]}
-                      />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.decorationEngineering?.hybrid
-                            ?.paperBottomSelected
-                        }
-                        requestValue=""
-                        currentValue={
-                          scenarioEngineering?.decorationEngineering?.hybrid
-                            ?.paperBottomSelected
-                        }
                       />
                     </Field>
 
@@ -3278,17 +3051,6 @@ export default function PricingEngineeringTab({
                               })
                             }
                           />
-                          <RefHints
-                            engineeringValue={
-                              engineeringReviewData?.decorationEngineering?.hybrid
-                                ?.paperBottomMaterial
-                            }
-                            requestValue=""
-                            currentValue={
-                              scenarioEngineering?.decorationEngineering?.hybrid
-                                ?.paperBottomMaterial
-                            }
-                          />
                         </Field>
 
                         <Field label="Paper Bottom GSM">
@@ -3303,17 +3065,6 @@ export default function PricingEngineeringTab({
                               })
                             }
                           />
-                          <RefHints
-                            engineeringValue={
-                              engineeringReviewData?.decorationEngineering?.hybrid
-                                ?.paperBottomGsm
-                            }
-                            requestValue=""
-                            currentValue={
-                              scenarioEngineering?.decorationEngineering?.hybrid
-                                ?.paperBottomGsm
-                            }
-                          />
                         </Field>
 
                         <Field label="Paper Bottom PE g/m²">
@@ -3326,17 +3077,6 @@ export default function PricingEngineeringTab({
                               updateNested("decorationEngineering", "hybrid", {
                                 paperBottomPE_g_m2: v,
                               })
-                            }
-                          />
-                          <RefHints
-                            engineeringValue={
-                              engineeringReviewData?.decorationEngineering?.hybrid
-                                ?.paperBottomPE_g_m2
-                            }
-                            requestValue=""
-                            currentValue={
-                              scenarioEngineering?.decorationEngineering?.hybrid
-                                ?.paperBottomPE_g_m2
                             }
                           />
                         </Field>
@@ -3364,11 +3104,6 @@ export default function PricingEngineeringTab({
                       updateNested("packaging", "primary", { pcsPerStack: v })
                     }
                   />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.packaging?.primary?.pcsPerStack}
-                    requestValue={requestValueOrBlank(packagingReq?.primary?.pcsPerStack)}
-                    currentValue={scenarioEngineering?.packaging?.primary?.pcsPerStack}
-                  />
                 </Field>
 
                 <Field label="Stacks / Bag">
@@ -3377,13 +3112,6 @@ export default function PricingEngineeringTab({
                     onChange={(v) =>
                       updateNested("packaging", "primary", { stacksPerPrimary: v })
                     }
-                  />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.primary?.stacksPerPrimary
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.primary?.stacksPerBag)}
-                    currentValue={scenarioEngineering?.packaging?.primary?.stacksPerPrimary}
                   />
                 </Field>
 
@@ -3394,13 +3122,6 @@ export default function PricingEngineeringTab({
                       updateNested("packaging", "primary", { primaryMaterial: v })
                     }
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.primary?.primaryMaterial
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveMaterial)}
-                    currentValue={scenarioEngineering?.packaging?.primary?.primaryMaterial}
-                  />
                 </Field>
 
                 <Field label="Primary Pack Name">
@@ -3409,11 +3130,6 @@ export default function PricingEngineeringTab({
                     onChange={(v) =>
                       updateNested("packaging", "primary", { primaryName: v })
                     }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.packaging?.primary?.primaryName}
-                    requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveMaterial)}
-                    currentValue={scenarioEngineering?.packaging?.primary?.primaryName}
                   />
                 </Field>
               </div>
@@ -3426,13 +3142,6 @@ export default function PricingEngineeringTab({
                       updateNested("packaging", "primary", { primaryLength_mm: v })
                     }
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.primary?.primaryLength_mm
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveDimensionsMm)}
-                    currentValue={scenarioEngineering?.packaging?.primary?.primaryLength_mm}
-                  />
                 </Field>
 
                 <Field label="Sleeve Thickness (micron)">
@@ -3441,13 +3150,6 @@ export default function PricingEngineeringTab({
                     onChange={(v) =>
                       updateNested("packaging", "primary", { primaryWidth_mm: v })
                     }
-                  />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.primary?.primaryWidth_mm
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveThicknessMicron)}
-                    currentValue={scenarioEngineering?.packaging?.primary?.primaryWidth_mm}
                   />
                 </Field>
 
@@ -3458,13 +3160,6 @@ export default function PricingEngineeringTab({
                       updateNested("packaging", "primary", { primaryHeight_mm: v })
                     }
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.primary?.primaryHeight_mm
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.primary?.bagSleeveWeight)}
-                    currentValue={scenarioEngineering?.packaging?.primary?.primaryHeight_mm}
-                  />
                 </Field>
 
                 <Field label="Primary Artwork Code">
@@ -3473,13 +3168,6 @@ export default function PricingEngineeringTab({
                     onChange={(v) =>
                       updateNested("packaging", "primary", { primaryArtworkCode: v })
                     }
-                  />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.primary?.primaryArtworkCode
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.primary?.sleeveArtworkProvided)}
-                    currentValue={scenarioEngineering?.packaging?.primary?.primaryArtworkCode}
                   />
                 </Field>
               </div>
@@ -3498,13 +3186,6 @@ export default function PricingEngineeringTab({
                       })
                     }
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.secondary?.primariesPerSecondary
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.secondary?.bagsPerCarton)}
-                    currentValue={scenarioEngineering?.packaging?.secondary?.primariesPerSecondary}
-                  />
                 </Field>
 
                 <Field label="Carton Type">
@@ -3518,13 +3199,6 @@ export default function PricingEngineeringTab({
                       { value: "Double wall", label: "Double wall" },
                     ]}
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.secondary?.secondaryType
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonType)}
-                    currentValue={scenarioEngineering?.packaging?.secondary?.secondaryType}
-                  />
                 </Field>
 
                 <Field label="Secondary Pack Name">
@@ -3534,13 +3208,6 @@ export default function PricingEngineeringTab({
                       updateNested("packaging", "secondary", { secondaryName: v })
                     }
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.secondary?.secondaryName
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonType)}
-                    currentValue={scenarioEngineering?.packaging?.secondary?.secondaryName}
-                  />
                 </Field>
 
                 <Field label="Labels / Box">
@@ -3549,11 +3216,6 @@ export default function PricingEngineeringTab({
                     onChange={(v) =>
                       updateNested("packaging", "secondary", { labelsPerBox: v })
                     }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.packaging?.secondary?.labelsPerBox}
-                    requestValue={requestValueOrBlank(packagingReq?.labelInstructions?.cartonLabelRequired)}
-                    currentValue={scenarioEngineering?.packaging?.secondary?.labelsPerBox}
                   />
                 </Field>
               </div>
@@ -3566,13 +3228,6 @@ export default function PricingEngineeringTab({
                       updateNested("packaging", "secondary", { secondaryLength_mm: v })
                     }
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.secondary?.secondaryLength_mm
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonExternalLengthMm)}
-                    currentValue={scenarioEngineering?.packaging?.secondary?.secondaryLength_mm}
-                  />
                 </Field>
 
                 <Field label="Carton External Width (mm)">
@@ -3581,13 +3236,6 @@ export default function PricingEngineeringTab({
                     onChange={(v) =>
                       updateNested("packaging", "secondary", { secondaryWidth_mm: v })
                     }
-                  />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.secondary?.secondaryWidth_mm
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonExternalWidthMm)}
-                    currentValue={scenarioEngineering?.packaging?.secondary?.secondaryWidth_mm}
                   />
                 </Field>
 
@@ -3598,13 +3246,6 @@ export default function PricingEngineeringTab({
                       updateNested("packaging", "secondary", { secondaryHeight_mm: v })
                     }
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.secondary?.secondaryHeight_mm
-                    }
-                    requestValue={requestValueOrBlank(packagingReq?.secondary?.cartonHeightMm)}
-                    currentValue={scenarioEngineering?.packaging?.secondary?.secondaryHeight_mm}
-                  />
                 </Field>
 
                 <Field label="Label Length (mm)">
@@ -3614,11 +3255,6 @@ export default function PricingEngineeringTab({
                       updateNested("packaging", "secondary", { labelLength_mm: v })
                     }
                   />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.packaging?.secondary?.labelLength_mm}
-                    requestValue={requestValueOrBlank(packagingReq?.labelInstructions?.cartonLabelDimensionsMm)}
-                    currentValue={scenarioEngineering?.packaging?.secondary?.labelLength_mm}
-                  />
                 </Field>
 
                 <Field label="Label Width (mm)">
@@ -3627,11 +3263,6 @@ export default function PricingEngineeringTab({
                     onChange={(v) =>
                       updateNested("packaging", "secondary", { labelWidth_mm: v })
                     }
-                  />
-                  <RefHints
-                    engineeringValue={engineeringReviewData?.packaging?.secondary?.labelWidth_mm}
-                    requestValue=""
-                    currentValue={scenarioEngineering?.packaging?.secondary?.labelWidth_mm}
                   />
                 </Field>
               </div>
@@ -3649,13 +3280,6 @@ export default function PricingEngineeringTab({
                     }
                     options={["Yes", "No"]}
                   />
-                  <RefHints
-                    engineeringValue={
-                      engineeringReviewData?.packaging?.pallet?.palletSelected
-                    }
-                    requestValue={packagingReq?.pallet?.noPalletNeeded ? "No" : "Yes"}
-                    currentValue={scenarioEngineering?.packaging?.pallet?.palletSelected}
-                  />
                 </Field>
 
                 {scenarioEngineering?.packaging?.pallet?.palletSelected === "Yes" && (
@@ -3671,11 +3295,6 @@ export default function PricingEngineeringTab({
                           { value: "EURO", label: "EURO Pallet" },
                         ]}
                       />
-                      <RefHints
-                        engineeringValue={engineeringReviewData?.packaging?.pallet?.palletType}
-                        requestValue={requestValueOrBlank(packagingReq?.pallet?.palletType)}
-                        currentValue={scenarioEngineering?.packaging?.pallet?.palletType}
-                      />
                     </Field>
 
                     <Field label="Pallet Length (mm)">
@@ -3684,13 +3303,6 @@ export default function PricingEngineeringTab({
                         onChange={(v) =>
                           updateNested("packaging", "pallet", { palletLength_mm: v })
                         }
-                      />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.packaging?.pallet?.palletLength_mm
-                        }
-                        requestValue={requestValueOrBlank(packagingReq?.pallet?.palletLengthMm)}
-                        currentValue={scenarioEngineering?.packaging?.pallet?.palletLength_mm}
                       />
                     </Field>
 
@@ -3701,13 +3313,6 @@ export default function PricingEngineeringTab({
                           updateNested("packaging", "pallet", { palletWidth_mm: v })
                         }
                       />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.packaging?.pallet?.palletWidth_mm
-                        }
-                        requestValue={requestValueOrBlank(packagingReq?.pallet?.palletWidthMm)}
-                        currentValue={scenarioEngineering?.packaging?.pallet?.palletWidth_mm}
-                      />
                     </Field>
 
                     <Field label="Pallet Height (mm)">
@@ -3717,13 +3322,6 @@ export default function PricingEngineeringTab({
                           updateNested("packaging", "pallet", { palletHeight_mm: v })
                         }
                       />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.packaging?.pallet?.palletHeight_mm
-                        }
-                        requestValue={requestValueOrBlank(packagingReq?.pallet?.palletHeightMm)}
-                        currentValue={scenarioEngineering?.packaging?.pallet?.palletHeight_mm}
-                      />
                     </Field>
 
                     <Field label="Cartons / Pallet">
@@ -3732,13 +3330,6 @@ export default function PricingEngineeringTab({
                         onChange={(v) =>
                           updateNested("packaging", "pallet", { boxesPerPallet: v })
                         }
-                      />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.packaging?.pallet?.boxesPerPallet
-                        }
-                        requestValue={requestValueOrBlank(packagingReq?.pallet?.cartonsPerPallet)}
-                        currentValue={scenarioEngineering?.packaging?.pallet?.boxesPerPallet}
                       />
                     </Field>
 
@@ -3753,16 +3344,6 @@ export default function PricingEngineeringTab({
                           })
                         }
                       />
-                      <RefHints
-                        engineeringValue={
-                          engineeringReviewData?.packaging?.pallet
-                            ?.stretchWeightPerPallet_kg
-                        }
-                        requestValue={requestValueOrBlank(packagingReq?.pallet?.stretchWrapKgPerPallet)}
-                        currentValue={
-                          scenarioEngineering?.packaging?.pallet?.stretchWeightPerPallet_kg
-                        }
-                      />
                     </Field>
                   </>
                 )}
@@ -3774,15 +3355,6 @@ export default function PricingEngineeringTab({
                   onChange={(v) => updateSection("packaging", { notes: v })}
                   rows={3}
                 />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.packaging?.notes}
-                  requestValue={requestValueOrBlank(
-                    packagingReq?.primary?.primaryPackagingNotes ||
-                      packagingReq?.secondary?.cartonPackagingNotes ||
-                      packagingReq?.pallet?.palletNotes
-                  )}
-                  currentValue={scenarioEngineering?.packaging?.notes}
-                />
               </Field>
 
               <Field label="Auto Packaging Instruction">
@@ -3790,11 +3362,6 @@ export default function PricingEngineeringTab({
                   value={scenarioEngineering?.packaging?.instructionText}
                   onChange={(v) => updateSection("packaging", { instructionText: v })}
                   rows={3}
-                />
-                <RefHints
-                  engineeringValue={engineeringReviewData?.packaging?.instructionText}
-                  requestValue=""
-                  currentValue={scenarioEngineering?.packaging?.instructionText}
                 />
               </Field>
 
@@ -3931,11 +3498,6 @@ export default function PricingEngineeringTab({
                         updateSection("freight", { [`${key}_pallets`]: v })
                       }
                     />
-                    <RefHints
-                      engineeringValue={engineeringReviewData?.freight?.[`${key}_pallets`]}
-                      requestValue=""
-                      currentValue={scenarioEngineering?.freight?.[`${key}_pallets`]}
-                    />
                   </Field>
 
                   {!isSheet && (
@@ -3945,11 +3507,6 @@ export default function PricingEngineeringTab({
                         onChange={(v) =>
                           updateSection("freight", { [`${key}_cartons`]: v })
                         }
-                      />
-                      <RefHints
-                        engineeringValue={engineeringReviewData?.freight?.[`${key}_cartons`]}
-                        requestValue=""
-                        currentValue={scenarioEngineering?.freight?.[`${key}_cartons`]}
                       />
                     </Field>
                   )}
@@ -3977,11 +3534,6 @@ export default function PricingEngineeringTab({
               value={scenarioEngineering?.freight?.notes}
               onChange={(v) => updateSection("freight", { notes: v })}
             />
-            <RefHints
-              engineeringValue={engineeringReviewData?.freight?.notes}
-              requestValue=""
-              currentValue={scenarioEngineering?.freight?.notes}
-            />
           </Field>
         </div>
       </Section>
@@ -3997,11 +3549,6 @@ export default function PricingEngineeringTab({
             <TextArea
               value={scenarioEngineering?.freight?.notes}
               onChange={(v) => updateSection("freight", { notes: v })}
-            />
-            <RefHints
-              engineeringValue={engineeringReviewData?.freight?.notes}
-              requestValue=""
-              currentValue={scenarioEngineering?.freight?.notes}
             />
           </Field>
         </div>
