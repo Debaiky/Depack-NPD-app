@@ -445,31 +445,30 @@ function buildDefaultFreightRows() {
 function buildDefaultWasteRows(caseType) {
   if (caseType === "sheet") {
     return [
-      { id: "waste-material", name: "Material Waste", ratePct: "" },
-      { id: "waste-packaging", name: "Packaging Waste", ratePct: "" },
+      { id: "waste-material", name: "Material Waste", ratePct: "1" },
+      { id: "waste-packaging", name: "Packaging Waste", ratePct: "1" },
     ];
   }
 
   return [
-    { id: "waste-material", name: "Material Waste", ratePct: "" },
+    { id: "waste-material", name: "Material Waste", ratePct: "1" },
     {
       id: "waste-intermediate-packaging",
       name: "Intermediate Sheet Packaging Waste",
-      ratePct: "",
+      ratePct: "1",
     },
     {
       id: "waste-thermo-packaging",
       name: "Thermoforming Packaging Waste",
-      ratePct: "",
+      ratePct: "1",
     },
     {
       id: "waste-decoration",
       name: "Decoration Waste",
-      ratePct: "",
+      ratePct: "1",
     },
   ];
 }
-
 function buildDefaultWorkingCapitalRows(caseType, assumptions) {
   const base = {
     dso: assumptions?.dso || "",
@@ -701,9 +700,59 @@ function Section({ title, tone = "gray", children }) {
     </div>
   );
 }
-
+function LineTableCompact({ rows, showPercent = true }) {
+  return (
+    <div className="overflow-auto">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="border-b bg-gray-50">
+            <th className="text-left p-2 font-semibold">Item</th>
+            <th className="text-right p-2 font-semibold">EGP</th>
+            <th className="text-right p-2 font-semibold">USD</th>
+            <th className="text-right p-2 font-semibold">EUR</th>
+            {showPercent ? (
+              <th className="text-right p-2 font-semibold">% of Selling Price</th>
+            ) : null}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={row.label}
+              className={`border-b ${row.bold ? "font-semibold" : ""}`}
+            >
+              <td className="p-2">{row.label}</td>
+              <td className="p-2 text-right">{row.egp}</td>
+              <td className="p-2 text-right">{row.usd}</td>
+              <td className="p-2 text-right">{row.eur}</td>
+              {showPercent ? <td className="p-2 text-right">{row.pct}</td> : null}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 function pctOfSales(value, salesPriceBaseEgp) {
   return salesPriceBaseEgp > 0 ? (n(value) / salesPriceBaseEgp) * 100 : 0;
+}
+function buildPieGradient(segments) {
+  const total = segments.reduce((sum, s) => sum + n(s.value), 0);
+
+  if (!total) {
+    return "conic-gradient(#e5e7eb 0deg 360deg)";
+  }
+
+  let current = 0;
+
+  const parts = segments.map((segment) => {
+    const start = current;
+    const angle = (n(segment.value) / total) * 360;
+    current += angle;
+    return `${segment.color} ${start}deg ${current}deg`;
+  });
+
+  return `conic-gradient(${parts.join(", ")})`;
 }
 
 function Pricing20PricingTab({
@@ -902,12 +951,28 @@ function Pricing20PricingTab({
         next.thermoPackagingRows || [],
         desiredThermoRows
       );
-      const mergedWasteRows = mergeRowsById(next.wasteRows || [], desiredWasteRows);
-      const mergedFreightRows = mergeRowsById(next.freightRows || [], desiredFreightRows);
-      const mergedWorkingCapitalRows = mergeRowsById(
-        next.workingCapitalRows || [],
-        desiredWorkingCapitalRows
-      );
+     const mergedWasteRows = mergeRowsById(next.wasteRows || [], desiredWasteRows).map(
+  (row) => ({
+    ...row,
+    ratePct: String(row.ratePct ?? "").trim() === "" ? "1" : row.ratePct,
+  })
+);
+
+const mergedFreightRows = mergeRowsById(next.freightRows || [], desiredFreightRows);
+
+const mergedWorkingCapitalRows = mergeRowsById(
+  next.workingCapitalRows || [],
+  desiredWorkingCapitalRows
+).map((row) => ({
+  ...row,
+  dso: String(row.dso ?? "").trim() === "" ? nextAssumptions.dso || "" : row.dso,
+  dio: String(row.dio ?? "").trim() === "" ? nextAssumptions.dio || "" : row.dio,
+  dpo: String(row.dpo ?? "").trim() === "" ? nextAssumptions.dpo || "" : row.dpo,
+  interestRatePct:
+    String(row.interestRatePct ?? "").trim() === ""
+      ? nextAssumptions.interestRatePct || ""
+      : row.interestRatePct,
+}));
       const mergedAmortRows = mergeRowsById(
         next.amortizationRows || [],
         desiredAmortRows
@@ -1728,7 +1793,158 @@ function Pricing20PricingTab({
     amortizationTotals.basis,
     conversionSummary.conversionPriceEgp,
   ]);
+  const conversionLineRows = [
+    {
+      label: "Daily Extrusion Conversion Price",
+      egp: fmt(conversionSummary.dailyExtrusionConversionEgp, 3),
+      usd: fmt(conversionSummary.dailyExtrusionConversionUsd, 3),
+      eur: fmt(conversionSummary.dailyExtrusionConversionEur, 3),
+      pct: "—",
+    },
+    {
+      label: "Daily Thermoforming Conversion Price",
+      egp: isSheet ? "—" : fmt(conversionSummary.dailyThermoConversionEgp, 3),
+      usd: isSheet ? "—" : fmt(conversionSummary.dailyThermoConversionUsd, 3),
+      eur: isSheet ? "—" : fmt(conversionSummary.dailyThermoConversionEur, 3),
+      pct: "—",
+    },
+    {
+      label: isSheet ? "Conversion Cost / Ton" : "Conversion Cost / 1000 pcs",
+      egp: fmt(conversionSummary.conversionPriceEgp, 3),
+      usd: fmt(conversionSummary.conversionUsd, 3),
+      eur: fmt(conversionSummary.conversionEur, 3),
+      pct: `${fmt(conversionSummary.conversionPct, 2)}%`,
+    },
+    {
+      label: isSheet ? "Sales Price / Ton" : "Sales Price / 1000 pcs",
+      egp: fmt(conversionSummary.salesPriceEgp, 3),
+      usd: fmt(conversionSummary.salesPriceUsd, 3),
+      eur: fmt(conversionSummary.salesPriceEur, 3),
+      pct: "100%",
+      bold: true,
+    },
+    {
+      label: "Conversion Cost / Sales Price %",
+      egp: `${fmt(conversionSummary.conversionPct, 2)}%`,
+      usd: "—",
+      eur: "—",
+      pct: "—",
+    },
+  ];
 
+  const resultBreakdownRows = [
+    ...summarySplit.map((row) => ({
+      label: row.label,
+      egp: fmt(row.value, 3),
+      usd: fmt(egpToUsd(row.value, assumptions.usdEgp), 3),
+      eur: fmt(egpToEur(row.value, assumptions.usdEgp, assumptions.eurUsd), 3),
+      pct: `${fmt(pctOfSales(row.value, salesPriceBaseEgp), 2)}%`,
+    })),
+    {
+      label: isSheet ? "Sales Price / Ton" : "Sales Price / 1000 pcs",
+      egp: fmt(conversionSummary.salesPriceEgp, 3),
+      usd: fmt(conversionSummary.salesPriceUsd, 3),
+      eur: fmt(conversionSummary.salesPriceEur, 3),
+      pct: "100%",
+      bold: true,
+    },
+  ];
+
+  const pieColorMap = {
+    green: "#16a34a",
+    orange: "#f59e0b",
+    teal: "#14b8a6",
+    blue: "#3b82f6",
+    red: "#ef4444",
+    purple: "#8b5cf6",
+    gray: "#6b7280",
+  };
+
+  const pieSegments = summarySplit
+    .filter((row) => n(row.value) > 0)
+    .map((row) => ({
+      ...row,
+      color: pieColorMap[row.tone] || "#9ca3af",
+    }));
+
+  const investmentPaybackRows = [
+    {
+      label: "Amortized Portion",
+      egp: fmt(amortizationTotals.amortizedInvestment, 3),
+      usd: fmt(egpToUsd(amortizationTotals.amortizedInvestment, assumptions.usdEgp), 3),
+      eur: fmt(
+        egpToEur(
+          amortizationTotals.amortizedInvestment,
+          assumptions.usdEgp,
+          assumptions.eurUsd
+        ),
+        3
+      ),
+    },
+    {
+      label: "Non-Amortized Portion",
+      egp: fmt(amortizationTotals.nonAmortizedInvestment, 3),
+      usd: fmt(egpToUsd(amortizationTotals.nonAmortizedInvestment, assumptions.usdEgp), 3),
+      eur: fmt(
+        egpToEur(
+          amortizationTotals.nonAmortizedInvestment,
+          assumptions.usdEgp,
+          assumptions.eurUsd
+        ),
+        3
+      ),
+    },
+    {
+      label: "Total Investment Cost",
+      egp: fmt(amortizationTotals.totalInvestment, 3),
+      usd: fmt(egpToUsd(amortizationTotals.totalInvestment, assumptions.usdEgp), 3),
+      eur: fmt(
+        egpToEur(
+          amortizationTotals.totalInvestment,
+          assumptions.usdEgp,
+          assumptions.eurUsd
+        ),
+        3
+      ),
+      bold: true,
+    },
+    {
+      label: `Expected Annual Volume (${isSheet ? "tons" : "x1000 pcs"})`,
+      egp: fmt(commercial.expectedAnnualVolume || 0, 3),
+      usd: "—",
+      eur: "—",
+    },
+    {
+      label: "Annual Turnover",
+      egp: fmt(annualTurnoverEgp, 3),
+      usd: fmt(egpToUsd(annualTurnoverEgp, assumptions.usdEgp), 3),
+      eur: fmt(egpToEur(annualTurnoverEgp, assumptions.usdEgp, assumptions.eurUsd), 3),
+    },
+    {
+      label: "Annual Conversion",
+      egp: fmt(annualConversionEgp, 3),
+      usd: fmt(egpToUsd(annualConversionEgp, assumptions.usdEgp), 3),
+      eur: fmt(
+        egpToEur(annualConversionEgp, assumptions.usdEgp, assumptions.eurUsd),
+        3
+      ),
+    },
+    {
+      label: "Payback - Total Investment",
+      egp: paybackTotalYears > 0 ? `${fmt(paybackTotalYears, 3)} years` : "—",
+      usd: "—",
+      eur: "—",
+    },
+    {
+      label: "Payback - Non-Amortized",
+      egp:
+        paybackNonAmortizedYears > 0
+          ? `${fmt(paybackNonAmortizedYears, 3)} years`
+          : "—",
+      usd: "—",
+      eur: "—",
+    },
+  ];
   const conversionModeOptions = isSheet
     ? [
         { value: "required_daily_extrusion_conversion", label: "Required Daily Extrusion Conversion" },
@@ -1775,6 +1991,9 @@ function Pricing20PricingTab({
       </Section>
 
       <Section title="1. Financial Assumptions" tone="blue">
+        <div className="text-xs text-red-600 font-medium">
+  All fields in this section are required.
+</div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <CompactSelect
             label="Base Currency"
@@ -2814,148 +3033,94 @@ function Pricing20PricingTab({
       </Section>
 
       <Section title={isSheet ? "9. Conversion Price" : "11. Conversion Price"} tone="gray">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <CompactSelect
-            label="Mode"
-            value={conversion.mode || ""}
-            onChange={(v) => updateRoot("conversion", { mode: v })}
-            options={conversionModeOptions}
-            mode="user"
-          />
-          <CompactInput
-            label="Value in Currency"
-            value={conversion.valueInCurrency || ""}
-            onChange={(v) => updateRoot("conversion", { valueInCurrency: v })}
-            mode="user"
-          />
-          <CompactSelect
-            label="Currency"
-            value={conversion.currency || "EGP"}
-            onChange={(v) => updateRoot("conversion", { currency: v })}
-            options={currencyOptions}
-            mode="user"
-          />
-          <CompactInput
-            label={`Conversion Price / ${basisLabel} EGP`}
-            value={fmt(conversionSummary.conversionPriceEgp, 3)}
-            onChange={() => {}}
-            mode="calculated"
-          />
-        </div>
-      </Section>
+  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <CompactSelect
+          label="Mode"
+          value={conversion.mode || ""}
+          onChange={(v) => updateRoot("conversion", { mode: v })}
+          options={conversionModeOptions}
+          mode="user"
+        />
+        <CompactInput
+          label="Value in Currency"
+          value={conversion.valueInCurrency || ""}
+          onChange={(v) => updateRoot("conversion", { valueInCurrency: v })}
+          mode="user"
+        />
+        <CompactSelect
+          label="Currency"
+          value={conversion.currency || "EGP"}
+          onChange={(v) => updateRoot("conversion", { currency: v })}
+          options={currencyOptions}
+          mode="user"
+        />
+      </div>
+    </div>
 
-      <Section title="12. Results" tone="green">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <StatCard
-            title={isSheet ? "Sales Price / Ton - EGP" : "Sales Price / 1000 pcs - EGP"}
-            value={`${fmt(conversionSummary.salesPriceEgp, 3)} EGP`}
-            tone="green"
-          />
-          <StatCard
-            title="USD"
-            value={`${fmt(conversionSummary.salesPriceUsd, 3)} USD`}
-            tone="green"
-          />
-          <StatCard
-            title="EUR"
-            value={`${fmt(conversionSummary.salesPriceEur, 3)} EUR`}
-            tone="green"
-          />
-          <StatCard
-            title="Conversion %"
-            value={`${fmt(conversionSummary.conversionPct, 2)}%`}
-            tone="green"
-          />
-        </div>
+    <div className="rounded-xl border bg-white p-3">
+      <LineTableCompact rows={conversionLineRows} showPercent={true} />
+    </div>
+  </div>
+</Section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {isSheet ? (
-            <StatCard
-              title="Daily Extrusion Conversion - EGP"
-              value={`${fmt(conversionSummary.dailyExtrusionConversionEgp, 3)} EGP`}
-              tone="purple"
-            />
-          ) : (
-            <>
-              <StatCard
-                title="Daily Thermo Conversion - EGP"
-                value={`${fmt(conversionSummary.dailyThermoConversionEgp, 3)} EGP`}
-                tone="purple"
-              />
-              <StatCard
-                title="Daily Extrusion Conversion - EGP"
-                value={`${fmt(conversionSummary.dailyExtrusionConversionEgp, 3)} EGP`}
-                tone="purple"
-              />
-            </>
-          )}
-        </div>
+    <Section title="12. Results" tone="green">
+  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+    <div className="rounded-xl border bg-white p-3">
+      <LineTableCompact rows={resultBreakdownRows} showPercent={true} />
+    </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3">
-          {summarySplit.map((row) => (
-            <StatCard
+    <div className="rounded-xl border bg-white p-4">
+      <div className="font-medium mb-4">Cost Breakdown Pie Chart</div>
+
+      <div className="flex flex-col md:flex-row items-center gap-6">
+        <div
+          className="w-64 h-64 rounded-full border shadow-sm shrink-0"
+          style={{
+            background: buildPieGradient(pieSegments),
+          }}
+        />
+
+        <div className="w-full space-y-2">
+          {pieSegments.map((row) => (
+            <div
               key={row.label}
-              title={row.label}
-              value={`${fmt(row.value, 3)} EGP`}
-              tone={row.tone}
-            />
+              className="flex items-center justify-between gap-3 border-b pb-2 text-sm"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="w-3 h-3 rounded-sm shrink-0"
+                  style={{ backgroundColor: row.color }}
+                />
+                <span className="truncate">{row.label}</span>
+              </div>
+
+              <div className="text-right shrink-0">
+                {fmt(pctOfSales(row.value, salesPriceBaseEgp), 2)}%
+              </div>
+            </div>
           ))}
         </div>
-      </Section>
+      </div>
+    </div>
+  </div>
+</Section>
 
-      <Section title="13. Investment & Payback Summary" tone="blue">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <CompactInput
-            label={`Expected Annual Volume (${isSheet ? "tons" : "x1000 pcs"})`}
-            value={commercial.expectedAnnualVolume || ""}
-            onChange={(v) => updateRoot("commercial", { expectedAnnualVolume: v })}
-            mode="user"
-          />
+     <Section title="13. Investment & Payback Summary" tone="blue">
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <CompactInput
+      label={`Expected Annual Volume (${isSheet ? "tons" : "x1000 pcs"})`}
+      value={commercial.expectedAnnualVolume || ""}
+      onChange={(v) => updateRoot("commercial", { expectedAnnualVolume: v })}
+      mode="user"
+    />
+  </div>
 
-          <StatCard
-            title="Amortized Portion"
-            value={`${fmt(amortizationTotals.amortizedInvestment, 3)} EGP`}
-            tone="blue"
-          />
-          <StatCard
-            title="Non-Amortized Portion"
-            value={`${fmt(amortizationTotals.nonAmortizedInvestment, 3)} EGP`}
-            tone="blue"
-          />
-          <StatCard
-            title="Total Investment Cost"
-            value={`${fmt(amortizationTotals.totalInvestment, 3)} EGP`}
-            tone="blue"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <StatCard
-            title="Annual Turnover"
-            value={`${fmt(annualTurnoverEgp, 3)} EGP`}
-            tone="green"
-          />
-          <StatCard
-            title="Annual Conversion"
-            value={`${fmt(annualConversionEgp, 3)} EGP`}
-            tone="green"
-          />
-          <StatCard
-            title="Payback - Total Investment"
-            value={paybackTotalYears > 0 ? `${fmt(paybackTotalYears, 3)} years` : "—"}
-            tone="purple"
-          />
-          <StatCard
-            title="Payback - Non Amortized"
-            value={
-              paybackNonAmortizedYears > 0
-                ? `${fmt(paybackNonAmortizedYears, 3)} years`
-                : "—"
-            }
-            tone="purple"
-          />
-        </div>
-      </Section>
+  <div className="rounded-xl border bg-white p-3">
+    <LineTableCompact rows={investmentPaybackRows} showPercent={false} />
+  </div>
+</Section>
     </div>
   );
 }
