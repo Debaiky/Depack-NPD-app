@@ -57,11 +57,18 @@ function Field({ label, requestValue, currentValue, children }) {
   );
 }
 
-function Input({ value, onChange, placeholder = "", type = "text", disabled = false }) {
+function Input({
+  value,
+  onChange,
+  placeholder = "",
+  type = "text",
+  disabled = false,
+  className = "",
+}) {
   return (
     <input
       type={type}
-      className={`w-full border rounded-lg p-2 ${disabled ? "bg-gray-100 text-gray-500" : ""}`}
+      className={`w-full border rounded-lg p-2 ${disabled ? "bg-gray-100 text-gray-500" : ""} ${className}`}
       value={value || ""}
       placeholder={placeholder}
       disabled={disabled}
@@ -2750,91 +2757,157 @@ if (!payload) {
 </Section>
 
 {!isSheet && (
-  <Section title="3. Thermoforming Data">
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-        <Field label="Machine">
-          <SelectField
-            value={engineering.thermo.machineName}
-            onChange={(v) => updateSection("thermo", { machineName: v })}
-            options={["RDM73K", "RDK80"]}
-          />
-        </Field>
+  <Section title="3. Thermoforming Process Data">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+      <div className="rounded-xl border p-4 space-y-4">
+        <div className="font-medium">Data Input</div>
 
-        <Field
-          label="Product Weight (g)"
-          requestValue={requestValueOrBlank(product.productWeightG)}
-          currentValue={engineering.thermo.unitWeight_g}
-        >
-          <Input
-            value={engineering.thermo.unitWeight_g}
-            onChange={(v) => updateSection("thermo", { unitWeight_g: v })}
-          />
-        </Field>
+        <div className="overflow-auto rounded-xl border">
+          <table className="w-full text-sm border-collapse">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="text-left p-3 font-medium">Item</th>
+                <th className="text-left p-3 font-medium">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t">
+                <td className="p-3 font-medium">Product Weight (g)</td>
+                <td className="p-2">
+                  <Input
+                    value={engineering.thermo.unitWeight_g}
+                    onChange={(v) => updateSection("thermo", { unitWeight_g: v })}
+                    className="text-lg font-semibold"
+                  />
+                  {product.productWeightG ? (
+                    <div className="mt-1 text-xs text-gray-400">
+                      Request: {product.productWeightG}
+                    </div>
+                  ) : null}
+                </td>
+              </tr>
 
-        <Field label="Cavities">
-          <Input
-            value={engineering.thermo.cavities}
-            onChange={(v) => updateSection("thermo", { cavities: v })}
-          />
-        </Field>
+              <tr className="border-t">
+                <td className="p-3 font-medium">Machine</td>
+                <td className="p-2">
+                  <SelectField
+                    value={engineering.thermo.machineName}
+                    onChange={(v) => updateSection("thermo", { machineName: v })}
+                    options={["RDM73K", "RDK80"]}
+                  />
+                </td>
+              </tr>
 
-        <Field label="CPM">
-          <Input
-            value={engineering.thermo.cpm}
-            onChange={(v) => updateSection("thermo", { cpm: v })}
-          />
-        </Field>
+              <tr className="border-t">
+                <td className="p-3 font-medium">Number of Cavities</td>
+                <td className="p-2">
+                  <Input
+                    value={engineering.thermo.cavities}
+                    onChange={(v) => updateSection("thermo", { cavities: v })}
+                    className="text-lg font-semibold"
+                  />
+                </td>
+              </tr>
 
-        <Field label="Efficiency %">
-          <Input
-            value={engineering.thermo.efficiencyPct}
-            onChange={(v) => updateSection("thermo", { efficiencyPct: v })}
-          />
-        </Field>
+              <tr className="border-t">
+                <td className="p-3 font-medium">Cycles Per Minute (CPM)</td>
+                <td className="p-2">
+                  <Input
+                    value={engineering.thermo.cpm}
+                    onChange={(v) => updateSection("thermo", { cpm: v })}
+                    className="text-lg font-semibold"
+                  />
+                </td>
+              </tr>
 
-        <Field label="Sheet Utilization %">
-          <Input
-            value={engineering.thermo.sheetUtilizationPct}
-            onChange={(v) => updateSection("thermo", { sheetUtilizationPct: v })}
-          />
-        </Field>
+              <tr className="border-t">
+                <td className="p-3 font-medium">Thermo Efficiency %</td>
+                <td className="p-2">
+                  <Input
+                    value={engineering.thermo.efficiencyPct}
+                    onChange={(v) => updateSection("thermo", { efficiencyPct: v })}
+                    className="text-lg font-semibold"
+                  />
+                </td>
+              </tr>
+
+              <tr className="border-t">
+                <td className="p-3 font-medium">Sheet Utilization %</td>
+                <td className="p-2">
+                  <Input
+                    value={engineering.thermo.sheetUtilizationPct}
+                    onChange={(v) => updateSection("thermo", { sheetUtilizationPct: v })}
+                    className="text-lg font-semibold"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-        <RefRow label="Pcs / Hr" value={engineering.thermo.pcsPerHour} />
-        <RefRow label="Pcs / Shift (12h)" value={engineering.thermo.pcsPerShift12h} />
-        <RefRow label="Pcs / Day" value={engineering.thermo.pcsPerDay24h} />
-        <RefRow label="Pcs / Week" value={engineering.thermo.pcsPerWeek} />
-        <RefRow label="Pcs / Month" value={engineering.thermo.pcsPerMonth} />
-        <RefRow label="Pcs / Year" value={engineering.thermo.pcsPerYear330d} />
-      </div>
+      <div className="rounded-xl border p-4 space-y-4">
+        <div className="font-medium">Results</div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <RefRow
-          label="Required Sheet Weight / Hr"
-          value={
-            thermoDerived.requiredSheetKgPerHour
-              ? `${fmt(thermoDerived.requiredSheetKgPerHour, 3)} kg`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Required Sheet Weight / Shift (12h)"
-          value={
-            thermoDerived.requiredSheetKgPerShift12h
-              ? `${fmt(thermoDerived.requiredSheetKgPerShift12h, 3)} kg`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Required Sheet Weight / Day (24h)"
-          value={
-            thermoDerived.requiredSheetKgPerDay24h
-              ? `${fmt(thermoDerived.requiredSheetKgPerDay24h, 3)} kg`
-              : "—"
-          }
-        />
+        <div className="overflow-auto rounded-xl border">
+          <table className="w-full text-sm border-collapse">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="text-left p-3 font-medium">Item</th>
+                <th className="text-left p-3 font-medium">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t">
+                <td className="p-3 font-medium">Pcs/Hr</td>
+                <td className="p-3 bg-yellow-50 font-semibold">
+                  {engineering.thermo.pcsPerHour || "—"}
+                </td>
+              </tr>
+
+              <tr className="border-t">
+                <td className="p-3 font-medium">Pcs/Shift</td>
+                <td className="p-3 bg-yellow-50 font-semibold">
+                  {engineering.thermo.pcsPerShift12h || "—"}
+                </td>
+              </tr>
+
+              <tr className="border-t">
+                <td className="p-3 font-medium">Pcs/Day</td>
+                <td className="p-3 bg-yellow-50 font-semibold">
+                  {engineering.thermo.pcsPerDay24h || "—"}
+                </td>
+              </tr>
+
+              <tr className="border-t">
+                <td className="p-3 font-medium">Sheet Consumption per hr (kg/hr)</td>
+                <td className="p-3 bg-yellow-50 font-semibold">
+                  {thermoDerived.requiredSheetKgPerHour
+                    ? fmt(thermoDerived.requiredSheetKgPerHour, 3)
+                    : "—"}
+                </td>
+              </tr>
+
+              <tr className="border-t">
+                <td className="p-3 font-medium">Sheet Consumption per shift</td>
+                <td className="p-3 bg-yellow-50 font-semibold">
+                  {thermoDerived.requiredSheetKgPerShift12h
+                    ? fmt(thermoDerived.requiredSheetKgPerShift12h, 3)
+                    : "—"}
+                </td>
+              </tr>
+
+              <tr className="border-t">
+                <td className="p-3 font-medium">Sheet Consumption per day</td>
+                <td className="p-3 bg-yellow-50 font-semibold">
+                  {thermoDerived.requiredSheetKgPerDay24h
+                    ? fmt(thermoDerived.requiredSheetKgPerDay24h, 3)
+                    : "—"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </Section>
