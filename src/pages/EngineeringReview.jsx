@@ -2560,6 +2560,215 @@ if (!payload) {
     </div>
   </div>
 </div>
+<div className="rounded-xl border p-4 space-y-4">
+  <div className="font-medium">
+    {isSheet ? "Sheet Roll Packaging Data" : "Intermediate Sheet Roll Packaging"}
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+    <Field
+      label="Core Material"
+      requestValue={requestValueOrBlank(product?.coreMaterial)}
+      currentValue={engineering.sheetPackaging.coreMaterial}
+    >
+      <Input
+        value={engineering.sheetPackaging.coreMaterial}
+        onChange={(v) => updateSection("sheetPackaging", { coreMaterial: v })}
+      />
+    </Field>
+
+    <Field
+      label="Core Size"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.coreSize}
+    >
+      <SelectField
+        value={engineering.sheetPackaging.coreSize}
+        onChange={(v) => updateSection("sheetPackaging", { coreSize: v })}
+        options={["3 inch", "6 inch", "8 inch"]}
+      />
+    </Field>
+
+    <Field
+      label="Core Uses"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.coreUses}
+    >
+      <Input
+        value={engineering.sheetPackaging.coreUses}
+        onChange={(v) => updateSection("sheetPackaging", { coreUses: v })}
+      />
+    </Field>
+
+    <Field
+      label="Roll Weight (kg)"
+      requestValue={requestValueOrBlank(product?.rollWeightKg)}
+      currentValue={engineering.sheetPackaging.rollWeight_kg}
+    >
+      <Input
+        value={
+          engineering.sheetPackaging.rollWeight_kg ||
+          engineering.sheetSpecs.rollTargetWeight_kg
+        }
+        onChange={(v) => updateSection("sheetPackaging", { rollWeight_kg: v })}
+      />
+    </Field>
+
+    <Field
+      label="Labels per Roll"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.labelsPerRoll}
+    >
+      <Input
+        value={engineering.sheetPackaging.labelsPerRoll}
+        onChange={(v) => updateSection("sheetPackaging", { labelsPerRoll: v })}
+      />
+    </Field>
+
+    <Field
+      label="Labels per Pallet"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.labelsPerPallet}
+    >
+      <Input
+        value={engineering.sheetPackaging.labelsPerPallet}
+        onChange={(v) => updateSection("sheetPackaging", { labelsPerPallet: v })}
+      />
+    </Field>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+    <Field
+      label="Pallet Type"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.palletType}
+    >
+      <SelectField
+        value={engineering.sheetPackaging.palletType}
+        onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
+        options={[
+          { value: "UK", label: "UK Standard Pallet" },
+          { value: "EURO", label: "EURO Pallet" },
+        ]}
+      />
+    </Field>
+
+    <Field
+      label="Pallet Uses"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.palletUses}
+    >
+      <Input
+        value={engineering.sheetPackaging.palletUses}
+        onChange={(v) => updateSection("sheetPackaging", { palletUses: v })}
+      />
+    </Field>
+
+    <Field
+      label="Pallet Length (mm)"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.palletLength_mm}
+    >
+      <Input
+        value={engineering.sheetPackaging.palletLength_mm}
+        onChange={(v) => updateSection("sheetPackaging", { palletLength_mm: v })}
+      />
+    </Field>
+
+    <Field
+      label="Pallet Width (mm)"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.palletWidth_mm}
+    >
+      <Input
+        value={engineering.sheetPackaging.palletWidth_mm}
+        onChange={(v) => updateSection("sheetPackaging", { palletWidth_mm: v })}
+      />
+    </Field>
+
+    <Field
+      label="Pallet Height (mm)"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.palletHeight_mm}
+    >
+      <Input
+        value={engineering.sheetPackaging.palletHeight_mm}
+        onChange={(v) => updateSection("sheetPackaging", { palletHeight_mm: v })}
+      />
+    </Field>
+
+    <Field
+      label="Rolls per Pallet"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.rollsPerPallet}
+    >
+      <Input
+        value={engineering.sheetPackaging.rollsPerPallet}
+        onChange={(v) => updateSection("sheetPackaging", { rollsPerPallet: v })}
+      />
+    </Field>
+
+    <Field
+      label="Strap Length / Pallet (m)"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.strapLength_m}
+    >
+      <Input
+        value={engineering.sheetPackaging.strapLength_m}
+        onChange={(v) => updateSection("sheetPackaging", { strapLength_m: v })}
+      />
+    </Field>
+
+    <Field
+      label="Separators / Pallet"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.separatorsPerPallet}
+    >
+      <Input
+        value={engineering.sheetPackaging.separatorsPerPallet}
+        onChange={(v) =>
+          updateSection("sheetPackaging", { separatorsPerPallet: v })
+        }
+      />
+    </Field>
+
+    <Field
+      label="Foam Sheet Length / Pallet (m)"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.foamLength_m}
+    >
+      <Input
+        value={engineering.sheetPackaging.foamLength_m}
+        onChange={(v) => updateSection("sheetPackaging", { foamLength_m: v })}
+      />
+    </Field>
+
+    <Field
+      label="Stretch Film / Pallet (kg)"
+      requestValue=""
+      currentValue={engineering.sheetPackaging.stretchKgPerPallet}
+    >
+      <Input
+        value={engineering.sheetPackaging.stretchKgPerPallet}
+        onChange={(v) =>
+          updateSection("sheetPackaging", { stretchKgPerPallet: v })
+        }
+      />
+    </Field>
+  </div>
+
+  <Field
+    label="Packaging Instructions"
+    requestValue=""
+    currentValue={engineering.sheetPackaging.instructionText}
+  >
+    <TextArea
+      value={engineering.sheetPackaging.instructionText}
+      onChange={(v) => updateSection("sheetPackaging", { instructionText: v })}
+      rows={3}
+    />
+  </Field>
+</div>
                    </div>
 </Section>
 
