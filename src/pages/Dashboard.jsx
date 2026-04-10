@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, FlaskConical, Calculator, Pencil } from "lucide-react";
+import { Eye, FlaskConical, Calculator, Pencil, Home } from "lucide-react";
 
 const fmtNumber = (v, digits = 0) => {
   const n = parseFloat(String(v ?? "").replace(/,/g, ""));
@@ -143,15 +143,25 @@ export default function Dashboard() {
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-xl font-semibold">Projects Dashboard</h1>
+  <h1 className="text-xl font-semibold">Projects Dashboard</h1>
 
-        <Link
-          to="/new"
-          className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
-        >
-          + New Request
-        </Link>
-      </div>
+  <div className="flex items-center gap-3 flex-wrap">
+    <Link
+      to="/"
+      className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium bg-white hover:bg-gray-50"
+    >
+      <Home className="h-4 w-4" />
+      Home
+    </Link>
+
+    <Link
+      to="/new"
+      className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
+    >
+      + New Request
+    </Link>
+  </div>
+</div>
 
       <div className="flex gap-3 flex-wrap">
         <input
