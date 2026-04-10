@@ -292,20 +292,34 @@ export default function EngineeringReview() {
     },
 
    sheetPackaging: {
-  coreMaterial: "",
-  coreSize: "",
-  coreUses: "",
-  rollWeight_kg: "",
-  labelsPerRoll: "",
+  coreMaterial: "Cardboard",
+  coreSize: "6 inch",
+  coreUses: "10",
+
+  labelType: "100 x 150 mm standard label",
+  labelsPerRoll: "1",
   labelsPerPallet: "",
+
+  useStretchFilm: true,
+  stretchWeightPerRoll_kg: "0.5",
+
+  useStrap: false,
+  strapLength_m: "2",
+
+  useFoamSheet: false,
+  foamLength_m: "3",
+
+  useCartonSeparator: false,
+  cartonSeparatorLength_m: "3",
+
+  usePallet: false,
   palletType: "",
-  palletUses: "",
+  palletUses: "10",
   rollsPerPallet: "",
-  strapLength_m: "",
-  separatorsPerPallet: "",
-  foamLength_m: "",
-  stretchKgPerPallet: "",
+
+  rollWeight_kg: "",
   instructionText: "",
+
   palletLength_mm: "",
   palletWidth_mm: "",
   palletHeight_mm: "",
@@ -417,7 +431,7 @@ decorationEngineering: {
 investments: [],
 
     packaging: {
-      usePallet: "Yes",
+      usePallet: "NO",
 
       primary: {
         pcsPerStack: "",
@@ -437,13 +451,13 @@ investments: [],
         secondaryLength_mm: "",
         secondaryWidth_mm: "",
         secondaryHeight_mm: "",
-        labelsPerBox: "",
+        labelsPerBox: "1",
         labelLength_mm: "100",
         labelWidth_mm: "150",
       },
 
       pallet: {
-        palletSelected: "Yes",
+        palletSelected: "NO",
         palletWidth_mm: "",
         palletHeight_mm: "",
         palletLength_mm: "",
@@ -1382,35 +1396,89 @@ Object.entries(grouped).forEach(([name, parts]) => {
     });
   }, [thermoDerived]);
 
-  const sheetPackagingSentence = useMemo(() => {
-    const coreSize = engineering.sheetPackaging.coreSize || engineering.sheetSpecs.coreSize || "6 inch";
-    const rollDia = n(engineering.sheetSpecs.rollDiameter_mm) || sheetDerived.calcRollDiameter;
-    const rollW =
-      n(engineering.sheetPackaging.rollWeight_kg) ||
-      n(engineering.sheetSpecs.rollTargetWeight_kg) ||
-      sheetDerived.calcRollWeight;
+const sheetPackagingInstruction = useMemo(() => {
+  const coreSize =
+    engineering.sheetPackaging.coreSize ||
+    engineering.sheetSpecs.coreSize ||
+    "6 inch";
+
+  const coreUses = n(engineering.sheetPackaging.coreUses);
+  const labelType =
+    engineering.sheetPackaging.labelType || "100 x 150 mm standard label";
+  const labelsPerRoll = n(engineering.sheetPackaging.labelsPerRoll) || 1;
+
+  const stretchEnabled = engineering.sheetPackaging.useStretchFilm === true;
+  const strapEnabled = engineering.sheetPackaging.useStrap === true;
+  const foamEnabled = engineering.sheetPackaging.useFoamSheet === true;
+  const cartonSepEnabled = engineering.sheetPackaging.useCartonSeparator === true;
+  const palletEnabled = engineering.sheetPackaging.usePallet === true;
+
+  const parts = [];
+
+  parts.push(`Use ${coreSize} core`);
+
+  if (coreUses > 0) {
+    parts.push(`core reused ${fmt(coreUses, 0)} times`);
+  }
+
+  parts.push(
+    `apply ${fmt(labelsPerRoll, 0)} ${labelType} label${
+      labelsPerRoll === 1 ? "" : "s"
+    } per roll`
+  );
+
+  if (stretchEnabled) {
+    parts.push(
+      `use ${fmt(
+        n(engineering.sheetPackaging.stretchWeightPerRoll_kg) || 0.5,
+        3
+      )} kg stretch film per roll`
+    );
+  }
+
+  if (strapEnabled) {
+    parts.push(
+      `use ${fmt(n(engineering.sheetPackaging.strapLength_m) || 2, 2)} m strap per roll`
+    );
+  }
+
+  if (foamEnabled) {
+    parts.push(
+      `use ${fmt(n(engineering.sheetPackaging.foamLength_m) || 3, 2)} m foam sheet per roll`
+    );
+  }
+
+  if (cartonSepEnabled) {
+    parts.push(
+      `use ${fmt(
+        n(engineering.sheetPackaging.cartonSeparatorLength_m) || 3,
+        2
+      )} m carton separator per roll`
+    );
+  }
+
+  if (palletEnabled) {
+    const palletType = engineering.sheetPackaging.palletType || "selected";
+    const palletUses = n(engineering.sheetPackaging.palletUses);
     const rollsPerPallet = n(engineering.sheetPackaging.rollsPerPallet);
-    const separators = n(engineering.sheetPackaging.separatorsPerPallet);
-    const strap = n(engineering.sheetPackaging.strapLength_m);
-    const stretch = n(engineering.sheetPackaging.stretchKgPerPallet);
 
-    if (!rollW && !rollsPerPallet) return "";
+    parts.push(`load ${fmt(rollsPerPallet, 0)} rolls per ${palletType} pallet`);
 
-    return `Use ${coreSize} core and make the roll diameter ${fmt(rollDia)} mm at about ${fmt(
-      rollW
-    )} kg per roll. Put ${fmt(rollsPerPallet, 0)} rolls on a pallet with ${fmt(
-      separators,
-      0
-    )} separators, use ${fmt(strap)} m of strap and full stretch wrap the pallet with ${fmt(
-      stretch
-    )} kg of stretch film.`;
-  }, [engineering.sheetPackaging, engineering.sheetSpecs, sheetDerived]);
-
-  useEffect(() => {
-    if (sheetPackagingSentence !== engineering.sheetPackaging.instructionText) {
-      updateSection("sheetPackaging", { instructionText: sheetPackagingSentence });
+    if (palletUses > 0) {
+      parts.push(`pallet reused ${fmt(palletUses, 0)} times`);
     }
-  }, [sheetPackagingSentence]);
+  }
+
+  return parts.length ? `${parts.join(". ")}.` : "";
+}, [engineering.sheetPackaging, engineering.sheetSpecs.coreSize]);
+
+useEffect(() => {
+  if (sheetPackagingInstruction !== engineering.sheetPackaging.instructionText) {
+    updateSection("sheetPackaging", {
+      instructionText: sheetPackagingInstruction,
+    });
+  }
+}, [sheetPackagingInstruction]);
 
   const thermoPackagingDerived = useMemo(() => {
     const pcsPerStack = n(engineering.packaging.primary.pcsPerStack);
@@ -1474,17 +1542,25 @@ const freightCalc = useMemo(() => {
       ? pcsPerCarton * unitWeightKg
       : 0;
 
-  const palletLength_mm = isSheet
+const sheetPalletEnabled = engineering.sheetPackaging.usePallet === true;
+
+const palletLength_mm = isSheet
+  ? sheetPalletEnabled
     ? n(engineering.sheetPackaging.palletLength_mm)
-    : n(engineering.packaging.pallet.palletLength_mm);
+    : 0
+  : n(engineering.packaging.pallet.palletLength_mm);
 
-  const palletWidth_mm = isSheet
+const palletWidth_mm = isSheet
+  ? sheetPalletEnabled
     ? n(engineering.sheetPackaging.palletWidth_mm)
-    : n(engineering.packaging.pallet.palletWidth_mm);
+    : 0
+  : n(engineering.packaging.pallet.palletWidth_mm);
 
-  const palletHeight_mm = isSheet
+const palletHeight_mm = isSheet
+  ? sheetPalletEnabled
     ? n(engineering.sheetPackaging.palletHeight_mm)
-    : n(engineering.packaging.pallet.palletHeight_mm);
+    : 0
+  : n(engineering.packaging.pallet.palletHeight_mm);
 
   const palletVolume_m3 =
     palletLength_mm > 0 && palletWidth_mm > 0 && palletHeight_mm > 0
@@ -1496,22 +1572,29 @@ const freightCalc = useMemo(() => {
   let cartonsPerPallet = 0;
   let rollsPerPallet = 0;
 
-  if (isSheet) {
-    rollsPerPallet = n(engineering.sheetPackaging.rollsPerPallet);
-    const rollWeight =
-      n(engineering.sheetPackaging.rollWeight_kg) ||
-      n(engineering.sheetSpecs.rollTargetWeight_kg) ||
-      sheetDerived.calcRollWeight;
-    palletWeight_kg = rollsPerPallet * rollWeight;
-  } else {
+ if (isSheet) {
+  rollsPerPallet =
+    engineering.sheetPackaging.usePallet === true
+      ? n(engineering.sheetPackaging.rollsPerPallet)
+      : 0;
+
+  const rollWeight =
+    n(engineering.sheetPackaging.rollWeight_kg) ||
+    n(engineering.sheetSpecs.rollTargetWeight_kg) ||
+    sheetDerived.calcRollWeight;
+
+  palletWeight_kg = rollsPerPallet * rollWeight;
+} else {
     cartonsPerPallet = n(engineering.packaging.pallet.boxesPerPallet);
     pcsPerPallet = n(thermoPackagingDerived.pcsPerPallet);
     palletWeight_kg = cartonsPerPallet * cartonWeight_kg;
   }
 
-  const palletType = isSheet
+ const palletType = isSheet
+  ? engineering.sheetPackaging.usePallet === true
     ? engineering.sheetPackaging.palletType
-    : engineering.packaging.pallet.palletType;
+    : ""
+  : engineering.packaging.pallet.palletType;
 
   const palletLookup =
     palletType === "EURO" ? PALLETS_PER_CONTAINER.EURO :
@@ -2560,82 +2643,7 @@ if (!payload) {
     </div>
   </div>
 </div>
-<div className="rounded-xl border p-4 space-y-4">
-  <div className="font-medium">
-    {isSheet ? "Sheet Roll Packaging Data" : "Intermediate Sheet Roll Packaging"}
-  </div>
 
-  <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-    <Field
-      label="Core Material"
-      requestValue={requestValueOrBlank(product?.coreMaterial)}
-      currentValue={engineering.sheetPackaging.coreMaterial}
-    >
-      <Input
-        value={engineering.sheetPackaging.coreMaterial}
-        onChange={(v) => updateSection("sheetPackaging", { coreMaterial: v })}
-      />
-    </Field>
-
-    <Field
-      label="Core Size"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.coreSize}
-    >
-      <SelectField
-        value={engineering.sheetPackaging.coreSize}
-        onChange={(v) => updateSection("sheetPackaging", { coreSize: v })}
-        options={["3 inch", "6 inch", "8 inch"]}
-      />
-    </Field>
-
-    <Field
-      label="Core Uses"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.coreUses}
-    >
-      <Input
-        value={engineering.sheetPackaging.coreUses}
-        onChange={(v) => updateSection("sheetPackaging", { coreUses: v })}
-      />
-    </Field>
-
-    <Field
-      label="Roll Weight (kg)"
-      requestValue={requestValueOrBlank(product?.rollWeightKg)}
-      currentValue={engineering.sheetPackaging.rollWeight_kg}
-    >
-      <Input
-        value={
-          engineering.sheetPackaging.rollWeight_kg ||
-          engineering.sheetSpecs.rollTargetWeight_kg
-        }
-        onChange={(v) => updateSection("sheetPackaging", { rollWeight_kg: v })}
-      />
-    </Field>
-
-    <Field
-      label="Labels per Roll"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.labelsPerRoll}
-    >
-      <Input
-        value={engineering.sheetPackaging.labelsPerRoll}
-        onChange={(v) => updateSection("sheetPackaging", { labelsPerRoll: v })}
-      />
-    </Field>
-
-    <Field
-      label="Labels per Pallet"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.labelsPerPallet}
-    >
-      <Input
-        value={engineering.sheetPackaging.labelsPerPallet}
-        onChange={(v) => updateSection("sheetPackaging", { labelsPerPallet: v })}
-      />
-    </Field>
-  </div>
 
   <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
     <Field

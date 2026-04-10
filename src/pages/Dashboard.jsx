@@ -201,8 +201,8 @@ function DashboardSection({ title, rows }) {
       </div>
 
       <div className="bg-white border rounded-xl overflow-hidden">
-        <div className="w-full">
-          <table className="w-full text-xs md:text-sm table-fixed">
+  <div className="overflow-x-auto">
+    <table className="min-w-[1410px] text-xs md:text-sm">
             <thead className="bg-gray-100 text-left">
               <tr>
                 <th className="p-3 w-[90px]">Image</th>
