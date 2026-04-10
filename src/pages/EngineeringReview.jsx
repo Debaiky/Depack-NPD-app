@@ -2777,7 +2777,7 @@ if (!payload) {
     />
   </Field>
 </div>
-                   </div>
+
 </Section>
 
   <Section title="2. Extrusion Process Data">
