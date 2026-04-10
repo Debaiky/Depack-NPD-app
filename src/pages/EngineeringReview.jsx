@@ -291,7 +291,7 @@ export default function EngineeringReview() {
       thicknessCalcMode: "Calculate Thickness",
     },
 
-   sheetPackaging: {
+sheetPackaging: {
   coreMaterial: "Cardboard",
   coreSize: "6 inch",
   coreUses: "10",
@@ -300,24 +300,25 @@ export default function EngineeringReview() {
   labelsPerRoll: "1",
   labelsPerPallet: "",
 
-  useStretchFilm: true,
+  rollWeight_kg: "",
+
+  stretchFilmEnabled: "Yes",
   stretchWeightPerRoll_kg: "0.5",
 
-  useStrap: false,
-  strapLength_m: "2",
+  strapEnabled: "No",
+  strapLengthPerRoll_m: "2",
 
-  useFoamSheet: false,
-  foamLength_m: "3",
+  foamSheetEnabled: "No",
+  foamSheetLengthPerRoll_m: "3",
 
-  useCartonSeparator: false,
-  cartonSeparatorLength_m: "3",
+  cartonSeparatorEnabled: "No",
+  cartonSeparatorLengthPerRoll_m: "3",
 
-  usePallet: false,
+  palletEnabled: "No",
   palletType: "",
   palletUses: "10",
   rollsPerPallet: "",
 
-  rollWeight_kg: "",
   instructionText: "",
 
   palletLength_mm: "",
@@ -1395,90 +1396,122 @@ Object.entries(grouped).forEach(([name, parts]) => {
       pcsPerYear330d: thermoDerived.pcsPerYear330d ? String(thermoDerived.pcsPerYear330d.toFixed(0)) : "",
     });
   }, [thermoDerived]);
+const sheetPackagingSentence = useMemo(() => {
+  const rollDia =
+    n(engineering.sheetSpecs.rollDiameter_mm) || sheetDerived.calcRollDiameter;
 
-const sheetPackagingInstruction = useMemo(() => {
+  const rollHeight = n(engineering.sheetSpecs.netWidth_mm);
+
+  const rollWeight =
+    n(engineering.sheetPackaging.rollWeight_kg) ||
+    n(engineering.sheetSpecs.rollTargetWeight_kg) ||
+    sheetDerived.calcRollWeight;
+
   const coreSize =
     engineering.sheetPackaging.coreSize ||
     engineering.sheetSpecs.coreSize ||
     "6 inch";
 
+  const coreDia = n(engineering.sheetSpecs.coreDiameter_mm);
   const coreUses = n(engineering.sheetPackaging.coreUses);
-  const labelType =
-    engineering.sheetPackaging.labelType || "100 x 150 mm standard label";
-  const labelsPerRoll = n(engineering.sheetPackaging.labelsPerRoll) || 1;
+  const labelType = engineering.sheetPackaging.labelType || "";
+  const labelsPerRoll = n(engineering.sheetPackaging.labelsPerRoll);
 
-  const stretchEnabled = engineering.sheetPackaging.useStretchFilm === true;
-  const strapEnabled = engineering.sheetPackaging.useStrap === true;
-  const foamEnabled = engineering.sheetPackaging.useFoamSheet === true;
-  const cartonSepEnabled = engineering.sheetPackaging.useCartonSeparator === true;
-  const palletEnabled = engineering.sheetPackaging.usePallet === true;
+  const stretchFilmEnabled = engineering.sheetPackaging.stretchFilmEnabled === "Yes";
+  const stretchWeightPerRoll = n(engineering.sheetPackaging.stretchWeightPerRoll_kg);
+
+  const strapEnabled = engineering.sheetPackaging.strapEnabled === "Yes";
+  const strapLengthPerRoll = n(engineering.sheetPackaging.strapLengthPerRoll_m);
+
+  const foamSheetEnabled = engineering.sheetPackaging.foamSheetEnabled === "Yes";
+  const foamSheetLengthPerRoll = n(engineering.sheetPackaging.foamSheetLengthPerRoll_m);
+
+  const cartonSeparatorEnabled =
+    engineering.sheetPackaging.cartonSeparatorEnabled === "Yes";
+  const cartonSeparatorLengthPerRoll = n(
+    engineering.sheetPackaging.cartonSeparatorLengthPerRoll_m
+  );
+
+  const palletEnabled = engineering.sheetPackaging.palletEnabled === "Yes";
+  const palletType = engineering.sheetPackaging.palletType || "";
+  const palletUses = n(engineering.sheetPackaging.palletUses);
+  const rollsPerPallet = n(engineering.sheetPackaging.rollsPerPallet);
 
   const parts = [];
 
-  parts.push(`Use ${coreSize} core`);
-
-  if (coreUses > 0) {
-    parts.push(`core reused ${fmt(coreUses, 0)} times`);
-  }
+  if (rollDia) parts.push(`Roll diameter ${fmt(rollDia, 2)} mm.`);
+  if (rollHeight) parts.push(`Roll height ${fmt(rollHeight, 2)} mm.`);
+  if (rollWeight) parts.push(`Roll weight ${fmt(rollWeight, 3)} kg.`);
 
   parts.push(
-    `apply ${fmt(labelsPerRoll, 0)} ${labelType} label${
-      labelsPerRoll === 1 ? "" : "s"
-    } per roll`
+    `Use ${coreSize} core${coreDia ? ` (${fmt(coreDia, 1)} mm)` : ""}${
+      coreUses ? ` with ${fmt(coreUses, 0)} reuses` : ""
+    }.`
   );
 
-  if (stretchEnabled) {
+  if (labelType || labelsPerRoll) {
     parts.push(
-      `use ${fmt(
-        n(engineering.sheetPackaging.stretchWeightPerRoll_kg) || 0.5,
-        3
-      )} kg stretch film per roll`
+      `Use label "${labelType || "Standard label"}"${
+        labelsPerRoll ? `, ${fmt(labelsPerRoll, 0)} label(s) per roll` : ""
+      }.`
+    );
+  }
+
+  if (stretchFilmEnabled) {
+    parts.push(
+      `Use stretch film${
+        stretchWeightPerRoll ? ` at ${fmt(stretchWeightPerRoll, 3)} kg per roll` : ""
+      }.`
     );
   }
 
   if (strapEnabled) {
     parts.push(
-      `use ${fmt(n(engineering.sheetPackaging.strapLength_m) || 2, 2)} m strap per roll`
+      `Use strap${
+        strapLengthPerRoll ? ` at ${fmt(strapLengthPerRoll, 2)} m per roll` : ""
+      }.`
     );
   }
 
-  if (foamEnabled) {
+  if (foamSheetEnabled) {
     parts.push(
-      `use ${fmt(n(engineering.sheetPackaging.foamLength_m) || 3, 2)} m foam sheet per roll`
+      `Use foam sheet${
+        foamSheetLengthPerRoll ? ` at ${fmt(foamSheetLengthPerRoll, 2)} m per roll` : ""
+      }.`
     );
   }
 
-  if (cartonSepEnabled) {
+  if (cartonSeparatorEnabled) {
     parts.push(
-      `use ${fmt(
-        n(engineering.sheetPackaging.cartonSeparatorLength_m) || 3,
-        2
-      )} m carton separator per roll`
+      `Use carton separator${
+        cartonSeparatorLengthPerRoll
+          ? ` at ${fmt(cartonSeparatorLengthPerRoll, 2)} m per roll`
+          : ""
+      }.`
     );
   }
 
   if (palletEnabled) {
-    const palletType = engineering.sheetPackaging.palletType || "selected";
-    const palletUses = n(engineering.sheetPackaging.palletUses);
-    const rollsPerPallet = n(engineering.sheetPackaging.rollsPerPallet);
-
-    parts.push(`load ${fmt(rollsPerPallet, 0)} rolls per ${palletType} pallet`);
-
-    if (palletUses > 0) {
-      parts.push(`pallet reused ${fmt(palletUses, 0)} times`);
-    }
+    parts.push(
+      `Use ${palletType || "selected"} pallet${
+        palletUses ? ` with ${fmt(palletUses, 0)} reuses` : ""
+      }${
+        rollsPerPallet ? ` and ${fmt(rollsPerPallet, 0)} roll(s) per pallet` : ""
+      }.`
+    );
   }
 
-  return parts.length ? `${parts.join(". ")}.` : "";
-}, [engineering.sheetPackaging, engineering.sheetSpecs.coreSize]);
+  return parts.join(" ");
+}, [engineering.sheetPackaging, engineering.sheetSpecs, sheetDerived]);
+
 
 useEffect(() => {
-  if (sheetPackagingInstruction !== engineering.sheetPackaging.instructionText) {
+  if (sheetPackagingSentence !== engineering.sheetPackaging.instructionText) {
     updateSection("sheetPackaging", {
-      instructionText: sheetPackagingInstruction,
+      instructionText: sheetPackagingSentence,
     });
   }
-}, [sheetPackagingInstruction]);
+}, [sheetPackagingSentence, engineering.sheetPackaging.instructionText]);
 
   const thermoPackagingDerived = useMemo(() => {
     const pcsPerStack = n(engineering.packaging.primary.pcsPerStack);
@@ -1542,7 +1575,7 @@ const freightCalc = useMemo(() => {
       ? pcsPerCarton * unitWeightKg
       : 0;
 
-const sheetPalletEnabled = engineering.sheetPackaging.usePallet === true;
+const sheetPalletEnabled = engineering.sheetPackaging.palletEnabled === "Yes";
 
 const palletLength_mm = isSheet
   ? sheetPalletEnabled
@@ -1572,9 +1605,9 @@ const palletHeight_mm = isSheet
   let cartonsPerPallet = 0;
   let rollsPerPallet = 0;
 
- if (isSheet) {
+if (isSheet) {
   rollsPerPallet =
-    engineering.sheetPackaging.usePallet === true
+    engineering.sheetPackaging.palletEnabled === "Yes"
       ? n(engineering.sheetPackaging.rollsPerPallet)
       : 0;
 
@@ -1589,9 +1622,8 @@ const palletHeight_mm = isSheet
     pcsPerPallet = n(thermoPackagingDerived.pcsPerPallet);
     palletWeight_kg = cartonsPerPallet * cartonWeight_kg;
   }
-
- const palletType = isSheet
-  ? engineering.sheetPackaging.usePallet === true
+const palletType = isSheet
+  ? engineering.sheetPackaging.palletEnabled === "Yes"
     ? engineering.sheetPackaging.palletType
     : ""
   : engineering.packaging.pallet.palletType;
@@ -2609,178 +2641,286 @@ if (!payload) {
           Width trim loss exceeds 15%.
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <RefRow
-          label="Plastic Weight / m²"
-          value={
-            sheetDerived.plasticWeightPerM2_g
-              ? `${fmt(sheetDerived.plasticWeightPerM2_g, 3)} g/m²`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Total Weight / m²"
-          value={
-            sheetDerived.totalWeightPerM2_g
-              ? `${fmt(sheetDerived.totalWeightPerM2_g, 3)} g/m²`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Trim Loss %"
-          value={
-            sheetDerived.trimLossPct
-              ? `${fmt(sheetDerived.trimLossPct, 2)}%`
-              : "—"
-          }
-        />
-        <RefRow
-          label="Core Diameter (mm)"
-          value={engineering.sheetSpecs.coreDiameter_mm || "—"}
-        />
-      </div>
     </div>
   </div>
 </div>
-
-
-  <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-    <Field
-      label="Pallet Type"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.palletType}
-    >
-      <SelectField
-        value={engineering.sheetPackaging.palletType}
-        onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
-        options={[
-          { value: "UK", label: "UK Standard Pallet" },
-          { value: "EURO", label: "EURO Pallet" },
-        ]}
-      />
-    </Field>
-
-    <Field
-      label="Pallet Uses"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.palletUses}
-    >
-      <Input
-        value={engineering.sheetPackaging.palletUses}
-        onChange={(v) => updateSection("sheetPackaging", { palletUses: v })}
-      />
-    </Field>
-
-    <Field
-      label="Pallet Length (mm)"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.palletLength_mm}
-    >
-      <Input
-        value={engineering.sheetPackaging.palletLength_mm}
-        onChange={(v) => updateSection("sheetPackaging", { palletLength_mm: v })}
-      />
-    </Field>
-
-    <Field
-      label="Pallet Width (mm)"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.palletWidth_mm}
-    >
-      <Input
-        value={engineering.sheetPackaging.palletWidth_mm}
-        onChange={(v) => updateSection("sheetPackaging", { palletWidth_mm: v })}
-      />
-    </Field>
-
-    <Field
-      label="Pallet Height (mm)"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.palletHeight_mm}
-    >
-      <Input
-        value={engineering.sheetPackaging.palletHeight_mm}
-        onChange={(v) => updateSection("sheetPackaging", { palletHeight_mm: v })}
-      />
-    </Field>
-
-    <Field
-      label="Rolls per Pallet"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.rollsPerPallet}
-    >
-      <Input
-        value={engineering.sheetPackaging.rollsPerPallet}
-        onChange={(v) => updateSection("sheetPackaging", { rollsPerPallet: v })}
-      />
-    </Field>
-
-    <Field
-      label="Strap Length / Pallet (m)"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.strapLength_m}
-    >
-      <Input
-        value={engineering.sheetPackaging.strapLength_m}
-        onChange={(v) => updateSection("sheetPackaging", { strapLength_m: v })}
-      />
-    </Field>
-
-    <Field
-      label="Separators / Pallet"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.separatorsPerPallet}
-    >
-      <Input
-        value={engineering.sheetPackaging.separatorsPerPallet}
-        onChange={(v) =>
-          updateSection("sheetPackaging", { separatorsPerPallet: v })
-        }
-      />
-    </Field>
-
-    <Field
-      label="Foam Sheet Length / Pallet (m)"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.foamLength_m}
-    >
-      <Input
-        value={engineering.sheetPackaging.foamLength_m}
-        onChange={(v) => updateSection("sheetPackaging", { foamLength_m: v })}
-      />
-    </Field>
-
-    <Field
-      label="Stretch Film / Pallet (kg)"
-      requestValue=""
-      currentValue={engineering.sheetPackaging.stretchKgPerPallet}
-    >
-      <Input
-        value={engineering.sheetPackaging.stretchKgPerPallet}
-        onChange={(v) =>
-          updateSection("sheetPackaging", { stretchKgPerPallet: v })
-        }
-      />
-    </Field>
   </div>
+  </Section>
+  <Section title={isSheet ? "2. Sheet Roll Packaging" : "2. Intermediate Sheet Roll Packaging"}>
+  <div className="grid grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)] gap-4">
+    <div className="rounded-xl border overflow-hidden">
+      <div className="bg-gray-100 px-4 py-3 font-medium text-center">Results</div>
 
-  <Field
-    label="Packaging Instructions"
-    requestValue=""
-    currentValue={engineering.sheetPackaging.instructionText}
-  >
-    <TextArea
-      value={engineering.sheetPackaging.instructionText}
-      onChange={(v) => updateSection("sheetPackaging", { instructionText: v })}
-      rows={3}
-    />
-  </Field>
-</div>
+      <div className="overflow-auto">
+        <table className="w-full text-sm border-collapse">
+          <tbody>
+            <tr className="border-t">
+              <td className="p-3 font-bold w-[180px] align-top">roll dimensions</td>
+              <td className="p-3 bg-yellow-50">
+                <div><span className="font-medium">roll diameter</span> = roll diameter entered in sheet specification section</div>
+                <div><span className="font-medium">Roll height</span> = roll net width entered in the sheet specification section</div>
+                <div><span className="font-medium">Roll weight</span> = pull value of roll weight from sheet specification section</div>
+              </td>
+            </tr>
 
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">Packaging instructions</td>
+              <td className="p-3 bg-yellow-50">
+                {engineering.sheetPackaging.instructionText || "auto text of the intermediate sheet roll packaging instruction."}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div className="rounded-xl border overflow-hidden">
+      <div className="bg-gray-100 px-4 py-3 font-medium text-center">Data Entry</div>
+
+      <div className="overflow-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left p-3 font-medium min-w-[180px]"></th>
+              <th className="text-left p-3 font-medium min-w-[220px]"></th>
+              <th className="text-left p-3 font-medium min-w-[220px]"></th>
+              <th className="text-left p-3 font-medium min-w-[180px]"></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">Core Type</td>
+              <td className="p-2">
+                <SelectField
+                  value={engineering.sheetPackaging.coreSize}
+                  onChange={(v) => updateSection("sheetPackaging", { coreSize: v })}
+                  options={["3 inch", "6 inch", "8 inch"]}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  = drop down selection 3,6,8 inch - default value: 6 inch
+                </div>
+              </td>
+              <td className="p-2">
+                <div className="font-medium">core Diameter in mm</div>
+                <div className="mt-2 rounded-lg border bg-green-50 p-2">
+                  {engineering.sheetSpecs.coreDiameter_mm || "—"}
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  = core diameter in mm based on the selection convert from inch to mm
+                </div>
+              </td>
+              <td className="p-2">
+                <div className="font-medium">no of reuses</div>
+                <Input
+                  value={engineering.sheetPackaging.coreUses}
+                  onChange={(v) => updateSection("sheetPackaging", { coreUses: v })}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  enter no of times the core is used - reuse - default 10
+                </div>
+              </td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">Label</td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetPackaging.labelType}
+                  onChange={(v) => updateSection("sheetPackaging", { labelType: v })}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  = enter label type - default value: 100 X 150 mm standard label
+                </div>
+              </td>
+              <td className="p-2">
+                <div className="font-medium">no of labels per roll</div>
+                <Input
+                  value={engineering.sheetPackaging.labelsPerRoll}
+                  onChange={(v) => updateSection("sheetPackaging", { labelsPerRoll: v })}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  =enter number of labels used per roll default value = 1
+                </div>
+              </td>
+              <td className="p-2"></td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">stretch film</td>
+              <td className="p-2">
+                <SelectField
+                  value={engineering.sheetPackaging.stretchFilmEnabled}
+                  onChange={(v) => updateSection("sheetPackaging", { stretchFilmEnabled: v })}
+                  options={["Yes", "No"]}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  toggle to select "use Stretch film" - default is true
+                </div>
+              </td>
+              <td className="p-2">
+                <div className="font-medium">Stretch weight per roll.</div>
+                <Input
+                  value={engineering.sheetPackaging.stretchWeightPerRoll_kg}
+                  onChange={(v) =>
+                    updateSection("sheetPackaging", { stretchWeightPerRoll_kg: v })
+                  }
+                  disabled={engineering.sheetPackaging.stretchFilmEnabled !== "Yes"}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  if stretch film toggle is true, enter the weight of stretch film used per roll in kg default value is 0.5kg
+                </div>
+              </td>
+              <td className="p-2"></td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">strap</td>
+              <td className="p-2">
+                <SelectField
+                  value={engineering.sheetPackaging.strapEnabled}
+                  onChange={(v) => updateSection("sheetPackaging", { strapEnabled: v })}
+                  options={["Yes", "No"]}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  Toggle selection if pallet is used - default is false
+                </div>
+              </td>
+              <td className="p-2">
+                <div className="font-medium">strap length per roll.</div>
+                <Input
+                  value={engineering.sheetPackaging.strapLengthPerRoll_m}
+                  onChange={(v) => updateSection("sheetPackaging", { strapLengthPerRoll_m: v })}
+                  disabled={engineering.sheetPackaging.strapEnabled !== "Yes"}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  if strap toggle is true , enter the length of strap used per roll in m default value is 2m
+                </div>
+              </td>
+              <td className="p-2"></td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">Foam sheet</td>
+              <td className="p-2">
+                <SelectField
+                  value={engineering.sheetPackaging.foamSheetEnabled}
+                  onChange={(v) => updateSection("sheetPackaging", { foamSheetEnabled: v })}
+                  options={["Yes", "No"]}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  toggle selection if foam sheet is used - default is false
+                </div>
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetPackaging.foamSheetLengthPerRoll_m}
+                  onChange={(v) =>
+                    updateSection("sheetPackaging", { foamSheetLengthPerRoll_m: v })
+                  }
+                  disabled={engineering.sheetPackaging.foamSheetEnabled !== "Yes"}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  if foam sheet toggle is true , enter the length of foam sheet used per roll in m default value is 3m
+                </div>
+              </td>
+              <td className="p-2"></td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">Carton separator</td>
+              <td className="p-2">
+                <SelectField
+                  value={engineering.sheetPackaging.cartonSeparatorEnabled}
+                  onChange={(v) =>
+                    updateSection("sheetPackaging", { cartonSeparatorEnabled: v })
+                  }
+                  options={["Yes", "No"]}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  toggle selection if carton separator is used - default is false
+                </div>
+              </td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetPackaging.cartonSeparatorLengthPerRoll_m}
+                  onChange={(v) =>
+                    updateSection("sheetPackaging", {
+                      cartonSeparatorLengthPerRoll_m: v,
+                    })
+                  }
+                  disabled={engineering.sheetPackaging.cartonSeparatorEnabled !== "Yes"}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  if foam sheet toggle is true , enter the length of foam sheet used per roll in default value is 3m
+                </div>
+              </td>
+              <td className="p-2"></td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">Pallet</td>
+              <td className="p-2">
+                <SelectField
+                  value={engineering.sheetPackaging.palletEnabled}
+                  onChange={(v) => updateSection("sheetPackaging", { palletEnabled: v })}
+                  options={["Yes", "No"]}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  Toggle selection if pallet is used - default is false
+                </div>
+              </td>
+              <td className="p-2">
+                <div className="font-medium">pallet type</div>
+                <SelectField
+                  value={engineering.sheetPackaging.palletType}
+                  onChange={(v) => updateSection("sheetPackaging", { palletType: v })}
+                  options={[
+                    { value: "UK", label: "UK pallet" },
+                    { value: "EURO", label: "Euro pallet" },
+                    { value: "OTHER", label: "others" },
+                  ]}
+                  disabled={engineering.sheetPackaging.palletEnabled !== "Yes"}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  if pallet toggle is true, select pallet type used - dropdown - UK pallet, Euro pallet, others.
+                </div>
+              </td>
+              <td className="p-2">
+                <div className="font-medium">no of reuses</div>
+                <Input
+                  value={engineering.sheetPackaging.palletUses}
+                  onChange={(v) => updateSection("sheetPackaging", { palletUses: v })}
+                  disabled={engineering.sheetPackaging.palletEnabled !== "Yes"}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  enter no of times the pallet is used - reuse - default 10
+                </div>
+              </td>
+            </tr>
+
+            <tr className="border-t">
+              <td className="p-3 font-bold align-top">no of rolls per pallet</td>
+              <td className="p-2">
+                <Input
+                  value={engineering.sheetPackaging.rollsPerPallet}
+                  onChange={(v) => updateSection("sheetPackaging", { rollsPerPallet: v })}
+                  disabled={engineering.sheetPackaging.palletEnabled !== "Yes"}
+                />
+                <div className="mt-1 text-xs text-gray-500">
+                  = if pallet toggle is true, enter the number of rolls placed on one pallet.
+                </div>
+              </td>
+              <td className="p-2"></td>
+              <td className="p-2"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </Section>
-
-  <Section title="2. Extrusion Process Data">
+  <Section title="3. Extrusion Process Data">
   <div className="grid grid-cols-1 xl:grid-cols-[420px_minmax(0,1fr)] gap-4">
     <div className="rounded-xl border overflow-hidden">
       <div className="bg-gray-100 px-4 py-3 font-medium">Input Box</div>
@@ -2974,7 +3114,7 @@ if (!payload) {
 </Section>
 
 {!isSheet && (
-  <Section title="3. Thermoforming Process Data">
+  <Section title="4. Thermoforming Process Data">
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
       <div className="rounded-xl border p-4 space-y-4">
         <div className="font-medium">Data Input</div>
@@ -3130,7 +3270,7 @@ if (!payload) {
   </Section>
 )}
 {!isSheet && (
-  <Section title="4. Tools Needed for Thermoforming">
+  <Section title="5. Tools Needed for Thermoforming">
     <div className="space-y-4">
       <div className="flex items-center gap-3 rounded-xl border p-3">
         <input
@@ -3254,7 +3394,7 @@ if (!payload) {
   </Section>
 )}
 {!isSheet && (
-  <Section title="5. Decoration">
+  <Section title="6. Decoration">
     <div className="space-y-4">
       {!hasRequestDecoration && (
         <div className="flex items-center gap-3 rounded-xl border p-3">
@@ -3886,7 +4026,7 @@ if (!payload) {
   </div>
   </Section>
 {!isSheet && (
-  <Section title="7. Thermoformed Product Packaging Data">
+  <Section title="8. Thermoformed Product Packaging Data">
     <div className="space-y-5">
 
       <div className="rounded-xl border p-4 space-y-4">
@@ -4274,7 +4414,7 @@ if (!payload) {
   </Section>
 )}
 
-     <Section title={isSheet ? "5. Freight / Logistics" : "8. Freight / Logistics"}>
+     <Section title={isSheet ? "5. Freight / Logistics" : "9. Freight / Logistics"}>
   <div className="space-y-5">
     <div className="rounded-xl border p-4 space-y-4">
       <div className="font-medium">Calculated Packing Data</div>
@@ -4415,7 +4555,7 @@ if (!payload) {
   </div>
 </Section>
 
-      <Section title={isSheet ? "6. Notes" : "9. Notes"}>
+      <Section title={isSheet ? "6. Notes" : "10. Notes"}>
   <div className="space-y-4">
 
     <RefRow
@@ -4433,5 +4573,6 @@ if (!payload) {
   </div>
 </Section>
     </div>
+    
   );
-} 
+}
