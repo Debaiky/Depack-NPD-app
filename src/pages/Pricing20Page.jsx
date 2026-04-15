@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import PricingEngineeringTab from "../components/pricing/PricingEngineeringTab";
 import Pricing20PricingTab from "../components/pricing20/Pricing20PricingTab";
 import Pricing20SummaryTab from "../components/pricing20/Pricing20SummaryTab";
-
+import Pricing20OffersTab from "../components/pricing20/Pricing20OffersTab";
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj || {}));
 }
@@ -82,6 +82,87 @@ function TabButton({ active, onClick, children }) {
     </button>
   );
 }
+function makeUid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function nextOfferNumber(existingOffers = []) {
+  const next = (existingOffers?.length || 0) + 1;
+  const year = new Date().getFullYear();
+  return `DPO-${year}-${String(next).padStart(3, "0")}`;
+}
+
+function buildNewOffer({
+  requestData,
+  scenarioSetup,
+  pricing20Data,
+}) {
+  const customerBlock = requestData?.customer || {};
+  const customers = customerBlock?.customers || [];
+  const primaryCustomer = customers?.[0] || {};
+  const product = requestData?.product || {};
+
+  return {
+    id: makeUid(),
+    offerNumber: nextOfferNumber(pricing20Data?.offers || []),
+    offerDate: todayIso(),
+
+    preparedBy: scenarioSetup?.createdBy || "",
+    offerCurrency: pricing20Data?.assumptions?.baseCurrency || "USD",
+
+    customerIndex: customers.length ? "0" : "",
+    customerName: primaryCustomer?.customerName || "",
+    customerAddress:
+      primaryCustomer?.address ||
+      primaryCustomer?.customerAddress ||
+      "",
+    contactPerson:
+      primaryCustomer?.contactPerson ||
+      primaryCustomer?.contactName ||
+      "",
+    contactEmail:
+      primaryCustomer?.email ||
+      primaryCustomer?.contactEmail ||
+      "",
+    phoneNumber:
+      primaryCustomer?.phone ||
+      primaryCustomer?.phoneNumber ||
+      "",
+
+    showBreakdown: {
+      material: true,
+      decoration: true,
+      packaging: true,
+      waste: true,
+      freight: true,
+      amortization: true,
+      conversion: true,
+    },
+
+    marginMode: "pct", // "pct" or "amount"
+    marginPct: "",
+    marginAmountPer1000: "",
+
+    incoterms: "",
+    fromLocation: "10th of Ramadan City, Al Sharqiyah, Egypt",
+    toLocation: "",
+    transportMode: "Container",
+    containerType: "20ft Dry",
+
+    extraTerms: "",
+
+    // snapshot / display helpers
+    productCode:
+      product?.productCode ||
+      product?.itemCode ||
+      product?.sku ||
+      "",
+  };
+}
 
 export default function Pricing20Page() {
   const { requestId, pricing20Id } = useParams();
@@ -99,7 +180,22 @@ export default function Pricing20Page() {
     scenarioDescription: "",
     scenarioDate: new Date().toISOString().slice(0, 10),
   });
+const createPriceOffer = () => {
+  setPricing20Data((prev) => {
+    const nextOffer = buildNewOffer({
+      requestData,
+      scenarioSetup,
+      pricing20Data: prev,
+    });
 
+    return {
+      ...prev,
+      offers: [...(prev?.offers || []), nextOffer],
+    };
+  });
+
+  setActiveTab("offers");
+};
   const [scenarioEngineering, setScenarioEngineering] = useState(null);
   const [engineeringChangeSummary, setEngineeringChangeSummary] = useState(
     buildEmptyChangeSummary()
@@ -114,6 +210,7 @@ export default function Pricing20Page() {
     freight: {},
     workingCapital: {},
     commercial: {},
+    offers: [],
   });
 
   useEffect(() => {
@@ -184,6 +281,7 @@ export default function Pricing20Page() {
             freight: {},
             workingCapital: {},
             commercial: {},
+            offers: [],
           }
         );
       } catch (err) {
@@ -334,6 +432,12 @@ const res = await fetch("/.netlify/functions/save-pricing20-scenario", {
               >
                 Save Scenario
               </button>
+              <button
+  onClick={createPriceOffer}
+  className="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-700"
+>
+  Create Price Offer
+</button>
             </div>
           </div>
 
@@ -429,6 +533,12 @@ const res = await fetch("/.netlify/functions/save-pricing20-scenario", {
             >
               Summary Tab
             </TabButton>
+            <TabButton
+  active={activeTab === "offers"}
+  onClick={() => setActiveTab("offers")}
+>
+  Offers Tab
+</TabButton>
           </div>
         </div>
 
@@ -459,6 +569,15 @@ const res = await fetch("/.netlify/functions/save-pricing20-scenario", {
             pricing20Data={pricing20Data}
           />
         )}
+        {activeTab === "offers" && (
+  <Pricing20OffersTab
+    requestData={requestData}
+    scenarioSetup={scenarioSetup}
+    scenarioEngineering={scenarioEngineering}
+    pricing20Data={pricing20Data}
+    setPricing20Data={setPricing20Data}
+  />
+)}
       </div>
     </div>
   );
