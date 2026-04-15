@@ -20,133 +20,280 @@ function uid(prefix = "offer") {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+function todayLocalIso() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
-function nextOfferNumber(existingOffers = [], requestId = "") {
-  const nums = (existingOffers || [])
-    .map((o) => n(String(o.offerNo || "").match(/\d+$/)?.[0] || 0))
-    .filter((x) => x > 0);
-
-  const next = nums.length ? Math.max(...nums) + 1 : 1;
-  const prefix = requestId ? `OFF-${requestId}` : "OFF";
-  return `${prefix}-${String(next).padStart(3, "0")}`;
+function detectCase(requestData) {
+  return requestData?.product?.productType === "Sheet Roll" ? "sheet" : "non_sheet";
 }
 
-function egpToOfferCurrency(valueEgp, offerCurrency, assumptions = {}) {
-  const amount = n(valueEgp);
-  const usdEgp = n(assumptions?.usdEgp);
-  const eurUsd = n(assumptions?.eurUsd);
+function currencyToEgp(value, currency, usdEgp, eurUsd) {
+  const amount = n(value);
+  const curr = String(currency || "EGP").trim().toUpperCase();
 
-  if (offerCurrency === "EGP") return amount;
-  if (offerCurrency === "USD") {
-    return usdEgp > 0 ? amount / usdEgp : 0;
-  }
-  if (offerCurrency === "EUR") {
-    return usdEgp > 0 && eurUsd > 0 ? amount / (usdEgp * eurUsd) : 0;
-  }
-
+  if (curr === "USD") return amount * n(usdEgp);
+  if (curr === "EUR") return amount * n(eurUsd) * n(usdEgp);
   return amount;
 }
 
-function getOfferPriceMap(pricing20Data = {}, requestData = {}) {
-  const snap = pricing20Data?.offerPricingSnapshot || {};
-  const isSheet = requestData?.product?.productType === "Sheet Roll";
-
-  return {
-    basis: snap?.basis || (isSheet ? "ton" : "1000 pcs"),
-
-    total: n(snap.salesPriceEgp),
-    material: n(snap.materialEgp),
-    decoration: n(snap.decorationEgp),
-    packaging: n(snap.packagingEgp),
-    waste: n(snap.wasteEgp),
-    freight: n(snap.freightEgp),
-    amortization: n(snap.amortizationEgp),
-    conversion: n(snap.conversionEgp),
-
-    selectedFreightOption: snap.selectedFreightOption || null,
-  };
+function egpToUsd(value, usdEgp) {
+  const rate = n(usdEgp);
+  if (!rate) return 0;
+  return n(value) / rate;
 }
 
-function buildDefaultOffer({
-  existingOffers = [],
-  requestData = {},
-  scenarioSetup = {},
+function egpToEur(value, usdEgp, eurUsd) {
+  const eurUsdRate = n(eurUsd);
+  if (!eurUsdRate) return 0;
+  return egpToUsd(value, usdEgp) / eurUsdRate;
+}
+
+function egpToOfferCurrency(valueEgp, currency, usdEgp, eurUsd) {
+  const curr = String(currency || "EGP").toUpperCase();
+  if (curr === "USD") return egpToUsd(valueEgp, usdEgp);
+  if (curr === "EUR") return egpToEur(valueEgp, usdEgp, eurUsd);
+  return n(valueEgp);
+}
+
+function perTonToPer1000(perTon, productWeightG, sheetUtilPct) {
+  const weightG = n(productWeightG);
+  const util = n(sheetUtilPct) > 0 ? n(sheetUtilPct) / 100 : 1;
+
+  if (!weightG || !util) return 0;
+
+  return (n(perTon) * weightG) / (1000 * util);
+}
+
+function getPcsPerCarton(scenarioEngineering) {
+  const pcsPerStack = n(scenarioEngineering?.packaging?.primary?.pcsPerStack);
+  const stacksPerPrimary = n(scenarioEngineering?.packaging?.primary?.stacksPerPrimary);
+  const primariesPerSecondary = n(
+    scenarioEngineering?.packaging?.secondary?.primariesPerSecondary
+  );
+
+  return pcsPerStack * stacksPerPrimary * primariesPerSecondary;
+}
+
+function getProductWeightG(requestData, scenarioEngineering) {
+  return (
+    n(scenarioEngineering?.thermo?.unitWeight_g) ||
+    n(requestData?.product?.productWeightG) ||
+    0
+  );
+}
+
+function getSheetUtilPct(scenarioEngineering) {
+  return n(scenarioEngineering?.thermo?.sheetUtilizationPct) || 100;
+}
+
+function getDecorationType(requestData) {
+  return requestData?.product?.productType === "Sheet Roll"
+    ? "No decoration"
+    : requestData?.decoration?.decorationType || "No decoration";
+}
+
+function dateKeyFromIso(dateStr) {
+  if (!dateStr) return "";
+  const [y, m, d] = String(dateStr).split("-");
+  if (!y || !m || !d) return "";
+  return `${d}${m}${String(y).slice(-2)}`;
+}
+
+function buildOfferNo(dateStr, offers = [], currentOfferId = "") {
+  const prefix = dateKeyFromIso(dateStr);
+  if (!prefix) return "";
+
+  let maxSerial = 0;
+
+  (offers || []).forEach((offer) => {
+    if (!offer || offer.id === currentOfferId) return;
+    const no = String(offer.offerNo || "");
+    const match = no.match(new RegExp(`^${prefix}-(\\d{3})$`));
+    if (!match) return;
+    maxSerial = Math.max(maxSerial, Number(match[1]));
+  });
+
+  return `${prefix}-${String(maxSerial + 1).padStart(3, "0")}`;
+}
+
+const COMPANY_INFO = {
+  name: "Depack for Advanced Packages S.A.E.",
+  website: "www.depack.co",
+  address:
+    "Plot 9/6 Ahmous St., Industrial Area A2, 10th of Ramadan City, Al Sharqiyah, Egypt.",
+  logoPath: "/images/depack-logo.png",
+};
+
+const INCOTERM_OPTIONS = [
+  "EXW",
+  "FCA",
+  "FOB",
+  "CFR",
+  "CIF",
+  "CPT",
+  "CIP",
+  "DAP",
+  "DPU",
+  "DDP",
+];
+
+const PAYMENT_TERM_OPTIONS = [
+  {
+    code: "CIA",
+    name: "Cash in Advance",
+    description:
+      "Seller requires upfront payment by the customer before order shipment.",
+  },
+  {
+    code: "PIA",
+    name: "Payment in Advance",
+    description:
+      "The customer must pay the seller before delivery of goods or before work starts.",
+  },
+  {
+    code: "CWO",
+    name: "Cash with Order",
+    description:
+      "The customer must include payment when submitting the order.",
+  },
+  {
+    code: "CBS",
+    name: "Cash before Shipment",
+    description:
+      "The customer is required to pay the seller before shipment of goods.",
+  },
+  {
+    code: "COD",
+    name: "Cash on Delivery",
+    description:
+      "The customer provides immediate payment when goods are delivered.",
+  },
+  {
+    code: "CND",
+    name: "Cash Next Delivery",
+    description:
+      "The customer must pay for the previous recurring order to receive the next order.",
+  },
+  {
+    code: "Net 15",
+    name: "Net 15 days",
+    description: "Invoice due within 15 days from invoice date.",
+  },
+  {
+    code: "Net 30",
+    name: "Net 30",
+    description: "Invoice due within 30 days from invoice date.",
+  },
+  {
+    code: "2/10 Net 30",
+    name: "2/10 Net 30",
+    description:
+      "2% discount if paid within 10 days, otherwise full amount due within 30 days.",
+  },
+  {
+    code: "Net 45",
+    name: "Net 45 days",
+    description: "Invoice due within 45 days from invoice date.",
+  },
+  {
+    code: "Net 60",
+    name: "Net 60",
+    description: "Invoice due within 60 days from invoice date.",
+  },
+  {
+    code: "EOM",
+    name: "End of Month",
+    description: "Invoice payable by the end of the month of issue.",
+  },
+  {
+    code: "MFI",
+    name: "Month Following Invoice",
+    description:
+      "Invoice due in the month following invoice based on the agreed cutoff day.",
+  },
+  {
+    code: "CAD",
+    name: "Cash against documents",
+    description:
+      "Payment is made against shipping or title documents.",
+  },
+  {
+    code: "LC",
+    name: "Letter of credit",
+    description:
+      "Payment secured through documentary letter of credit.",
+  },
+];
+
+function getPaymentTerm(termCode) {
+  return (
+    PAYMENT_TERM_OPTIONS.find((t) => t.code === termCode) || PAYMENT_TERM_OPTIONS[0]
+  );
+}
+
+function buildNewOffer({
+  offers = [],
+  requestId = "",
+  customerName = "",
+  preparedBy = "",
+  defaultCurrency = "EGP",
+  defaultFreightOption = "",
 }) {
-  const customerBlock = requestData?.customer || {};
-  const primaryCustomer = customerBlock?.customers?.[0] || {};
-  const product = requestData?.product || {};
+  const id = uid("offer");
+  const offerDate = todayLocalIso();
 
   return {
-    id: uid("offer"),
-    offerNo: nextOfferNumber(existingOffers, requestData?.project?.requestId || requestData?.requestId || ""),
-    date: todayIso(),
+    id,
+    offerDate,
+    offerNo: buildOfferNo(offerDate, offers, id),
+    requestCode: requestId || "",
+    customerName: customerName || "",
+    customerAddress: "",
+    contactPerson: "",
+    contactEmail: "",
+    phoneNumber: "",
+    preparedBy: preparedBy || "",
+    offerCurrency: defaultCurrency || "EGP",
 
-    customerName: primaryCustomer.customerName || "",
-    customerAddress: primaryCustomer.address || "",
-    contactPerson: primaryCustomer.contactPerson || "",
-    contactEmail: primaryCustomer.email || "",
-    contactPhone: primaryCustomer.phone || "",
-
-    preparedBy: scenarioSetup?.createdBy || "",
-    offerCurrency: "USD",
-
-    showBreakdown: {
+    breakdown: {
       material: true,
-      decoration: product.productType === "Sheet Roll" ? false : true,
+      decoration: true,
       packaging: true,
       waste: true,
       freight: true,
-      amortization: false,
+      amortization: true,
       conversion: true,
     },
 
-    marginMode: "pct",
-    marginPct: "",
-    marginAmountPerBasis: "",
+    marginMode: "none", // none | pct | amount
+    marginValue: "",
 
+    selectedFreightOption: defaultFreightOption || "",
     freightFrom: "",
     freightTo: "",
-    incoterms: "",
+    incoterm: "EXW",
 
-    selectedTerms: [],
-    extraTerms: "",
+    terms: {
+      validity: "",
+      paymentMode: "single", // single | split
+      singlePaymentTerm: "CIA",
 
-    notes: "",
+      split1Pct: "50",
+      split1Term: "PIA",
+      split2Pct: "50",
+      split2Term: "CBS",
+
+      additionalTerms: "",
+    },
   };
 }
 
-function toneCard(title, value, tone = "gray") {
-  const tones = {
-    gray: "bg-gray-50 border-gray-200",
-    blue: "bg-blue-50 border-blue-200",
-    green: "bg-green-50 border-green-200",
-    orange: "bg-orange-50 border-orange-200",
-    red: "bg-red-50 border-red-200",
-    purple: "bg-purple-50 border-purple-200",
-    teal: "bg-teal-50 border-teal-200",
-  };
-
-  return (
-    <div className={`rounded-xl border p-3 ${tones[tone] || tones.gray}`}>
-      <div className="text-xs text-gray-500">{title}</div>
-      <div className="font-semibold">{value}</div>
-    </div>
-  );
-}
-
-function Section({ title, children }) {
-  return (
-    <div className="rounded-2xl border bg-white shadow-sm p-4 space-y-4">
-      <div className="font-semibold">{title}</div>
-      {children}
-    </div>
-  );
-}
-
-function CompactInput({
+function SmallInput({
   label,
   value,
   onChange,
@@ -156,11 +303,11 @@ function CompactInput({
 }) {
   return (
     <label className="block space-y-1">
-      <div className="text-xs text-gray-600">{label}</div>
+      <div className="text-xs text-gray-500">{label}</div>
       <input
         type={type}
-        className={`w-full rounded-lg border px-3 py-2 text-sm ${
-          readOnly ? "bg-gray-100 text-gray-600 border-gray-300" : "bg-white"
+        className={`w-full border rounded-lg px-3 py-2 text-sm ${
+          readOnly ? "bg-gray-100 text-gray-600" : "bg-white"
         }`}
         value={value ?? ""}
         readOnly={readOnly}
@@ -171,49 +318,21 @@ function CompactInput({
   );
 }
 
-function CompactTextArea({
-  label,
-  value,
-  onChange,
-  rows = 3,
-  readOnly = false,
-  placeholder = "",
-}) {
+function SmallSelect({ label, value, onChange, options = [], disabled = false }) {
   return (
     <label className="block space-y-1">
-      <div className="text-xs text-gray-600">{label}</div>
-      <textarea
-        rows={rows}
-        className={`w-full rounded-lg border px-3 py-2 text-sm ${
-          readOnly ? "bg-gray-100 text-gray-600 border-gray-300" : "bg-white"
-        }`}
-        value={value ?? ""}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        onChange={(e) => onChange?.(e.target.value)}
-      />
-    </label>
-  );
-}
-
-function CompactSelect({
-  label,
-  value,
-  onChange,
-  options = [],
-}) {
-  return (
-    <label className="block space-y-1">
-      <div className="text-xs text-gray-600">{label}</div>
+      <div className="text-xs text-gray-500">{label}</div>
       <select
-        className="w-full rounded-lg border px-3 py-2 text-sm bg-white"
+        className={`w-full border rounded-lg px-3 py-2 text-sm ${
+          disabled ? "bg-gray-100 text-gray-600" : "bg-white"
+        }`}
         value={value ?? ""}
+        disabled={disabled}
         onChange={(e) => onChange?.(e.target.value)}
       >
         {options.map((opt) => {
           const optionValue = typeof opt === "string" ? opt : opt.value;
           const optionLabel = typeof opt === "string" ? opt : opt.label;
-
           return (
             <option key={optionValue} value={optionValue}>
               {optionLabel}
@@ -225,7 +344,95 @@ function CompactSelect({
   );
 }
 
-function buildNonSheetPackagingText(scenarioEngineering = {}) {
+function InfoCard({ title, children }) {
+  return (
+    <div className="rounded-2xl border bg-white p-4 space-y-3 shadow-sm">
+      <div className="font-semibold">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function getFreightOptionsFromEngineering(scenarioEngineering, isSheet) {
+  const rows = [
+    {
+      value: "container20",
+      label: "20ft Dry Container",
+      pallets: n(scenarioEngineering?.freight?.container20_pallets),
+      cartons: n(scenarioEngineering?.freight?.container20_cartons),
+      pcs: n(scenarioEngineering?.freight?.container20_pcs),
+      rolls: n(scenarioEngineering?.freight?.container20_rolls),
+      netWeightKg: n(scenarioEngineering?.freight?.container20_netWeight_kg),
+    },
+    {
+      value: "container40",
+      label: "40ft Dry Container",
+      pallets: n(scenarioEngineering?.freight?.container40_pallets),
+      cartons: n(scenarioEngineering?.freight?.container40_cartons),
+      pcs: n(scenarioEngineering?.freight?.container40_pcs),
+      rolls: n(scenarioEngineering?.freight?.container40_rolls),
+      netWeightKg: n(scenarioEngineering?.freight?.container40_netWeight_kg),
+    },
+    {
+      value: "container40hc",
+      label: "40ft High Cube",
+      pallets: n(scenarioEngineering?.freight?.container40hc_pallets),
+      cartons: n(scenarioEngineering?.freight?.container40hc_cartons),
+      pcs: n(scenarioEngineering?.freight?.container40hc_pcs),
+      rolls: n(scenarioEngineering?.freight?.container40hc_rolls),
+      netWeightKg: n(scenarioEngineering?.freight?.container40hc_netWeight_kg),
+    },
+    {
+      value: "smallTruck",
+      label: "Small Truck",
+      pallets: n(scenarioEngineering?.freight?.smallTruck_pallets),
+      cartons: n(scenarioEngineering?.freight?.smallTruck_cartons),
+      pcs: n(scenarioEngineering?.freight?.smallTruck_pcs),
+      rolls: n(scenarioEngineering?.freight?.smallTruck_rolls),
+      netWeightKg: n(scenarioEngineering?.freight?.smallTruck_netWeight_kg),
+    },
+    {
+      value: "mediumTruck",
+      label: "Medium Truck",
+      pallets: n(scenarioEngineering?.freight?.mediumTruck_pallets),
+      cartons: n(scenarioEngineering?.freight?.mediumTruck_cartons),
+      pcs: n(scenarioEngineering?.freight?.mediumTruck_pcs),
+      rolls: n(scenarioEngineering?.freight?.mediumTruck_rolls),
+      netWeightKg: n(scenarioEngineering?.freight?.mediumTruck_netWeight_kg),
+    },
+    {
+      value: "largeTruck",
+      label: "Large Truck",
+      pallets: n(scenarioEngineering?.freight?.largeTruck_pallets),
+      cartons: n(scenarioEngineering?.freight?.largeTruck_cartons),
+      pcs: n(scenarioEngineering?.freight?.largeTruck_pcs),
+      rolls: n(scenarioEngineering?.freight?.largeTruck_rolls),
+      netWeightKg: n(scenarioEngineering?.freight?.largeTruck_netWeight_kg),
+    },
+    {
+      value: "doubleTrailer",
+      label: "Double Trailer",
+      pallets: n(scenarioEngineering?.freight?.doubleTrailer_pallets),
+      cartons: n(scenarioEngineering?.freight?.doubleTrailer_cartons),
+      pcs: n(scenarioEngineering?.freight?.doubleTrailer_pcs),
+      rolls: n(scenarioEngineering?.freight?.doubleTrailer_rolls),
+      netWeightKg: n(scenarioEngineering?.freight?.doubleTrailer_netWeight_kg),
+    },
+  ];
+
+  return rows.filter((row) =>
+    isSheet ? row.rolls > 0 || row.netWeightKg > 0 : row.pcs > 0 || row.cartons > 0
+  );
+}
+
+function buildPackagingText({ scenarioEngineering, requestData, isSheet }) {
+  if (isSheet) {
+    return (
+      scenarioEngineering?.sheetPackaging?.instructionText ||
+      "Sheet roll packaging instruction not available."
+    );
+  }
+
   const primary = scenarioEngineering?.packaging?.primary || {};
   const secondary = scenarioEngineering?.packaging?.secondary || {};
   const pallet = scenarioEngineering?.packaging?.pallet || {};
@@ -234,864 +441,1092 @@ function buildNonSheetPackagingText(scenarioEngineering = {}) {
   const pcsPerStack = n(primary.pcsPerStack);
   const stacksPerPrimary = n(primary.stacksPerPrimary);
   const primariesPerSecondary = n(secondary.primariesPerSecondary);
-  const cartonsPerPallet = n(pallet.boxesPerPallet);
-
-  const pcsPerBag = pcsPerStack * stacksPerPrimary;
-  const pcsPerCarton = pcsPerBag * primariesPerSecondary;
-  const pcsPerPallet =
-    String(pallet.palletSelected || "").toLowerCase() === "yes"
-      ? pcsPerCarton * cartonsPerPallet
-      : 0;
-
-  const labelCount = n(secondary.labelsPerBox);
-  const cartonSize =
-    secondary.secondaryLength_mm &&
-    secondary.secondaryWidth_mm &&
-    secondary.secondaryHeight_mm
-      ? `${secondary.secondaryLength_mm} × ${secondary.secondaryWidth_mm} × ${secondary.secondaryHeight_mm} mm`
-      : "—";
-
-  const palletSize =
-    pallet.palletLength_mm &&
-    pallet.palletWidth_mm &&
-    pallet.palletHeight_mm
-      ? `${pallet.palletLength_mm} × ${pallet.palletWidth_mm} × ${pallet.palletHeight_mm} mm`
-      : "—";
+  const labelsPerBox = n(secondary.labelsPerBox);
+  const boxesPerPallet = n(pallet.boxesPerPallet);
 
   const parts = [];
 
   if (pcsPerStack) parts.push(`${fmt(pcsPerStack, 0)} pcs/stack`);
   if (stacksPerPrimary) parts.push(`${fmt(stacksPerPrimary, 0)} stacks per bag`);
-  if (primariesPerSecondary) parts.push(`${fmt(primariesPerSecondary, 0)} bags/carton`);
-  if (labelCount) parts.push(`${fmt(labelCount, 0)} label(s) on carton`);
-  if (cartonsPerPallet) parts.push(`${fmt(cartonsPerPallet, 0)} cartons/pallet`);
-  if (n(pallet.stretchWeightPerPallet_kg) > 0) parts.push("with stretch wrap");
+  if (primariesPerSecondary) {
+    parts.push(`${fmt(primariesPerSecondary, 0)} bags per carton`);
+  }
+  if (labelsPerBox) parts.push(`${fmt(labelsPerBox, 0)} label(s) per carton`);
+  if (boxesPerPallet) parts.push(`${fmt(boxesPerPallet, 0)} cartons per pallet`);
 
-  return {
-    text: parts.join(", "),
-    pcsPerBag,
-    pcsPerCarton,
-    pcsPerPallet,
-    cartonSize,
-    palletSize,
-    cartonWeightKg: freight.cartonWeight_kg || "",
-    palletWeightKg: freight.palletWeight_kg || "",
-  };
-}
+  if (n(pallet.stretchWeightPerPallet_kg) > 0) {
+    parts.push("with stretch wrap");
+  }
 
-function buildSheetPackagingText(scenarioEngineering = {}) {
-  const sheetPackaging = scenarioEngineering?.sheetPackaging || {};
-  const sheetSpecs = scenarioEngineering?.sheetSpecs || {};
-  const freight = scenarioEngineering?.freight || {};
-
-  const rollWeight =
-    n(sheetPackaging.rollWeight_kg) || n(sheetSpecs.rollTargetWeight_kg);
-
-  const rollHeight = n(sheetSpecs.netWidth_mm);
-  const rollDiameter = n(sheetSpecs.rollDiameter_mm);
+  const cartonSize =
+    secondary.secondaryLength_mm &&
+    secondary.secondaryWidth_mm &&
+    secondary.secondaryHeight_mm
+      ? `Carton size: ${secondary.secondaryLength_mm} × ${secondary.secondaryWidth_mm} × ${secondary.secondaryHeight_mm} mm`
+      : "";
 
   const palletSize =
-    sheetPackaging.palletLength_mm &&
-    sheetPackaging.palletWidth_mm &&
-    sheetPackaging.palletHeight_mm
-      ? `${sheetPackaging.palletLength_mm} × ${sheetPackaging.palletWidth_mm} × ${sheetPackaging.palletHeight_mm} mm`
-      : "—";
+    freight.palletLength_mm && freight.palletWidth_mm && freight.palletHeight_mm
+      ? `Pallet size: ${freight.palletLength_mm} × ${freight.palletWidth_mm} × ${freight.palletHeight_mm} mm`
+      : "";
 
-  const parts = [];
+  const cartonWeight = freight.cartonWeight_kg
+    ? `Carton weight: ${freight.cartonWeight_kg} kg`
+    : "";
 
-  if (rollDiameter) parts.push(`Roll diameter ${fmt(rollDiameter, 2)} mm`);
-  if (rollHeight) parts.push(`Roll height ${fmt(rollHeight, 2)} mm`);
-  if (rollWeight) parts.push(`Roll weight ${fmt(rollWeight, 3)} kg`);
-  if (sheetPackaging.coreSize) parts.push(`Core ${sheetPackaging.coreSize}`);
-  if (n(sheetPackaging.labelsPerRoll) > 0)
-    parts.push(`${fmt(sheetPackaging.labelsPerRoll, 0)} label(s)/roll`);
-  if (n(sheetPackaging.rollsPerPallet) > 0)
-    parts.push(`${fmt(sheetPackaging.rollsPerPallet, 0)} roll(s)/pallet`);
+  const palletWeight = freight.palletWeight_kg
+    ? `Pallet weight: ${freight.palletWeight_kg} kg`
+    : "";
 
-  return {
-    text: sheetPackaging.instructionText || parts.join(", "),
+  const derived = [];
+  const pcsPerPrimary = pcsPerStack * stacksPerPrimary;
+  const pcsPerCarton = pcsPerPrimary * primariesPerSecondary;
+  const pcsPerPallet = pcsPerCarton * boxesPerPallet;
+
+  if (pcsPerPrimary) derived.push(`Pcs/bag: ${fmt(pcsPerPrimary, 0)}`);
+  if (pcsPerCarton) derived.push(`Pcs/carton: ${fmt(pcsPerCarton, 0)}`);
+  if (pcsPerPallet) derived.push(`Pcs/pallet: ${fmt(pcsPerPallet, 0)}`);
+
+  return [
+    parts.join(", "),
+    cartonSize,
     palletSize,
-    palletWeightKg: freight.palletWeight_kg || "",
-  };
+    cartonWeight,
+    palletWeight,
+    derived.join(" • "),
+  ]
+    .filter(Boolean)
+    .join(". ");
 }
 
-function getFreightDisplayData(scenarioEngineering = {}, requestData = {}, priceMap = {}) {
-  const freight = scenarioEngineering?.freight || {};
-  const isSheet = requestData?.product?.productType === "Sheet Roll";
-  const selected = priceMap?.selectedFreightOption || null;
+function buildFreightText({ selectedFreight, offer, isSheet }) {
+  if (!selectedFreight) return "Freight details not selected.";
 
-  const optionValue = selected?.value || "";
-  const optionLabel = selected?.label || "—";
+  const qtyText = isSheet
+    ? `${fmt(selectedFreight.rolls, 0)} rolls / shipment`
+    : `${fmt(selectedFreight.pcs, 0)} pcs / shipment`;
 
-  const pallets = optionValue ? freight[`${optionValue}_pallets`] || "" : "";
-  const cartons = optionValue ? freight[`${optionValue}_cartons`] || freight[`${optionValue}_cartonsRange`] || "" : "";
-  const pcs = optionValue ? freight[`${optionValue}_pcs`] || "" : "";
-  const rolls = optionValue ? freight[`${optionValue}_rolls`] || "" : "";
-  const netWeight = optionValue ? freight[`${optionValue}_netWeight_kg`] || "" : "";
+  const packingText = isSheet
+    ? `${fmt(selectedFreight.pallets, 0)} pallets, ${fmt(selectedFreight.rolls, 0)} rolls`
+    : `${fmt(selectedFreight.pallets, 0)} pallets, ${fmt(selectedFreight.cartons, 0)} cartons, ${fmt(selectedFreight.pcs, 0)} pcs`;
+
+  return [
+    `Freight mode: ${selectedFreight.label}`,
+    packingText,
+    qtyText,
+    selectedFreight.netWeightKg
+      ? `Net weight: ${fmt(selectedFreight.netWeightKg, 2)} kg`
+      : "",
+    offer.freightFrom ? `From: ${offer.freightFrom}` : "",
+    offer.freightTo ? `To: ${offer.freightTo}` : "",
+    offer.incoterm ? `Incoterm: ${offer.incoterm}` : "",
+  ]
+    .filter(Boolean)
+    .join(". ");
+}
+
+function buildPricingSummary({ requestData, scenarioEngineering, pricing20Data }) {
+  const isSheet = detectCase(requestData) === "sheet";
+
+  const assumptions = pricing20Data?.assumptions || {};
+  const operational = pricing20Data?.operational || {};
+  const materialRows = pricing20Data?.materialRows || [];
+  const sheetPackagingRows = pricing20Data?.sheetPackagingRows || [];
+  const intermediatePackagingRows = pricing20Data?.intermediatePackagingRows || [];
+  const thermoPackagingRows = pricing20Data?.thermoPackagingRows || [];
+  const decoration = pricing20Data?.decoration || {};
+  const wasteRows = pricing20Data?.wasteRows || [];
+  const freightRows = pricing20Data?.freightRows || [];
+  const freight = pricing20Data?.freight || {};
+  const workingCapitalRows = pricing20Data?.workingCapitalRows || [];
+  const amortizationRows = pricing20Data?.amortizationRows || [];
+  const conversion = pricing20Data?.conversion || {};
+
+  const productWeightG =
+    n(operational.productWeightG) || getProductWeightG(requestData, scenarioEngineering);
+
+  const sheetUtilPct =
+    n(operational.sheetUtilizationPct) || getSheetUtilPct(scenarioEngineering);
+
+  const pcsPerCarton =
+    n(operational.pcsPerCarton) || getPcsPerCarton(scenarioEngineering);
+
+  const rollWeightKg =
+    n(operational.rollWeightKg) ||
+    n(scenarioEngineering?.sheetPackaging?.rollWeight_kg) ||
+    n(scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg);
+
+  const freightOptions = getFreightOptionsFromEngineering(scenarioEngineering, isSheet);
+
+  const selectedFreight =
+    freightOptions.find((row) => row.value === freight.selectedOption) ||
+    freightOptions[0] ||
+    null;
+
+  const materialEgp = materialRows.reduce((sum, row) => {
+    const unitPriceEgp = currencyToEgp(
+      row.priceInCurrency,
+      row.currency,
+      assumptions.usdEgp,
+      assumptions.eurUsd
+    );
+
+    const costPerTon = n(row.sourceConsumptionKgPerTon) * unitPriceEgp;
+
+    const costPer1000 = perTonToPer1000(costPerTon, productWeightG, sheetUtilPct);
+
+    return sum + (isSheet ? costPerTon : costPer1000);
+  }, 0);
+
+  const sheetPackagingEgp = sheetPackagingRows.reduce((sum, row) => {
+    const unitPriceEgp = currencyToEgp(
+      row.priceInCurrency,
+      row.currency,
+      assumptions.usdEgp,
+      assumptions.eurUsd
+    );
+
+    const uses = n(row.sourceNoOfUses) || 1;
+    const costPerRoll = (n(row.sourceConsumptionPerRoll) * unitPriceEgp) / uses;
+    const costPerTon = rollWeightKg > 0 ? costPerRoll / (rollWeightKg / 1000) : 0;
+
+    return sum + costPerTon;
+  }, 0);
+
+  const intermediatePackagingEgp = intermediatePackagingRows.reduce((sum, row) => {
+    const unitPriceEgp = currencyToEgp(
+      row.priceInCurrency,
+      row.currency,
+      assumptions.usdEgp,
+      assumptions.eurUsd
+    );
+
+    const uses = n(row.sourceNoOfUses) || 1;
+    const costPerRoll = (n(row.sourceConsumptionPerRoll) * unitPriceEgp) / uses;
+    const costPerTon = rollWeightKg > 0 ? costPerRoll / (rollWeightKg / 1000) : 0;
+    const costPer1000 = perTonToPer1000(costPerTon, productWeightG, sheetUtilPct);
+
+    return sum + costPer1000;
+  }, 0);
+
+  const thermoPackagingEgp = thermoPackagingRows.reduce((sum, row) => {
+    const unitPriceEgp = currencyToEgp(
+      row.priceInCurrency,
+      row.currency,
+      assumptions.usdEgp,
+      assumptions.eurUsd
+    );
+
+    const uses = n(row.sourceNoOfUses) || 1;
+    const costPer1000 =
+      pcsPerCarton > 0
+        ? ((n(row.sourceConsumptionPerCarton) * unitPriceEgp) / uses / pcsPerCarton) * 1000
+        : 0;
+
+    return sum + costPer1000;
+  }, 0);
+
+  const packagingEgp = isSheet
+    ? sheetPackagingEgp
+    : intermediatePackagingEgp + thermoPackagingEgp;
+
+  let decorationEgp = 0;
+  if (!isSheet && decoration.enabled) {
+    if (decoration.type === "Printing") {
+      decorationEgp =
+        (n(decoration?.printing?.inkConsumptionGPer1000) *
+          currencyToEgp(
+            decoration?.printing?.inkPricePerKgCurrency,
+            decoration?.printing?.currency,
+            assumptions.usdEgp,
+            assumptions.eurUsd
+          )) /
+        1000;
+    } else if (decoration.type === "Shrink Sleeve") {
+      const sleevesPerKg = n(decoration?.sleeve?.sleevesPerKg);
+      const sleeveCostPerKgEgp = currencyToEgp(
+        decoration?.sleeve?.sleeveCostPerKgCurrency,
+        decoration?.sleeve?.currency,
+        assumptions.usdEgp,
+        assumptions.eurUsd
+      );
+      decorationEgp = sleevesPerKg > 0 ? (1000 / sleevesPerKg) * sleeveCostPerKgEgp : 0;
+    } else if (decoration.type === "Hybrid") {
+      decorationEgp =
+        n(decoration?.hybrid?.blankConsumptionPerCup) *
+          currencyToEgp(
+            decoration?.hybrid?.blankUnitPriceCurrency,
+            decoration?.hybrid?.blankCurrency,
+            assumptions.usdEgp,
+            assumptions.eurUsd
+          ) *
+          1000 +
+        n(decoration?.hybrid?.bottomConsumptionPerCup) *
+          currencyToEgp(
+            decoration?.hybrid?.bottomUnitPriceCurrency,
+            decoration?.hybrid?.bottomCurrency,
+            assumptions.usdEgp,
+            assumptions.eurUsd
+          ) *
+          1000;
+    }
+  }
+
+  const wasteEgp = wasteRows.reduce((sum, row) => {
+    let baseCost = 0;
+
+    if (row.id === "waste-material") baseCost = materialEgp;
+    else if (row.id === "waste-packaging") baseCost = sheetPackagingEgp;
+    else if (row.id === "waste-intermediate-packaging") baseCost = intermediatePackagingEgp;
+    else if (row.id === "waste-thermo-packaging") baseCost = thermoPackagingEgp;
+    else if (row.id === "waste-decoration") baseCost = decorationEgp;
+
+    return sum + (n(row.ratePct) / 100) * baseCost;
+  }, 0);
+
+  const freightEgp = freightRows.reduce((sum, row) => {
+    const tripCostEgp = currencyToEgp(
+      row.tripCostCurrency,
+      row.currency,
+      assumptions.usdEgp,
+      assumptions.eurUsd
+    );
+
+    const qtyPerTrip = isSheet
+      ? n(selectedFreight?.netWeightKg) / 1000
+      : n(selectedFreight?.pcs);
+
+    const basis =
+      qtyPerTrip > 0
+        ? isSheet
+          ? tripCostEgp / qtyPerTrip
+          : (tripCostEgp / qtyPerTrip) * 1000
+        : 0;
+
+    return sum + basis;
+  }, 0);
+
+  const workingCapitalEgp = workingCapitalRows.reduce((sum, row) => {
+    const dso = n(row.dso);
+    const dio = n(row.dio);
+    const dpo = n(row.dpo);
+    const interestRatePct = n(row.interestRatePct);
+    const effectivePct = ((dso + dio - dpo) * interestRatePct) / 365;
+
+    let baseCost = 0;
+    if (row.id === "wc-material") baseCost = materialEgp;
+    else if (row.id === "wc-packaging") {
+      baseCost = isSheet ? sheetPackagingEgp : intermediatePackagingEgp + thermoPackagingEgp;
+    } else if (row.id === "wc-decoration") {
+      baseCost = decorationEgp;
+    }
+
+    return sum + baseCost * (effectivePct / 100);
+  }, 0);
+
+  const amortizationEgp = amortizationRows.reduce((sum, row) => {
+    const valueInEgp = currencyToEgp(
+      row.valueInCurrency,
+      row.currency,
+      assumptions.usdEgp,
+      assumptions.eurUsd
+    );
+
+    if (row.amortized !== true || n(row.amortizationQty) <= 0) return sum;
+
+    const basis = isSheet
+      ? valueInEgp / n(row.amortizationQty)
+      : (valueInEgp / n(row.amortizationQty)) * 1000;
+
+    return sum + basis;
+  }, 0);
+
+  const otherCostsBeforeConversion =
+    materialEgp +
+    packagingEgp +
+    decorationEgp +
+    wasteEgp +
+    freightEgp +
+    workingCapitalEgp +
+    amortizationEgp;
+
+  const conversionValueEgp = currencyToEgp(
+    conversion.valueInCurrency,
+    conversion.currency,
+    assumptions.usdEgp,
+    assumptions.eurUsd
+  );
+
+  let conversionEgp = 0;
+  let salesPriceEgp = 0;
+
+  if (isSheet) {
+    if (conversion.mode === "required_sales_price_per_ton") {
+      salesPriceEgp = conversionValueEgp;
+      conversionEgp = salesPriceEgp - otherCostsBeforeConversion;
+    } else if (conversion.mode === "required_daily_extrusion_conversion") {
+      const tonsPerDay =
+        n(pricing20Data?.operational?.productivityTonsPerDay) ||
+        n(scenarioEngineering?.extrusion?.tonsPerDay24h);
+      conversionEgp = tonsPerDay > 0 ? conversionValueEgp / tonsPerDay : 0;
+      salesPriceEgp = otherCostsBeforeConversion + conversionEgp;
+    } else {
+      conversionEgp = conversionValueEgp;
+      salesPriceEgp = otherCostsBeforeConversion + conversionEgp;
+    }
+  } else {
+    if (conversion.mode === "required_sales_price_per_1000") {
+      salesPriceEgp = conversionValueEgp;
+      conversionEgp = salesPriceEgp - otherCostsBeforeConversion;
+    } else if (conversion.mode === "required_daily_thermo_conversion") {
+      const pcsPerDay =
+        n(pricing20Data?.operational?.pcsProducedPerDay) ||
+        n(scenarioEngineering?.thermo?.pcsPerDay24h);
+      conversionEgp = pcsPerDay > 0 ? (conversionValueEgp / pcsPerDay) * 1000 : 0;
+      salesPriceEgp = otherCostsBeforeConversion + conversionEgp;
+    } else if (conversion.mode === "required_daily_extrusion_conversion") {
+      const tonsPerDay =
+        n(pricing20Data?.operational?.extrusionProductivityTonsPerDay) ||
+        n(scenarioEngineering?.extrusion?.tonsPerDay24h);
+      const sheetKgPerDay =
+        n(pricing20Data?.operational?.sheetRollConsumedPerDayKg) ||
+        ((n(scenarioEngineering?.thermo?.pcsPerDay24h) * productWeightG) / 1000) /
+          (sheetUtilPct / 100 || 1);
+      const pcsPerDay =
+        n(pricing20Data?.operational?.pcsProducedPerDay) ||
+        n(scenarioEngineering?.thermo?.pcsPerDay24h);
+
+      conversionEgp =
+        tonsPerDay > 0 && pcsPerDay > 0
+          ? (conversionValueEgp / tonsPerDay) * (sheetKgPerDay / 1000) / pcsPerDay * 1000
+          : 0;
+
+      salesPriceEgp = otherCostsBeforeConversion + conversionEgp;
+    } else {
+      conversionEgp = conversionValueEgp;
+      salesPriceEgp = otherCostsBeforeConversion + conversionEgp;
+    }
+  }
 
   return {
-    optionLabel,
-    pallets,
-    cartons,
-    pcs,
-    rolls,
-    netWeight,
     isSheet,
-  };
-}
-
-function buildOfferLines(selectedOffer, priceMap) {
-  const s = selectedOffer?.showBreakdown || {};
-
-  const lines = [];
-
-  if (s.material) {
-    lines.push({ key: "material", label: "Material Cost", value: n(priceMap.material) });
-  }
-
-  if (s.decoration) {
-    lines.push({ key: "decoration", label: "Decoration Cost", value: n(priceMap.decoration) });
-  }
-
-  if (s.packaging) {
-    lines.push({ key: "packaging", label: "Packaging Cost", value: n(priceMap.packaging) });
-  }
-
-  if (s.waste) {
-    lines.push({ key: "waste", label: "Waste Cost", value: n(priceMap.waste) });
-  }
-
-  if (s.freight) {
-    lines.push({ key: "freight", label: "Freight Cost", value: n(priceMap.freight) });
-  }
-
-  if (s.amortization) {
-    lines.push({ key: "amortization", label: "Amortization Cost", value: n(priceMap.amortization) });
-  }
-
-  const shownNonConversionTotal = lines.reduce((sum, row) => sum + n(row.value), 0);
-  const conversionValue = Math.max(n(priceMap.total) - shownNonConversionTotal, 0);
-
-  if (s.conversion) {
-    lines.push({
-      key: "conversion",
-      label: "Conversion Price",
-      value: conversionValue,
-    });
-  }
-
-  return {
-    lines,
-    shownNonConversionTotal,
-    conversionValue,
+    assumptions,
+    materialEgp,
+    packagingEgp,
+    decorationEgp,
+    wasteEgp,
+    freightEgp,
+    amortizationEgp,
+    workingCapitalEgp,
+    conversionEgp,
+    salesPriceEgp,
+    freightOptions,
+    selectedFreight,
   };
 }
 
 function Pricing20OffersTab({
+  requestId,
   requestData,
   scenarioEngineering,
+  scenarioSetup,
   pricing20Data,
   setPricing20Data,
-  scenarioSetup,
 }) {
-  const offers = pricing20Data?.priceOffers || [];
-  const selectedOfferId = pricing20Data?.selectedPriceOfferId || "";
+  const isSheet = detectCase(requestData) === "sheet";
+  const product = requestData?.product || {};
+  const primaryCustomer = requestData?.customer?.customers?.[0] || {};
+
   const assumptions = pricing20Data?.assumptions || {};
-  const priceMap = useMemo(
-    () => getOfferPriceMap(pricing20Data, requestData),
-    [pricing20Data, requestData]
+  const offersTab = pricing20Data?.offersTab || { offers: [], activeOfferId: "" };
+
+  const pricingSummary = useMemo(
+    () => buildPricingSummary({ requestData, scenarioEngineering, pricing20Data }),
+    [requestData, scenarioEngineering, pricing20Data]
   );
 
-  const isSheet = requestData?.product?.productType === "Sheet Roll";
-  const basisLabel = priceMap.basis === "ton" ? "ton" : "1000 pcs";
-
-  const customerBlock = requestData?.customer || {};
-  const primaryCustomer = customerBlock?.customers?.[0] || {};
-  const product = requestData?.product || {};
-  const project = requestData?.project || {};
-
   useEffect(() => {
-    if (!offers.length) {
-      const firstOffer = buildDefaultOffer({
-        existingOffers: [],
-        requestData,
-        scenarioSetup,
-      });
+    if ((offersTab?.offers || []).length > 0) return;
 
-      setPricing20Data((prev) => ({
-        ...(prev || {}),
-        priceOffers: [firstOffer],
-        selectedPriceOfferId: firstOffer.id,
-      }));
-      return;
-    }
+    const firstOffer = buildNewOffer({
+      offers: [],
+      requestId,
+      customerName: primaryCustomer.customerName || "",
+      preparedBy: scenarioSetup?.createdBy || "",
+      defaultCurrency: assumptions.baseCurrency || "EGP",
+      defaultFreightOption: pricingSummary.selectedFreight?.value || "",
+    });
 
-    if (!selectedOfferId || !offers.some((o) => o.id === selectedOfferId)) {
-      setPricing20Data((prev) => ({
-        ...(prev || {}),
-        selectedPriceOfferId: offers[0].id,
-      }));
-    }
-  }, [offers, selectedOfferId, requestData, scenarioSetup, setPricing20Data]);
+    setPricing20Data((prev) => ({
+      ...(prev || {}),
+      offersTab: {
+        offers: [firstOffer],
+        activeOfferId: firstOffer.id,
+      },
+    }));
+  }, [
+    offersTab?.offers,
+    requestId,
+    primaryCustomer.customerName,
+    scenarioSetup?.createdBy,
+    assumptions.baseCurrency,
+    pricingSummary.selectedFreight,
+    setPricing20Data,
+  ]);
 
-  const selectedOffer =
-    offers.find((o) => o.id === selectedOfferId) || offers[0] || null;
+  const offers = offersTab?.offers || [];
+  const activeOffer =
+    offers.find((row) => row.id === offersTab?.activeOfferId) || offers[0] || null;
 
   const updateOffer = (offerId, patch) => {
     setPricing20Data((prev) => ({
       ...(prev || {}),
-      priceOffers: (((prev || {}).priceOffers) || []).map((offer) =>
-        offer.id === offerId ? { ...offer, ...patch } : offer
-      ),
+      offersTab: {
+        ...((prev || {}).offersTab || {}),
+        offers: ((((prev || {}).offersTab || {}).offers || []).map((row) =>
+          row.id === offerId ? { ...row, ...patch } : row
+        )),
+      },
     }));
   };
 
   const updateOfferNested = (offerId, key, patch) => {
     setPricing20Data((prev) => ({
       ...(prev || {}),
-      priceOffers: (((prev || {}).priceOffers) || []).map((offer) =>
-        offer.id === offerId
-          ? {
-              ...offer,
-              [key]: {
-                ...(offer[key] || {}),
-                ...patch,
-              },
-            }
-          : offer
-      ),
+      offersTab: {
+        ...((prev || {}).offersTab || {}),
+        offers: ((((prev || {}).offersTab || {}).offers || []).map((row) =>
+          row.id === offerId
+            ? {
+                ...row,
+                [key]: {
+                  ...(row[key] || {}),
+                  ...patch,
+                },
+              }
+            : row
+        )),
+      },
     }));
   };
 
-  const addOffer = () => {
-    const newOffer = buildDefaultOffer({
-      existingOffers: offers,
-      requestData,
-      scenarioSetup,
-    });
+const createOffer = () => {
+  const nextOffer = buildNewOffer({
+    offers,
+    requestId,
+    customerName: primaryCustomer.customerName || "",
+    preparedBy: scenarioSetup?.createdBy || "",
+    defaultCurrency: assumptions.baseCurrency || "EGP",
+    defaultFreightOption: pricingSummary.selectedFreight?.value || "",
+  });
 
-    setPricing20Data((prev) => ({
-      ...(prev || {}),
-      priceOffers: [...(((prev || {}).priceOffers) || []), newOffer],
-      selectedPriceOfferId: newOffer.id,
-    }));
-  };
-
-  const removeOffer = (offerId) => {
-    const nextOffers = offers.filter((o) => o.id !== offerId);
-    const nextSelected = nextOffers[0]?.id || "";
-
-    setPricing20Data((prev) => ({
-      ...(prev || {}),
-      priceOffers: nextOffers,
-      selectedPriceOfferId: nextSelected,
-    }));
-  };
-
-  const offerLinesSummary = useMemo(() => {
-    if (!selectedOffer) {
-      return {
-        lines: [],
-        shownNonConversionTotal: 0,
-        conversionValue: 0,
-        marginAmountBase: 0,
-        finalOfferPriceBase: 0,
-      };
-    }
-
-    const { lines, shownNonConversionTotal, conversionValue } = buildOfferLines(
-      selectedOffer,
-      priceMap
-    );
-
-    let marginAmountBase = 0;
-
-    if (selectedOffer.marginMode === "amount") {
-      marginAmountBase = n(selectedOffer.marginAmountPerBasis);
-    } else {
-      marginAmountBase = n(priceMap.total) * (n(selectedOffer.marginPct) / 100);
-    }
-
-    const finalOfferPriceBase = n(priceMap.total) + marginAmountBase;
+  setPricing20Data((prev) => {
+    const existingOffers = ((prev || {}).offersTab || {}).offers || [];
 
     return {
-      lines,
-      shownNonConversionTotal,
-      conversionValue,
-      marginAmountBase,
-      finalOfferPriceBase,
+      ...(prev || {}),
+      offersTab: {
+        ...((prev || {}).offersTab || {}),
+        offers: [...existingOffers, nextOffer],
+        activeOfferId: nextOffer.id,
+      },
     };
-  }, [selectedOffer, priceMap]);
+  });
+};
+  const deleteOffer = (offerId) => {
+    const remaining = offers.filter((row) => row.id !== offerId);
+    const nextActiveId =
+      offersTab?.activeOfferId === offerId
+        ? remaining[0]?.id || ""
+        : offersTab?.activeOfferId || "";
 
-  const packagingDisplay = useMemo(() => {
-    return isSheet
-      ? buildSheetPackagingText(scenarioEngineering)
-      : buildNonSheetPackagingText(scenarioEngineering);
-  }, [isSheet, scenarioEngineering]);
+    setPricing20Data((prev) => ({
+      ...(prev || {}),
+      offersTab: {
+        ...((prev || {}).offersTab || {}),
+        offers: remaining,
+        activeOfferId: nextActiveId,
+      },
+    }));
+  };
 
-  const freightDisplay = useMemo(() => {
-    return getFreightDisplayData(scenarioEngineering, requestData, priceMap);
-  }, [scenarioEngineering, requestData, priceMap]);
+  const activeOfferComputed = useMemo(() => {
+    if (!activeOffer) return null;
 
-  if (!selectedOffer) {
-    return <div className="p-4">Loading offers...</div>;
+    const offerCurrency = activeOffer.offerCurrency || assumptions.baseCurrency || "EGP";
+    const usdEgp = assumptions.usdEgp;
+    const eurUsd = assumptions.eurUsd;
+
+    const baseSalesPriceEgp = n(pricingSummary.salesPriceEgp);
+
+    let marginAddEgp = 0;
+    if (activeOffer.marginMode === "pct") {
+      marginAddEgp = baseSalesPriceEgp * (n(activeOffer.marginValue) / 100);
+    } else if (activeOffer.marginMode === "amount") {
+      marginAddEgp = currencyToEgp(
+        activeOffer.marginValue,
+        offerCurrency,
+        usdEgp,
+        eurUsd
+      );
+    }
+
+    const offerTotalEgp = baseSalesPriceEgp + marginAddEgp;
+
+    const selectedRows = [
+      {
+        key: "material",
+        label: isSheet ? "Material Cost / ton" : "Material Cost / 1000 pcs",
+        valueEgp: pricingSummary.materialEgp,
+      },
+      {
+        key: "decoration",
+        label: "Decoration Cost / 1000 pcs",
+        valueEgp: isSheet ? 0 : pricingSummary.decorationEgp,
+      },
+      {
+        key: "packaging",
+        label: isSheet ? "Packaging Cost / ton" : "Packaging Cost / 1000 pcs",
+        valueEgp: pricingSummary.packagingEgp,
+      },
+      {
+        key: "waste",
+        label: isSheet ? "Waste Cost / ton" : "Waste Cost / 1000 pcs",
+        valueEgp: pricingSummary.wasteEgp,
+      },
+      {
+        key: "freight",
+        label: isSheet ? "Freight Cost / ton" : "Freight Cost / 1000 pcs",
+        valueEgp: pricingSummary.freightEgp,
+      },
+      {
+        key: "amortization",
+        label: isSheet ? "Amortization Cost / ton" : "Amortization Cost / 1000 pcs",
+        valueEgp: pricingSummary.amortizationEgp,
+      },
+    ].filter((row) => activeOffer?.breakdown?.[row.key] === true);
+
+    const selectedNonConversionTotalEgp = selectedRows.reduce(
+      (sum, row) => sum + n(row.valueEgp),
+      0
+    );
+
+    const conversionDerivedEgp = offerTotalEgp - selectedNonConversionTotalEgp;
+
+    const displayRows = [...selectedRows];
+
+    if (activeOffer?.breakdown?.conversion === true) {
+      displayRows.push({
+        key: "conversion",
+        label: isSheet ? "Conversion Price / ton" : "Conversion Price / 1000 pcs",
+        valueEgp: conversionDerivedEgp,
+      });
+    }
+
+    return {
+      offerCurrency,
+      baseSalesPriceEgp,
+      marginAddEgp,
+      offerTotalEgp,
+      conversionDerivedEgp,
+      displayRows: displayRows.map((row) => ({
+        ...row,
+        valueOfferCurrency: egpToOfferCurrency(
+          row.valueEgp,
+          offerCurrency,
+          usdEgp,
+          eurUsd
+        ),
+      })),
+      totalOfferCurrency: egpToOfferCurrency(
+        offerTotalEgp,
+        offerCurrency,
+        usdEgp,
+        eurUsd
+      ),
+      packagingText: buildPackagingText({
+        scenarioEngineering,
+        requestData,
+        isSheet,
+      }),
+      freightText: buildFreightText({
+        selectedFreight:
+          pricingSummary.freightOptions.find(
+            (row) => row.value === activeOffer.selectedFreightOption
+          ) || pricingSummary.selectedFreight,
+        offer: activeOffer,
+        isSheet,
+      }),
+    };
+  }, [activeOffer, assumptions, pricingSummary, scenarioEngineering, requestData, isSheet]);
+
+  if (!activeOffer || !activeOfferComputed) {
+    return <div className="p-6">Loading offers...</div>;
   }
 
-  const offerCurrency = selectedOffer.offerCurrency || "USD";
+  const selectedFreight =
+    pricingSummary.freightOptions.find(
+      (row) => row.value === activeOffer.selectedFreightOption
+    ) || pricingSummary.selectedFreight;
+
+  const paymentTerm = getPaymentTerm(activeOffer?.terms?.singlePaymentTerm);
+  const split1Term = getPaymentTerm(activeOffer?.terms?.split1Term);
+  const split2Term = getPaymentTerm(activeOffer?.terms?.split2Term);
+
+  const productCode = product.productCode || requestId || "—";
+  const baseMaterial =
+    scenarioEngineering?.materialSheet?.baseMaterial ||
+    product.sheetMaterial ||
+    product.productMaterial ||
+    "—";
+
+  const productWeight =
+    scenarioEngineering?.thermo?.unitWeight_g ||
+    product.productWeightG ||
+    "—";
+
+  const decorationType = getDecorationType(requestData);
 
   return (
     <div className="space-y-6">
-      <Section title="Create Price Offers">
+      <div className="rounded-2xl border bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="text-sm text-gray-600">
-            Create commercial offers based on the selected pricing scenario.
+          <div>
+            <div className="text-xs uppercase tracking-wide text-gray-500">
+              Create Price Offers
+            </div>
+            <div className="text-xl font-semibold">
+              {requestData?.project?.projectName || requestId}
+            </div>
+            <div className="text-sm text-gray-500">
+              Live values are pulled from the current Pricing 2.0 scenario.
+            </div>
           </div>
 
-          <button
-            type="button"
-            className="rounded-lg bg-black text-white px-4 py-2 text-sm"
-            onClick={addOffer}
-          >
-            + Create New Offer
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={createOffer}
+              className="rounded-lg bg-black text-white px-4 py-2 text-sm"
+            >
+              + Create New Offer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border bg-white p-4 shadow-sm">
+        <div className="flex gap-2 flex-wrap">
+          {offers.map((offer) => (
+            <button
+              key={offer.id}
+              type="button"
+              onClick={() =>
+                setPricing20Data((prev) => ({
+                  ...(prev || {}),
+                  offersTab: {
+                    ...((prev || {}).offersTab || {}),
+                    activeOfferId: offer.id,
+                  },
+                }))
+              }
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                offer.id === activeOffer.id
+                  ? "bg-black text-white border-black"
+                  : "bg-white hover:bg-gray-50"
+              }`}
+            >
+              {offer.offerNo || "Offer"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <InfoCard title="1. Offer Header">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <SmallInput
+                label="Offer Number"
+                value={activeOffer.offerNo}
+                readOnly
+              />
+              <SmallInput
+                label="Offer Date"
+                value={activeOffer.offerDate}
+                type="date"
+                onChange={(v) => {
+                  updateOffer(activeOffer.id, {
+                    offerDate: v,
+                    offerNo: buildOfferNo(v, offers, activeOffer.id),
+                  });
+                }}
+              />
+              <SmallInput
+                label="Request Code"
+                value={activeOffer.requestCode || requestId}
+                readOnly
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <SmallInput
+                label="Customer Name"
+                value={activeOffer.customerName}
+                onChange={(v) => updateOffer(activeOffer.id, { customerName: v })}
+              />
+              <SmallSelect
+                label="Offer Currency"
+                value={activeOffer.offerCurrency}
+                onChange={(v) => updateOffer(activeOffer.id, { offerCurrency: v })}
+                options={["EGP", "USD", "EUR"]}
+              />
+              <SmallInput
+                label="Customer Address"
+                value={activeOffer.customerAddress}
+                onChange={(v) => updateOffer(activeOffer.id, { customerAddress: v })}
+              />
+              <SmallInput
+                label="Prepared By"
+                value={activeOffer.preparedBy}
+                onChange={(v) => updateOffer(activeOffer.id, { preparedBy: v })}
+              />
+              <SmallInput
+                label="Contact Person"
+                value={activeOffer.contactPerson}
+                onChange={(v) => updateOffer(activeOffer.id, { contactPerson: v })}
+              />
+              <SmallInput
+                label="Contact E-mail"
+                value={activeOffer.contactEmail}
+                onChange={(v) => updateOffer(activeOffer.id, { contactEmail: v })}
+              />
+              <SmallInput
+                label="Phone Number"
+                value={activeOffer.phoneNumber}
+                onChange={(v) => updateOffer(activeOffer.id, { phoneNumber: v })}
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-gray-50 p-4 space-y-3">
+            <img
+              src={COMPANY_INFO.logoPath}
+              alt="Depack logo"
+              className="h-12 object-contain"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+            <div className="font-semibold">{COMPANY_INFO.name}</div>
+            <div className="text-sm text-gray-600">{COMPANY_INFO.website}</div>
+            <div className="text-sm text-gray-600">{COMPANY_INFO.address}</div>
+          </div>
+        </div>
+      </InfoCard>
+
+      <InfoCard title="2. Products and Price Breakdown">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <SmallInput label="Product Code" value={productCode} readOnly />
+          <SmallInput label="Base Material" value={baseMaterial} readOnly />
+          <SmallInput label="Product Weight (g)" value={productWeight} readOnly />
+          <SmallInput label="Decoration Type" value={decorationType} readOnly />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5">
-          <div className="rounded-xl border bg-white p-3 space-y-3">
-            <div className="font-medium">Offers</div>
-
-            {offers.map((offer) => (
-              <div
-                key={offer.id}
-                className={`rounded-xl border p-3 cursor-pointer ${
-                  selectedOffer.id === offer.id
-                    ? "border-black bg-gray-50"
-                    : "border-gray-200 bg-white"
-                }`}
-                onClick={() =>
-                  setPricing20Data((prev) => ({
-                    ...(prev || {}),
-                    selectedPriceOfferId: offer.id,
-                  }))
+        <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-7 gap-3 pt-2">
+          {[
+            ["material", "Material"],
+            ["decoration", "Decoration"],
+            ["packaging", "Packaging"],
+            ["waste", "Waste"],
+            ["freight", "Freight"],
+            ["amortization", "Amortization"],
+            ["conversion", "Conversion"],
+          ].map(([key, label]) => (
+            <label
+              key={key}
+              className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+            >
+              <input
+                type="checkbox"
+                checked={activeOffer?.breakdown?.[key] === true}
+                onChange={(e) =>
+                  updateOfferNested(activeOffer.id, "breakdown", {
+                    [key]: e.target.checked,
+                  })
                 }
-              >
-                <div className="font-medium">{offer.offerNo || "New Offer"}</div>
-                <div className="text-xs text-gray-500">
-                  {offer.customerName || "No customer"} • {offer.date || "—"}
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    className="text-xs text-red-600 underline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeOffer(offer.id);
-                    }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
+              />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+          <SmallSelect
+            label="Margin Mode"
+            value={activeOffer.marginMode || "none"}
+            onChange={(v) => updateOffer(activeOffer.id, { marginMode: v })}
+            options={[
+              { value: "none", label: "No Margin" },
+              { value: "pct", label: "Margin %" },
+              { value: "amount", label: `Margin Amount / ${isSheet ? "ton" : "1000 pcs"}` },
+            ]}
+          />
+          <SmallInput
+            label={
+              activeOffer.marginMode === "pct"
+                ? "Margin %"
+                : `Margin Amount / ${isSheet ? "ton" : "1000 pcs"}`
+            }
+            value={activeOffer.marginValue}
+            onChange={(v) => updateOffer(activeOffer.id, { marginValue: v })}
+            readOnly={activeOffer.marginMode === "none"}
+          />
+          <SmallInput
+            label={`Offer Total Price / ${isSheet ? "ton" : "1000 pcs"} (${activeOfferComputed.offerCurrency})`}
+            value={fmt(activeOfferComputed.totalOfferCurrency, 3)}
+            readOnly
+          />
+        </div>
+
+        <div className="overflow-auto rounded-xl border">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left p-3">Breakdown Item</th>
+                <th className="text-right p-3">
+                  Amount / {isSheet ? "ton" : "1000 pcs"} ({activeOfferComputed.offerCurrency})
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeOfferComputed.displayRows.map((row) => (
+                <tr key={row.key} className="border-t">
+                  <td className="p-3">{row.label}</td>
+                  <td className="p-3 text-right">{fmt(row.valueOfferCurrency, 3)}</td>
+                </tr>
+              ))}
+              <tr className="border-t font-semibold bg-green-50">
+                <td className="p-3">
+                  Total Offer Price / {isSheet ? "ton" : "1000 pcs"}
+                </td>
+                <td className="p-3 text-right">
+                  {fmt(activeOfferComputed.totalOfferCurrency, 3)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </InfoCard>
+
+      <InfoCard title="3. Packaging">
+        <div className="rounded-xl border bg-gray-50 p-4 text-sm leading-6">
+          {activeOfferComputed.packagingText}
+        </div>
+      </InfoCard>
+
+      <InfoCard title="4. Freight">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <SmallSelect
+            label="Container / Truck Size"
+            value={activeOffer.selectedFreightOption || ""}
+            onChange={(v) =>
+              updateOffer(activeOffer.id, { selectedFreightOption: v })
+            }
+            options={pricingSummary.freightOptions.map((row) => ({
+              value: row.value,
+              label: row.label,
+            }))}
+          />
+          <SmallInput
+            label="From"
+            value={activeOffer.freightFrom}
+            onChange={(v) => updateOffer(activeOffer.id, { freightFrom: v })}
+          />
+          <SmallInput
+            label="To"
+            value={activeOffer.freightTo}
+            onChange={(v) => updateOffer(activeOffer.id, { freightTo: v })}
+          />
+          <SmallSelect
+            label="Incoterm"
+            value={activeOffer.incoterm || "EXW"}
+            onChange={(v) => updateOffer(activeOffer.id, { incoterm: v })}
+            options={INCOTERM_OPTIONS}
+          />
+        </div>
+
+        {selectedFreight ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <SmallInput label="Selected Freight Option" value={selectedFreight.label} readOnly />
+            <SmallInput label="Pallets" value={fmt(selectedFreight.pallets, 0)} readOnly />
+            <SmallInput
+              label={isSheet ? "Rolls" : "Cartons"}
+              value={fmt(isSheet ? selectedFreight.rolls : selectedFreight.cartons, 0)}
+              readOnly
+            />
+            <SmallInput
+              label={isSheet ? "Net Weight (kg)" : "PCS"}
+              value={fmt(isSheet ? selectedFreight.netWeightKg : selectedFreight.pcs, 0)}
+              readOnly
+            />
           </div>
+        ) : null}
 
-          <div className="space-y-5">
-            <Section title="Offer Summary">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                {toneCard(
-                  `Scenario Price / ${basisLabel}`,
-                  `${fmt(
-                    egpToOfferCurrency(priceMap.total, offerCurrency, assumptions),
-                    3
-                  )} ${offerCurrency}`,
-                  "blue"
-                )}
+        <div className="rounded-xl border bg-gray-50 p-4 text-sm leading-6">
+          {activeOfferComputed.freightText}
+        </div>
+      </InfoCard>
 
-                {toneCard(
-                  `Margin / ${basisLabel}`,
-                  `${fmt(
-                    egpToOfferCurrency(
-                      offerLinesSummary.marginAmountBase,
-                      offerCurrency,
-                      assumptions
-                    ),
-                    3
-                  )} ${offerCurrency}`,
-                  "purple"
-                )}
+      <InfoCard title="5. Terms and Conditions">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SmallInput
+            label="Offer Validity"
+            value={activeOffer?.terms?.validity || ""}
+            onChange={(v) =>
+              updateOfferNested(activeOffer.id, "terms", { validity: v })
+            }
+            placeholder="Example: 7 days from offer date"
+          />
 
-                {toneCard(
-                  `Final Offer / ${basisLabel}`,
-                  `${fmt(
-                    egpToOfferCurrency(
-                      offerLinesSummary.finalOfferPriceBase,
-                      offerCurrency,
-                      assumptions
-                    ),
-                    3
-                  )} ${offerCurrency}`,
-                  "green"
-                )}
+          <SmallSelect
+            label="Payment Structure"
+            value={activeOffer?.terms?.paymentMode || "single"}
+            onChange={(v) =>
+              updateOfferNested(activeOffer.id, "terms", { paymentMode: v })
+            }
+            options={[
+              { value: "single", label: "Single payment term" },
+              { value: "split", label: "Split into two payments" },
+            ]}
+          />
+        </div>
 
-                {toneCard(
-                  "Offer Currency",
-                  offerCurrency,
-                  "teal"
-                )}
+        {activeOffer?.terms?.paymentMode === "single" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SmallSelect
+              label="Payment Term"
+              value={activeOffer?.terms?.singlePaymentTerm || "CIA"}
+              onChange={(v) =>
+                updateOfferNested(activeOffer.id, "terms", {
+                  singlePaymentTerm: v,
+                })
+              }
+              options={PAYMENT_TERM_OPTIONS.map((row) => ({
+                value: row.code,
+                label: `${row.code} — ${row.name}`,
+              }))}
+            />
+            <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+              <div className="font-medium">
+                {paymentTerm.code} — {paymentTerm.name}
               </div>
-            </Section>
+              <div className="text-gray-600 mt-1">{paymentTerm.description}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <SmallInput
+                label="1st Payment %"
+                value={activeOffer?.terms?.split1Pct || ""}
+                onChange={(v) =>
+                  updateOfferNested(activeOffer.id, "terms", { split1Pct: v })
+                }
+              />
+              <SmallSelect
+                label="1st Payment Method"
+                value={activeOffer?.terms?.split1Term || "PIA"}
+                onChange={(v) =>
+                  updateOfferNested(activeOffer.id, "terms", { split1Term: v })
+                }
+                options={PAYMENT_TERM_OPTIONS.map((row) => ({
+                  value: row.code,
+                  label: `${row.code} — ${row.name}`,
+                }))}
+              />
+              <SmallInput
+                label="2nd Payment %"
+                value={activeOffer?.terms?.split2Pct || ""}
+                onChange={(v) =>
+                  updateOfferNested(activeOffer.id, "terms", { split2Pct: v })
+                }
+              />
+              <SmallSelect
+                label="2nd Payment Method"
+                value={activeOffer?.terms?.split2Term || "CBS"}
+                onChange={(v) =>
+                  updateOfferNested(activeOffer.id, "terms", { split2Term: v })
+                }
+                options={PAYMENT_TERM_OPTIONS.map((row) => ({
+                  value: row.code,
+                  label: `${row.code} — ${row.name}`,
+                }))}
+              />
+            </div>
 
-            <Section title="1. Offer Header">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <CompactInput
-                  label="Offer Number"
-                  value={selectedOffer.offerNo}
-                  readOnly
-                />
-
-                <CompactInput
-                  label="Date"
-                  value={selectedOffer.date}
-                  onChange={(v) => updateOffer(selectedOffer.id, { date: v })}
-                  type="date"
-                />
-
-                <CompactSelect
-                  label="Offer Currency"
-                  value={selectedOffer.offerCurrency || "USD"}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { offerCurrency: v })
-                  }
-                  options={["EGP", "USD", "EUR"]}
-                />
-
-                <CompactInput
-                  label="Prepared By"
-                  value={selectedOffer.preparedBy}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { preparedBy: v })
-                  }
-                />
-
-                <CompactInput
-                  label="Customer Name"
-                  value={selectedOffer.customerName}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { customerName: v })
-                  }
-                  placeholder={primaryCustomer.customerName || ""}
-                />
-
-                <CompactInput
-                  label="Contact Person"
-                  value={selectedOffer.contactPerson}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { contactPerson: v })
-                  }
-                />
-
-                <CompactInput
-                  label="Contact Person E-mail"
-                  value={selectedOffer.contactEmail}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { contactEmail: v })
-                  }
-                />
-
-                <CompactInput
-                  label="Phone Number"
-                  value={selectedOffer.contactPhone}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { contactPhone: v })
-                  }
-                />
-
-                <div className="md:col-span-2">
-                  <CompactTextArea
-                    label="Customer Address"
-                    value={selectedOffer.customerAddress}
-                    onChange={(v) =>
-                      updateOffer(selectedOffer.id, { customerAddress: v })
-                    }
-                    rows={3}
-                  />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+                <div className="font-medium">
+                  {split1Term.code} — {split1Term.name}
                 </div>
-
-                <div className="md:col-span-2 rounded-xl border bg-gray-50 p-3 space-y-2">
-                  <div className="font-medium">Our Company Details</div>
-                  <div className="text-sm">Depack for Advanced Packages S.A.E.</div>
-                  <div className="text-sm">www.depack.co</div>
-                  <div className="text-sm">
-                    Address: Plot 9/6 Ahmous St., Industrial Area A2, 10th of Ramadan City, Al Sharqiyah, Egypt
-                  </div>
-                  <div className="text-sm">
-                    Product: {project.projectName || product.productType || "—"}
-                  </div>
+                <div className="text-gray-600 mt-1">{split1Term.description}</div>
+              </div>
+              <div className="rounded-xl border bg-gray-50 p-3 text-sm">
+                <div className="font-medium">
+                  {split2Term.code} — {split2Term.name}
                 </div>
+                <div className="text-gray-600 mt-1">{split2Term.description}</div>
               </div>
-            </Section>
+            </div>
 
-            <Section title="2. Products and Price Breakdown">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                <CompactInput
-                  label="Product Code"
-                  value={product.productCode || product.requestNumber || ""}
-                  readOnly
-                />
-
-                <CompactInput
-                  label="Product Name"
-                  value={project.projectName || product.productType || ""}
-                  readOnly
-                />
-
-                <CompactInput
-                  label="Base Material"
-                  value={
-                    scenarioEngineering?.materialSheet?.baseMaterial ||
-                    product.productMaterial ||
-                    product.sheetMaterial ||
-                    ""
-                  }
-                  readOnly
-                />
-
-                <CompactInput
-                  label="Product Weight"
-                  value={
-                    isSheet
-                      ? `${fmt(
-                          scenarioEngineering?.sheetPackaging?.rollWeight_kg ||
-                            scenarioEngineering?.sheetSpecs?.rollTargetWeight_kg ||
-                            0,
-                          3
-                        )} kg/roll`
-                      : `${fmt(
-                          scenarioEngineering?.thermo?.unitWeight_g ||
-                            product.productWeightG ||
-                            0,
-                          3
-                        )} g`
-                  }
-                  readOnly
-                />
-
-                <CompactInput
-                  label="Decoration Type"
-                  value={
-                    isSheet
-                      ? "No decoration"
-                      : requestData?.decoration?.decorationType || "No decoration"
-                  }
-                  readOnly
-                />
-              </div>
-
-              <div className="rounded-xl border p-3 space-y-4">
-                <div className="font-medium">Breakdown Options to Show</div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                  {[
-                    ["material", "Material Cost"],
-                    ["decoration", "Decoration Cost"],
-                    ["packaging", "Packaging Cost"],
-                    ["waste", "Waste Cost"],
-                    ["freight", "Freight Cost"],
-                    ["amortization", "Amortization Cost"],
-                    ["conversion", "Conversion Price"],
-                  ].map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedOffer.showBreakdown?.[key] === true}
-                        onChange={(e) =>
-                          updateOfferNested(selectedOffer.id, "showBreakdown", {
-                            [key]: e.target.checked,
-                          })
-                        }
-                      />
-                      <span>{label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <CompactSelect
-                  label="Margin Mode"
-                  value={selectedOffer.marginMode || "pct"}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { marginMode: v })
-                  }
-                  options={[
-                    { value: "pct", label: "Margin %" },
-                    { value: "amount", label: `Margin Amount / ${basisLabel}` },
-                  ]}
-                />
-
-                {selectedOffer.marginMode === "pct" ? (
-                  <CompactInput
-                    label="Margin %"
-                    value={selectedOffer.marginPct}
-                    onChange={(v) =>
-                      updateOffer(selectedOffer.id, { marginPct: v })
-                    }
-                  />
-                ) : (
-                  <CompactInput
-                    label={`Margin Amount / ${basisLabel}`}
-                    value={selectedOffer.marginAmountPerBasis}
-                    onChange={(v) =>
-                      updateOffer(selectedOffer.id, { marginAmountPerBasis: v })
-                    }
-                  />
-                )}
-
-                <CompactInput
-                  label={`Final Offer / ${basisLabel}`}
-                  value={`${fmt(
-                    egpToOfferCurrency(
-                      offerLinesSummary.finalOfferPriceBase,
-                      offerCurrency,
-                      assumptions
-                    ),
-                    3
-                  )} ${offerCurrency}`}
-                  readOnly
-                />
-              </div>
-
-              <div className="overflow-auto rounded-xl border">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left p-3">Line</th>
-                      <th className="text-right p-3">{offerCurrency}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {offerLinesSummary.lines.map((row) => (
-                      <tr key={row.key} className="border-t">
-                        <td className="p-3">
-                          {row.label} / {basisLabel}
-                        </td>
-                        <td className="p-3 text-right bg-yellow-50">
-                          {fmt(
-                            egpToOfferCurrency(row.value, offerCurrency, assumptions),
-                            3
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-
-                    <tr className="border-t font-medium">
-                      <td className="p-3">Scenario Total / {basisLabel}</td>
-                      <td className="p-3 text-right">
-                        {fmt(
-                          egpToOfferCurrency(priceMap.total, offerCurrency, assumptions),
-                          3
-                        )}
-                      </td>
-                    </tr>
-
-                    <tr className="border-t">
-                      <td className="p-3">Margin / {basisLabel}</td>
-                      <td className="p-3 text-right">
-                        {fmt(
-                          egpToOfferCurrency(
-                            offerLinesSummary.marginAmountBase,
-                            offerCurrency,
-                            assumptions
-                          ),
-                          3
-                        )}
-                      </td>
-                    </tr>
-
-                    <tr className="border-t font-semibold bg-green-50">
-                      <td className="p-3">Final Offer Price / {basisLabel}</td>
-                      <td className="p-3 text-right">
-                        {fmt(
-                          egpToOfferCurrency(
-                            offerLinesSummary.finalOfferPriceBase,
-                            offerCurrency,
-                            assumptions
-                          ),
-                          3
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </Section>
-
-            <Section title="3. Packaging">
-              {isSheet ? (
-                <div className="space-y-4">
-                  <CompactTextArea
-                    label="Packaging Instruction"
-                    value={packagingDisplay.text}
-                    readOnly
-                    rows={4}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {toneCard("Pallet Size", packagingDisplay.palletSize || "—", "orange")}
-                    {toneCard(
-                      "Pallet Weight",
-                      packagingDisplay.palletWeightKg
-                        ? `${fmt(packagingDisplay.palletWeightKg, 3)} kg`
-                        : "—",
-                      "orange"
-                    )}
-                    {toneCard(
-                      "Roll Basis",
-                      "Sheet Roll",
-                      "orange"
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <CompactTextArea
-                    label="Packaging Summary"
-                    value={packagingDisplay.text}
-                    readOnly
-                    rows={4}
-                  />
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    {toneCard(
-                      "PCS / Bag",
-                      packagingDisplay.pcsPerBag
-                        ? fmt(packagingDisplay.pcsPerBag, 0)
-                        : "—",
-                      "teal"
-                    )}
-                    {toneCard(
-                      "PCS / Carton",
-                      packagingDisplay.pcsPerCarton
-                        ? fmt(packagingDisplay.pcsPerCarton, 0)
-                        : "—",
-                      "teal"
-                    )}
-                    {toneCard(
-                      "PCS / Pallet",
-                      packagingDisplay.pcsPerPallet
-                        ? fmt(packagingDisplay.pcsPerPallet, 0)
-                        : "—",
-                      "teal"
-                    )}
-                    {toneCard(
-                      "Carton Weight",
-                      packagingDisplay.cartonWeightKg
-                        ? `${fmt(packagingDisplay.cartonWeightKg, 3)} kg`
-                        : "—",
-                      "teal"
-                    )}
-                    {toneCard("Carton Size", packagingDisplay.cartonSize || "—", "teal")}
-                    {toneCard("Pallet Size", packagingDisplay.palletSize || "—", "teal")}
-                    {toneCard(
-                      "Pallet Weight",
-                      packagingDisplay.palletWeightKg
-                        ? `${fmt(packagingDisplay.palletWeightKg, 3)} kg`
-                        : "—",
-                      "teal"
-                    )}
-                  </div>
-                </div>
+            <div
+              className={`rounded-xl border p-3 text-sm ${
+                Math.abs(
+                  n(activeOffer?.terms?.split1Pct) + n(activeOffer?.terms?.split2Pct) - 100
+                ) < 0.001
+                  ? "bg-green-50 border-green-200 text-green-700"
+                  : "bg-yellow-50 border-yellow-200 text-yellow-700"
+              }`}
+            >
+              Total split payment ={" "}
+              {fmt(
+                n(activeOffer?.terms?.split1Pct) + n(activeOffer?.terms?.split2Pct),
+                2
               )}
-            </Section>
-
-            <Section title="4. Freight">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <CompactInput
-                  label="From"
-                  value={selectedOffer.freightFrom}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { freightFrom: v })
-                  }
-                />
-
-                <CompactInput
-                  label="To"
-                  value={selectedOffer.freightTo}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { freightTo: v })
-                  }
-                />
-
-                <CompactInput
-                  label="Incoterms"
-                  value={selectedOffer.incoterms}
-                  onChange={(v) =>
-                    updateOffer(selectedOffer.id, { incoterms: v })
-                  }
-                  placeholder={requestData?.delivery?.incoterms || ""}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                {toneCard("Container / Truck", freightDisplay.optionLabel || "—", "blue")}
-                {toneCard(
-                  "Pallets",
-                  freightDisplay.pallets ? fmt(freightDisplay.pallets, 0) : "—",
-                  "blue"
-                )}
-                {!freightDisplay.isSheet &&
-                  toneCard(
-                    "Cartons",
-                    freightDisplay.cartons || "—",
-                    "blue"
-                  )}
-                {!freightDisplay.isSheet &&
-                  toneCard(
-                    "PCS",
-                    freightDisplay.pcs ? fmt(freightDisplay.pcs, 0) : "—",
-                    "blue"
-                  )}
-                {freightDisplay.isSheet &&
-                  toneCard(
-                    "Rolls",
-                    freightDisplay.rolls ? fmt(freightDisplay.rolls, 0) : "—",
-                    "blue"
-                  )}
-                {toneCard(
-                  "Net Weight",
-                  freightDisplay.netWeight
-                    ? `${fmt(freightDisplay.netWeight, 2)} kg`
-                    : "—",
-                  "blue"
-                )}
-              </div>
-            </Section>
-
-            <Section title="5. Terms and Conditions">
-              <CompactTextArea
-                label="Additional Terms"
-                value={selectedOffer.extraTerms}
-                onChange={(v) =>
-                  updateOffer(selectedOffer.id, { extraTerms: v })
-                }
-                rows={6}
-                placeholder="Add any specific commercial or technical terms here."
-              />
-
-              <CompactTextArea
-                label="Internal Notes"
-                value={selectedOffer.notes}
-                onChange={(v) =>
-                  updateOffer(selectedOffer.id, { notes: v })
-                }
-                rows={4}
-              />
-            </Section>
+              %
+            </div>
           </div>
-        </div>
-      </Section>
+        )}
+
+        <label className="block space-y-1">
+          <div className="text-xs text-gray-500">Additional Terms</div>
+          <textarea
+            rows={5}
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+            value={activeOffer?.terms?.additionalTerms || ""}
+            onChange={(e) =>
+              updateOfferNested(activeOffer.id, "terms", {
+                additionalTerms: e.target.value,
+              })
+            }
+            placeholder="Add any extra commercial terms here."
+          />
+        </label>
+      </InfoCard>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => deleteOffer(activeOffer.id)}
+          className="rounded-lg border border-red-300 text-red-700 px-4 py-2 text-sm bg-white"
+        >
+          Delete This Offer
+        </button>
+      </div>
     </div>
   );
 }
 
+export { Pricing20OffersTab };
 export default Pricing20OffersTab;
